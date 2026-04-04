@@ -1,0 +1,229 @@
+import { Board } from "./components/Board";
+import { Panel } from "./components/Panel";
+import { useChessMatch } from "./hooks/useChessMatch";
+
+function statusLabel(isCheck: boolean, isCheckmate: boolean, isStalemate: boolean) {
+  if (isCheckmate) {
+    return "Checkmate";
+  }
+
+  if (isStalemate) {
+    return "Stalemate";
+  }
+
+  if (isCheck) {
+    return "Check";
+  }
+
+  return "In play";
+}
+
+function turnLabel(turn: "white" | "black") {
+  return turn === "white" ? "White to move" : "Black to move";
+}
+
+export default function App() {
+  const {
+    snapshot,
+    boardSquares,
+    selectedSquare,
+    selectedCharacter,
+    selectedPiece,
+    legalMoves,
+    canUndo,
+    lastMove,
+    handleSquareClick,
+    handleUndo
+  } = useChessMatch();
+
+  const status = snapshot.status;
+  const lastEvent = snapshot.eventHistory.at(-1) ?? null;
+  const moveHistory = [...snapshot.moveHistory].reverse();
+  const narrativeHistory = [...snapshot.eventHistory].reverse();
+
+  return (
+    <div className="app-shell">
+      <div className="app-shell__glow app-shell__glow--left" />
+      <div className="app-shell__glow app-shell__glow--right" />
+
+      <header className="hero">
+        <div className="hero__copy">
+          <p className="hero__eyebrow">Narrative Chess</p>
+          <h1>Play the board first. Let the story follow.</h1>
+          <p className="hero__lede">
+            A clean local chess slice with a minimal narrative trail, move history, undo, and
+            a clear 2D board built for quick play.
+          </p>
+        </div>
+
+        <div className="hero__status">
+          <div className="status-card">
+            <span className="status-card__label">Turn</span>
+            <span className="status-card__value">{turnLabel(status.turn)}</span>
+          </div>
+          <div className="status-card">
+            <span className="status-card__label">State</span>
+            <span className="status-card__value">{statusLabel(status.isCheck, status.isCheckmate, status.isStalemate)}</span>
+          </div>
+          <div className="status-card">
+            <span className="status-card__label">Moves</span>
+            <span className="status-card__value">{snapshot.moveHistory.length}</span>
+          </div>
+        </div>
+      </header>
+
+      <main className="layout">
+        <section className="board-panel">
+          <div className="board-panel__header">
+            <div>
+              <p className="section-eyebrow">Board</p>
+              <h2>2D local play surface</h2>
+            </div>
+            <div className="board-panel__actions">
+              <button type="button" className="button button--ghost" onClick={handleUndo} disabled={!canUndo}>
+                Undo
+              </button>
+            </div>
+          </div>
+
+          <Board
+            snapshot={snapshot}
+            cells={boardSquares}
+            selectedSquare={selectedSquare}
+            legalMoves={legalMoves}
+            onSquareClick={handleSquareClick}
+          />
+
+          <div className="board-panel__footer">
+            <p>{selectedSquare ? `Selected ${selectedSquare}` : "Select a piece, then choose a legal square."}</p>
+            {lastMove ? <p>Last move: {lastMove.san}</p> : <p>No moves yet.</p>}
+          </div>
+        </section>
+
+        <aside className="sidebar">
+          <Panel title="Selected Piece" eyebrow="Character">
+            {selectedCharacter ? (
+              <div className="detail-card">
+                <div className="detail-card__title-row">
+                  <h3>{selectedCharacter.fullName}</h3>
+                  <span className={`side-pill side-pill--${selectedCharacter.side}`}>
+                    {selectedCharacter.side}
+                  </span>
+                </div>
+                <p className="detail-card__description">{selectedCharacter.oneLineDescription}</p>
+                <dl className="detail-grid">
+                  <div>
+                    <dt>Role</dt>
+                    <dd>{selectedCharacter.role}</dd>
+                  </div>
+                  <div>
+                    <dt>Origin</dt>
+                    <dd>{selectedCharacter.districtOfOrigin}</dd>
+                  </div>
+                  <div>
+                    <dt>Faction</dt>
+                    <dd>{selectedCharacter.faction}</dd>
+                  </div>
+                  <div>
+                    <dt>Square</dt>
+                    <dd>{selectedSquare ?? "None"}</dd>
+                  </div>
+                </dl>
+                <div className="chip-row">
+                  {selectedCharacter.traits.map((trait) => (
+                    <span key={trait} className="chip">
+                      {trait}
+                    </span>
+                  ))}
+                </div>
+                <div className="chip-row">
+                  {selectedCharacter.verbs.map((verb) => (
+                    <span key={verb} className="chip chip--soft">
+                      {verb}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="muted">
+                {selectedPiece
+                  ? "The selected square does not currently map to a character."
+                  : "Select any piece to inspect its role, origin, and narrative tags."}
+              </p>
+            )}
+          </Panel>
+
+          <Panel title="Move History" eyebrow="Rules">
+            <div className="timeline">
+              {moveHistory.length ? (
+                moveHistory.map((move) => (
+                  <article key={move.id} className="timeline__item">
+                    <div className="timeline__meta">
+                      <span className="timeline__turn">
+                        {move.moveNumber}. {move.side}
+                      </span>
+                      <span className="timeline__san">{move.san}</span>
+                    </div>
+                    <p className="timeline__text">
+                      {move.from} to {move.to}
+                      {move.isCheckmate ? " with checkmate" : move.isCheck ? " with check" : ""}
+                      {move.capturedPieceId ? " and a capture" : ""}
+                    </p>
+                  </article>
+                ))
+              ) : (
+                <p className="muted">The game log will appear here as soon as the first move lands.</p>
+              )}
+            </div>
+          </Panel>
+
+          <Panel title="Narrative Log" eyebrow="Story">
+            <div className="timeline timeline--narrative">
+              {narrativeHistory.length ? (
+                narrativeHistory.map((event) => (
+                  <article key={event.id} className="timeline__item timeline__item--narrative">
+                    <div className="timeline__meta">
+                      <span className="timeline__turn">
+                        Move {event.moveNumber}
+                      </span>
+                      <span className="timeline__san">{event.eventType}</span>
+                    </div>
+                    <h3 className="timeline__headline">{event.headline}</h3>
+                    <p className="timeline__text">{event.detail}</p>
+                  </article>
+                ))
+              ) : (
+                <p className="muted">Each move will add a lightweight narrative beat here.</p>
+              )}
+            </div>
+          </Panel>
+
+          <Panel title="Match State" eyebrow="Status">
+            <div className="state-list">
+              <div className="state-list__row">
+                <span>Current turn</span>
+                <strong>{turnLabel(status.turn)}</strong>
+              </div>
+              <div className="state-list__row">
+                <span>Board state</span>
+                <strong>{statusLabel(status.isCheck, status.isCheckmate, status.isStalemate)}</strong>
+              </div>
+              <div className="state-list__row">
+                <span>Selected square</span>
+                <strong>{selectedSquare ?? "None"}</strong>
+              </div>
+              <div className="state-list__row">
+                <span>Legal targets</span>
+                <strong>{legalMoves.length}</strong>
+              </div>
+              <div className="state-list__row">
+                <span>Last event</span>
+                <strong>{lastEvent ? lastEvent.headline : "None yet"}</strong>
+              </div>
+            </div>
+          </Panel>
+        </aside>
+      </main>
+    </div>
+  );
+}
