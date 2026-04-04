@@ -43,6 +43,7 @@ import { Board } from "./components/Board";
 import { Panel } from "./components/Panel";
 import { AppMenu } from "./components/AppMenu";
 import { CompetitiveLandscapePage } from "./components/CompetitiveLandscapePage";
+import { EdinburghReviewPage } from "./components/EdinburghReviewPage";
 import { LayoutToolbar } from "./components/LayoutToolbar";
 import { RoleCatalogPage } from "./components/RoleCatalogPage";
 import { StudyPanel } from "./components/StudyPanel";
@@ -54,7 +55,7 @@ import {
   updateRoleCatalogEntry
 } from "./roleCatalog";
 
-type AppPage = "match" | "roles" | "research";
+type AppPage = "match" | "edinburgh" | "roles" | "research";
 type LayoutEditMode = "move" | "resize";
 
 type ActiveLayoutEdit = {
@@ -73,6 +74,19 @@ const panelTitles: Record<WorkspacePanelId, string> = {
   study: "Study Games",
   status: "Match State"
 };
+
+function isAppPage(value: string | null): value is AppPage {
+  return value === "match" || value === "edinburgh" || value === "roles" || value === "research";
+}
+
+function getInitialPage() {
+  if (typeof window === "undefined") {
+    return "match" as AppPage;
+  }
+
+  const requestedPage = new URLSearchParams(window.location.search).get("page");
+  return isAppPage(requestedPage) ? requestedPage : ("match" as AppPage);
+}
 
 function statusLabel(isCheck: boolean, isCheckmate: boolean, isStalemate: boolean) {
   if (isCheckmate) {
@@ -144,7 +158,7 @@ function getPanelToggleLabel(isCollapsed: boolean) {
 }
 
 export default function App() {
-  const [page, setPage] = useState<AppPage>("match");
+  const [page, setPage] = useState<AppPage>(() => getInitialPage());
   const [selectedReferenceGameId, setSelectedReferenceGameId] = useState(referenceGames[0]?.id ?? "");
   const [pastedPgn, setPastedPgn] = useState("");
   const [settings, setSettings] = useState<AppSettings>(() => listAppSettings());
@@ -317,6 +331,21 @@ export default function App() {
     workspaceLayout.columnFractions,
     workspaceLayout.rowHeight
   ]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const nextUrl = new URL(window.location.href);
+    if (page === "match") {
+      nextUrl.searchParams.delete("page");
+    } else {
+      nextUrl.searchParams.set("page", page);
+    }
+
+    window.history.replaceState({}, "", nextUrl);
+  }, [page]);
 
   const beginPanelEdit =
     (panelId: WorkspacePanelId, mode: LayoutEditMode) =>
@@ -512,6 +541,7 @@ export default function App() {
             >
               <TabsList className="page-switcher">
                 <TabsTrigger value="match">Match</TabsTrigger>
+                <TabsTrigger value="edinburgh">Edinburgh</TabsTrigger>
                 <TabsTrigger value="roles">Role Catalog</TabsTrigger>
                 <TabsTrigger value="research">Research</TabsTrigger>
               </TabsList>
@@ -543,7 +573,9 @@ export default function App() {
         ) : (
           <div className="app-header__context">
             <p className="muted">
-              {page === "roles"
+              {page === "edinburgh"
+                ? "Review the gathered Edinburgh board mapping, edit district notes, and save updates locally."
+                : page === "roles"
                 ? "Edit piece-role pools and feed those changes back into the local roster."
                 : "Review current chess product references, screenshots, and notes for competitive analysis."}
             </p>
@@ -551,7 +583,9 @@ export default function App() {
         )}
       </header>
 
-      {page === "roles" ? (
+      {page === "edinburgh" ? (
+        <EdinburghReviewPage />
+      ) : page === "roles" ? (
         <RoleCatalogPage
           roleCatalog={roleCatalog}
           onRoleCatalogChange={handleRoleCatalogChange}
