@@ -9,6 +9,7 @@ import {
   type DistrictCell,
   type MoveRecord,
   type NarrativeEvent,
+  type PieceKind,
   type PieceSide,
   type StartingPieceBlueprint,
   startingPieceBlueprints
@@ -40,10 +41,120 @@ type RosterConfig = {
   descriptorVerbBiases: BiasMap;
 };
 
+export type NarrativeTonePreset = "grounded" | "civic-noir" | "dark-comedy";
+
 const rosterConfig = narrativeData.roster as RosterConfig;
 const eventConfig = narrativeData.events as EventTemplateSet;
 const rolePools = rosterConfig.rolePools;
 const sideFactions = rosterConfig.sideFactions;
+
+const toneCodaByEventType: Record<NarrativeTonePreset, Record<EventType, string[]>> = {
+  grounded: {
+    move: [
+      "The position stays legible.",
+      "The line remains under control."
+    ],
+    capture: [
+      "The board tightens around the exchange.",
+      "Space opens on the file immediately."
+    ],
+    check: [
+      "The pressure is obvious now.",
+      "The defense has to respond at once."
+    ],
+    checkmate: [
+      "There is no clean reply left.",
+      "Every escape route is closed."
+    ],
+    stalemate: [
+      "No side can make a useful move now.",
+      "The board runs out of legal air."
+    ],
+    promotion: [
+      "The promotion changes the tempo of the board.",
+      "The file now carries a different kind of threat."
+    ]
+  },
+  "civic-noir": {
+    move: [
+      "The district feels the shift straight away.",
+      "The lane goes tense for a beat."
+    ],
+    capture: [
+      "Everyone nearby understands what just changed.",
+      "The square keeps the mark of it."
+    ],
+    check: [
+      "The pressure lands like a warning siren.",
+      "The king is left in a very public light."
+    ],
+    checkmate: [
+      "By the end, the whole block can read the verdict.",
+      "The finish lands with city-hall certainty."
+    ],
+    stalemate: [
+      "The streetlights stay on, but nothing else moves.",
+      "The city exhales into a dead stop."
+    ],
+    promotion: [
+      "The promotion feels like a name change under sodium light.",
+      "The square suddenly belongs to someone new."
+    ]
+  },
+  "dark-comedy": {
+    move: [
+      "Everyone acts as if this was the sensible option.",
+      "The board pretends not to enjoy the drama."
+    ],
+    capture: [
+      "The spectators find a way to gasp and gossip at the same time.",
+      "Somewhere, a rumor gets promoted ahead of schedule."
+    ],
+    check: [
+      "Nobody on the board can convincingly call this subtle.",
+      "The threat arrives with all the grace of a thrown chair."
+    ],
+    checkmate: [
+      "The ending is so clean it almost feels rude.",
+      "That is the sort of finish people retell badly on purpose."
+    ],
+    stalemate: [
+      "Every plan reaches the same awkward shrug.",
+      "The position gives up before anyone does."
+    ],
+    promotion: [
+      "Reinvention arrives suspiciously well-timed.",
+      "Nothing says upward mobility like a queen on short notice."
+    ]
+  }
+};
+
+const captureInterpretations: Record<NarrativeTonePreset, Record<PieceKind, string[]>> = {
+  grounded: {
+    pawn: ["presses out", "forces off", "shoulders past"],
+    rook: ["locks out", "drives back", "closes down"],
+    knight: ["cuts off", "outflanks", "jars loose"],
+    bishop: ["exposes", "angles out", "crossfires"],
+    queen: ["outmaneuvers", "commands off", "sweeps aside"],
+    king: ["leans on", "forces back", "ushers aside"]
+  },
+  "civic-noir": {
+    pawn: ["grinds down", "leans through", "works over"],
+    rook: ["shuts out", "bars off", "pins in place before removing"],
+    knight: ["slips past and strips out", "catches on the turn and removes", "arrives from the blind side to take"],
+    bishop: ["exposes and removes", "cuts a diagonal through and takes", "draws into the open before removing"],
+    queen: ["owns the square away from", "presses the district clean out of", "makes an example of"],
+    king: ["steps through and takes", "forces the issue against", "closes the distance on"]
+  },
+  "dark-comedy": {
+    pawn: ["politely evicts", "bumps off the route of", "outlasts the patience of"],
+    rook: ["files paperwork against", "shuts the gate on", "makes an administrative problem for"],
+    knight: ["appears inconveniently beside", "shows up at exactly the wrong angle for", "turns the corner on"],
+    bishop: ["finds the worst possible angle for", "offers a sermon to before removing", "makes a doctrinal case against"],
+    queen: ["runs a full campaign against", "arrives with terrible timing for", "treats as a scheduling error"],
+    king: ["personally intervenes against", "makes everyone watch the removal of", "decides enough is enough for"]
+  }
+};
 
 function selectWindow(values: string[], seed: number, count: number): string[] {
   if (values.length === 0 || count <= 0) {
@@ -187,6 +298,24 @@ function toSentenceCase(value: string): string {
   return `${value[0]?.toUpperCase() ?? ""}${value.slice(1)}`;
 }
 
+function toOrdinal(value: number): string {
+  const remainder = value % 100;
+  if (remainder >= 11 && remainder <= 13) {
+    return `${value}th`;
+  }
+
+  switch (value % 10) {
+    case 1:
+      return `${value}st`;
+    case 2:
+      return `${value}nd`;
+    case 3:
+      return `${value}rd`;
+    default:
+      return `${value}th`;
+  }
+}
+
 function buildFallbackDistrictName(blueprint: StartingPieceBlueprint): string {
   const fileIndex = boardFiles.indexOf(
     blueprint.square[0] as (typeof boardFiles)[number]
@@ -306,13 +435,113 @@ function inferEventType(move: MoveRecord): EventType {
 }
 
 function selectEventTemplate(eventType: EventType, seed: number): string {
-  const templates = eventConfig[eventType].details;
-  return pickTemplateEntry(templates, seed);
+  return pickTemplateEntry(eventConfig[eventType].details, seed);
 }
 
 function selectEventHeadline(eventType: EventType, seed: number): string {
-  const templates = eventConfig[eventType].headlines;
-  return pickTemplateEntry(templates, seed);
+  return pickTemplateEntry(eventConfig[eventType].headlines, seed);
+}
+
+function selectToneCoda(
+  tonePreset: NarrativeTonePreset,
+  eventType: EventType,
+  seed: number
+): string {
+  return pickTemplateEntry(toneCodaByEventType[tonePreset][eventType], seed);
+}
+
+function buildCaptureDetail(input: {
+  move: MoveRecord;
+  actor: CharacterSummary;
+  target?: CharacterSummary | null;
+  tonePreset: NarrativeTonePreset;
+}): string {
+  const targetLabel = input.target?.fullName ?? "their opponent";
+  const interpretation = pickTemplateEntry(
+    captureInterpretations[input.tonePreset][input.actor.pieceKind],
+    input.move.moveNumber + input.actor.fullName.length
+  );
+
+  return `${input.actor.fullName} ${interpretation} ${targetLabel} from ${input.move.from} to ${input.move.to}.`;
+}
+
+function buildMemoryNote(input: {
+  eventType: EventType;
+  actor: CharacterSummary;
+  priorEvents: NarrativeEvent[];
+  tonePreset: NarrativeTonePreset;
+}): string {
+  const priorActorEvents = input.priorEvents.filter(
+    (event) => event.actorPieceId === input.actor.pieceId
+  );
+
+  if (input.eventType === "capture") {
+    const priorCaptures = priorActorEvents.filter((event) => event.eventType === "capture").length;
+    if (priorCaptures > 0) {
+      const totalCaptures = priorCaptures + 1;
+
+      switch (input.tonePreset) {
+        case "grounded":
+          return `It is their ${toOrdinal(totalCaptures)} decisive removal of the match.`;
+        case "civic-noir":
+          return `The board is now keeping count: ${toOrdinal(totalCaptures)} removal, same operator.`;
+        case "dark-comedy":
+          return `At this point, even the gossip has learned their pattern.`;
+      }
+    }
+  }
+
+  if (priorActorEvents.length > 0) {
+    const totalActions = priorActorEvents.length + 1;
+
+    switch (input.tonePreset) {
+      case "grounded":
+        return `It marks their ${toOrdinal(totalActions)} intervention of the game.`;
+      case "civic-noir":
+        return `The city has seen them here before; this is intervention ${totalActions}.`;
+      case "dark-comedy":
+        return `Their ${toOrdinal(totalActions)} appearance somehow feels less surprising than it should.`;
+    }
+  }
+
+  return "";
+}
+
+function buildEventDetail(input: {
+  eventType: EventType;
+  move: MoveRecord;
+  actor: CharacterSummary;
+  target?: CharacterSummary | null;
+  tonePreset: NarrativeTonePreset;
+  priorEvents: NarrativeEvent[];
+}): string {
+  const promotionLabel = formatPieceLabel(input.move.promotion);
+  const baseDetail =
+    input.eventType === "capture"
+      ? buildCaptureDetail(input)
+      : templateFill(selectEventTemplate(input.eventType, input.move.moveNumber), {
+          actor: input.actor.fullName,
+          target: input.target?.fullName ?? "their opponent",
+          from: input.move.from,
+          to: input.move.to,
+          promotion: promotionLabel,
+          verb:
+            input.actor.verbs[(input.move.moveNumber - 1) % input.actor.verbs.length] ??
+            "moves"
+        });
+  const toneCoda = selectToneCoda(
+    input.tonePreset,
+    input.eventType,
+    input.move.moveNumber + hashText(input.actor.pieceId)
+  );
+  const memoryNote = buildMemoryNote({
+    eventType: input.eventType,
+    actor: input.actor,
+    priorEvents: input.priorEvents,
+    tonePreset: input.tonePreset
+  });
+
+  return [baseDetail, toneCoda, memoryNote].filter(Boolean).join(" ");
 }
 
 export function createInitialCharacterRoster(options?: {
@@ -339,8 +568,11 @@ export function createNarrativeEvent(input: {
   move: MoveRecord;
   actor: CharacterSummary;
   target?: CharacterSummary | null;
+  tonePreset?: NarrativeTonePreset;
+  priorEvents?: NarrativeEvent[];
 }): NarrativeEvent {
   const eventType = inferEventType(input.move);
+  const tonePreset = input.tonePreset ?? "grounded";
   const promotionLabel = formatPieceLabel(input.move.promotion);
   const headline = templateFill(selectEventHeadline(eventType, input.move.moveNumber), {
     actor: input.actor.fullName,
@@ -350,14 +582,13 @@ export function createNarrativeEvent(input: {
     promotion: promotionLabel,
     verb: input.actor.verbs[(input.move.moveNumber - 1) % input.actor.verbs.length] ?? "moves"
   });
-
-  const detail = templateFill(selectEventTemplate(eventType, input.move.moveNumber), {
-    actor: input.actor.fullName,
-    target: input.target?.fullName ?? "their opponent",
-    from: input.move.from,
-    to: input.move.to,
-    promotion: promotionLabel,
-    verb: input.actor.verbs[(input.move.moveNumber - 1) % input.actor.verbs.length] ?? "moves"
+  const detail = buildEventDetail({
+    eventType,
+    move: input.move,
+    actor: input.actor,
+    target: input.target,
+    tonePreset,
+    priorEvents: input.priorEvents ?? []
   });
 
   return narrativeEventSchema.parse({
@@ -376,8 +607,11 @@ export function createNarrativeEvent(input: {
 export function createNarrativeHistory(input: {
   moves: MoveRecord[];
   characters: Record<string, CharacterSummary>;
+  tonePreset?: NarrativeTonePreset;
 }): NarrativeEvent[] {
-  return input.moves.map((move) => {
+  const events: NarrativeEvent[] = [];
+
+  for (const move of input.moves) {
     const actor =
       input.characters[move.pieceId] ??
       characterSummarySchema.parse({
@@ -403,10 +637,29 @@ export function createNarrativeHistory(input: {
       ? input.characters[move.capturedPieceId] ?? null
       : null;
 
-    return createNarrativeEvent({
-      move,
-      actor,
-      target
-    });
-  });
+    events.push(
+      createNarrativeEvent({
+        move,
+        actor,
+        target,
+        tonePreset: input.tonePreset,
+        priorEvents: events
+      })
+    );
+  }
+
+  return events;
+}
+
+export function getCharacterEventHistory(input: {
+  events: NarrativeEvent[];
+  pieceId: string;
+  limit?: number;
+}): NarrativeEvent[] {
+  const relevantEvents = input.events.filter(
+    (event) => event.actorPieceId === input.pieceId || event.targetPieceId === input.pieceId
+  );
+  const limit = input.limit ?? 3;
+
+  return relevantEvents.slice(-limit).reverse();
 }

@@ -26,6 +26,17 @@ function turnLabel(turn: "white" | "black") {
   return turn === "white" ? "White to move" : "Black to move";
 }
 
+function toneLabel(tonePreset: "grounded" | "civic-noir" | "dark-comedy") {
+  switch (tonePreset) {
+    case "civic-noir":
+      return "Civic noir";
+    case "dark-comedy":
+      return "Dark comedy";
+    default:
+      return "Grounded";
+  }
+}
+
 export default function App() {
   const [selectedReferenceGameId, setSelectedReferenceGameId] = useState(referenceGames[0]?.id ?? "");
   const [pastedPgn, setPastedPgn] = useState("");
@@ -35,10 +46,12 @@ export default function App() {
     boardSquares,
     selectedSquare,
     selectedCharacter,
+    selectedCharacterMoments,
     selectedPiece,
     legalMoves,
     canUndo,
     isStudyMode,
+    tonePreset,
     studySession,
     canStepBackward,
     canStepForward,
@@ -52,7 +65,8 @@ export default function App() {
     jumpToStart,
     stepBackward,
     stepForward,
-    jumpToEnd
+    jumpToEnd,
+    updateTonePreset
   } = useChessMatch();
 
   const status = snapshot.status;
@@ -291,6 +305,21 @@ export default function App() {
                     </span>
                   ))}
                 </div>
+                <div className="memory-list">
+                  <p className="memory-list__label">Recent actions</p>
+                  {selectedCharacterMoments.length ? (
+                    selectedCharacterMoments.map((event) => (
+                      <article key={event.id} className="memory-item">
+                        <span className="memory-item__meta">
+                          Move {event.moveNumber} | {event.eventType}
+                        </span>
+                        <p className="memory-item__headline">{event.headline}</p>
+                      </article>
+                    ))
+                  ) : (
+                    <p className="muted">No recorded actions for this piece yet.</p>
+                  )}
+                </div>
               </div>
             ) : (
               <p className="muted">
@@ -325,7 +354,35 @@ export default function App() {
             </div>
           </Panel>
 
-          <Panel title="Narrative Log" eyebrow="Story">
+          <Panel
+            title="Narrative Log"
+            eyebrow="Story"
+            action={
+              <div className="tone-switcher">
+                <button
+                  type="button"
+                  className={`button button--ghost ${tonePreset === "grounded" ? "button--active" : ""}`}
+                  onClick={() => updateTonePreset("grounded")}
+                >
+                  Grounded
+                </button>
+                <button
+                  type="button"
+                  className={`button button--ghost ${tonePreset === "civic-noir" ? "button--active" : ""}`}
+                  onClick={() => updateTonePreset("civic-noir")}
+                >
+                  Civic noir
+                </button>
+                <button
+                  type="button"
+                  className={`button button--ghost ${tonePreset === "dark-comedy" ? "button--active" : ""}`}
+                  onClick={() => updateTonePreset("dark-comedy")}
+                >
+                  Dark comedy
+                </button>
+              </div>
+            }
+          >
             <div className="timeline timeline--narrative">
               {narrativeHistory.length ? (
                 narrativeHistory.map((event) => (
@@ -355,6 +412,10 @@ export default function App() {
               <div className="state-list__row">
                 <span>Mode</span>
                 <strong>{isStudyMode ? "Study replay" : "Local play"}</strong>
+              </div>
+              <div className="state-list__row">
+                <span>Narrative tone</span>
+                <strong>{toneLabel(tonePreset)}</strong>
               </div>
               <div className="state-list__row">
                 <span>Board state</span>

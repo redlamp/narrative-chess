@@ -3,7 +3,8 @@ import edinburghBoardData from "../../../content/cities/edinburgh-board.json";
 import {
   createInitialCharacterRoster,
   createNarrativeHistory,
-  createNarrativeEvent
+  createNarrativeEvent,
+  getCharacterEventHistory
 } from "./index";
 import type {
   CharacterSummary,
@@ -121,6 +122,61 @@ describe("createNarrativeEvent", () => {
     expect(event.detail).toContain("Morgan Vale");
   });
 
+  it("varies capture narration by tone and remembers prior action counts", () => {
+    const actor = makeActor();
+    const target = makeActor({
+      id: "black-pawn-e",
+      pieceId: "black-pawn-e",
+      side: "black",
+      pieceKind: "pawn",
+      fullName: "Morgan Vale",
+      faction: "Iron Accord"
+    });
+    const priorCapture = createNarrativeEvent({
+      move: makeMove({
+        id: "move-1a",
+        moveNumber: 1,
+        capturedPieceId: "black-pawn-d",
+        to: "d5"
+      }),
+      actor,
+      target: makeActor({
+        id: "black-pawn-d",
+        pieceId: "black-pawn-d",
+        side: "black",
+        pieceKind: "pawn",
+        fullName: "Taylor North",
+        faction: "Iron Accord"
+      })
+    });
+    const grounded = createNarrativeEvent({
+      move: makeMove({
+        id: "move-2",
+        moveNumber: 2,
+        capturedPieceId: "black-pawn-e"
+      }),
+      actor,
+      target,
+      priorEvents: [priorCapture],
+      tonePreset: "grounded"
+    });
+    const noir = createNarrativeEvent({
+      move: makeMove({
+        id: "move-2b",
+        moveNumber: 2,
+        capturedPieceId: "black-pawn-e"
+      }),
+      actor,
+      target,
+      priorEvents: [priorCapture],
+      tonePreset: "civic-noir"
+    });
+
+    expect(grounded.detail).toContain("2nd decisive removal");
+    expect(noir.detail).toContain("The board is now keeping count");
+    expect(grounded.detail).not.toBe(noir.detail);
+  });
+
   it("prioritizes checkmate and promotion state correctly", () => {
     const promotionEvent = createNarrativeEvent({
       move: makeMove({
@@ -196,5 +252,49 @@ describe("createNarrativeEvent", () => {
     expect(events).toHaveLength(2);
     expect(events[0].moveId).toBe("move-1");
     expect(events[1].moveNumber).toBe(2);
+  });
+
+  it("returns recent character events for UI memory hooks", () => {
+    const actor = makeActor({
+      pieceId: "white-pawn-e",
+      id: "white-pawn-e"
+    });
+    const events = createNarrativeHistory({
+      characters: {
+        "white-pawn-e": actor,
+        "black-pawn-e": makeActor({
+          id: "black-pawn-e",
+          pieceId: "black-pawn-e",
+          side: "black",
+          fullName: "Morgan Vale",
+          faction: "Iron Accord"
+        })
+      },
+      moves: [
+        makeMove({
+          id: "move-1",
+          moveNumber: 1,
+          pieceId: "white-pawn-e"
+        }),
+        makeMove({
+          id: "move-2",
+          moveNumber: 2,
+          pieceId: "white-pawn-e",
+          capturedPieceId: "black-pawn-e",
+          to: "e5"
+        })
+      ],
+      tonePreset: "dark-comedy"
+    });
+
+    const recentEvents = getCharacterEventHistory({
+      events,
+      pieceId: "white-pawn-e",
+      limit: 2
+    });
+
+    expect(recentEvents).toHaveLength(2);
+    expect(recentEvents[0]?.moveNumber).toBe(2);
+    expect(recentEvents[1]?.moveNumber).toBe(1);
   });
 });
