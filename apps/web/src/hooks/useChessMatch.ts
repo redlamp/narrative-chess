@@ -10,42 +10,12 @@ import {
 } from "@narrative-chess/game-core";
 import {
   createInitialCharacterRoster,
-  createNarrativeEvent,
-  createNarrativeHistory
+  createNarrativeHistory,
+  getCharacterEventHistory,
+  type NarrativeTonePreset
 } from "@narrative-chess/narrative-engine";
-import type {
-  CharacterSummary,
-  GameSnapshot,
-  MoveRecord,
-  PieceState,
-  ReferenceGame,
-  Square
-} from "@narrative-chess/content-schema";
+import type { GameSnapshot, PieceState, ReferenceGame, Square } from "@narrative-chess/content-schema";
 import { edinburghBoard } from "../edinburghBoard";
-
-function createFallbackCharacter(piece: PieceState): CharacterSummary {
-  const sideLabel = piece.side === "white" ? "North" : "South";
-
-  return {
-    id: piece.pieceId,
-    pieceId: piece.pieceId,
-    side: piece.side,
-    pieceKind: piece.kind,
-    fullName: `${sideLabel} ${piece.kind[0].toUpperCase()}${piece.kind.slice(1)}`,
-    role: piece.kind,
-    districtOfOrigin: "Central Ward",
-    faction: piece.side === "white" ? "White Directorate" : "Black Assembly",
-    traits: ["focused", "observant", "steady", "guarded"],
-    verbs: ["advance", "hold", "pressure", "defend"],
-    oneLineDescription: "A lightweight fallback character for local play.",
-    generationSource: "web-fallback",
-    generationModel: null,
-    contentStatus: "procedural",
-    reviewStatus: "empty",
-    reviewNotes: null,
-    lastReviewedAt: null
-  };
-}
 
 function isPromotionMove(piece: PieceState | null, to: Square): boolean {
   if (!piece || piece.kind !== "pawn") {
@@ -72,7 +42,10 @@ type StudyReplay = {
   pgn: string;
 };
 
-function withNarrativeHistory(snapshots: GameSnapshot[]) {
+function withNarrativeHistory(
+  snapshots: GameSnapshot[],
+  tonePreset: NarrativeTonePreset
+) {
   const finalSnapshot = snapshots.at(-1);
   if (!finalSnapshot) {
     return snapshots;
@@ -80,7 +53,8 @@ function withNarrativeHistory(snapshots: GameSnapshot[]) {
 
   const events = createNarrativeHistory({
     moves: finalSnapshot.moveHistory,
-    characters: finalSnapshot.characters
+    characters: finalSnapshot.characters,
+    tonePreset
   });
 
   return snapshots.map((snapshot) => ({
@@ -95,11 +69,19 @@ export function useChessMatch() {
   const [studyIndex, setStudyIndex] = useState(0);
   const [importError, setImportError] = useState<string | null>(null);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
+  const [tonePreset, setTonePreset] = useState<NarrativeTonePreset>("grounded");
 
   const snapshot = studyReplay ? studyReplay.snapshots[studyIndex] : localSnapshot;
   const isStudyMode = studyReplay !== null;
   const selectedPiece = selectedSquare ? getPieceAtSquare(snapshot, selectedSquare) : null;
   const selectedCharacter = selectedPiece ? snapshot.characters[selectedPiece.pieceId] ?? null : null;
+  const selectedCharacterMoments = selectedCharacter
+    ? getCharacterEventHistory({
+        events: snapshot.eventHistory,
+        pieceId: selectedCharacter.pieceId,
+        limit: 3
+      })
+    : [];
   const legalMoves = selectedSquare ? listLegalMoves(snapshot, selectedSquare) : [];
   const boardSquares = getBoardSquares(snapshot);
   const canUndo = !isStudyMode && snapshot.moveHistory.length > 0;
@@ -120,7 +102,7 @@ export function useChessMatch() {
         cityBoard: edinburghBoard
       });
       const replay = createReplayFromPgn(input.pgn, characters);
-      const snapshots = withNarrativeHistory(replay.snapshots);
+      const snapshots = withNarrativeHistory(replay.snapshots, tonePreset);
 
       startTransition(() => {
         setStudyReplay({
@@ -160,19 +142,15 @@ export function useChessMatch() {
       return false;
     }
 
-    const actor = snapshot.characters[movingPiece.pieceId] ?? createFallbackCharacter(movingPiece);
-    const targetPiece = appliedMove.move.capturedPieceId
-      ? snapshot.characters[appliedMove.move.capturedPieceId] ?? null
-      : null;
-    const event = createNarrativeEvent({
-      move: appliedMove.move as MoveRecord,
-      actor,
-      target: targetPiece
+    const eventHistory = createNarrativeHistory({
+      moves: appliedMove.nextState.moveHistory,
+      characters: appliedMove.nextState.characters,
+      tonePreset
     });
 
     setLocalSnapshot({
       ...appliedMove.nextState,
-      eventHistory: [...snapshot.eventHistory, event]
+      eventHistory
     });
     setSelectedSquare(null);
     return true;
@@ -211,7 +189,14 @@ export function useChessMatch() {
       return;
     }
 
-    setLocalSnapshot(previous);
+    setLocalSnapshot({
+      ...previous,
+      eventHistory: createNarrativeHistory({
+        moves: previous.moveHistory,
+        characters: previous.characters,
+        tonePreset
+      })
+    });
     setSelectedSquare(null);
   };
 
@@ -278,15 +263,39 @@ export function useChessMatch() {
     setSelectedSquare(null);
   };
 
+  const updateTonePreset = (nextTonePreset: NarrativeTonePreset) => {
+    startTransition(() => {
+      setTonePreset(nextTonePreset);
+      setLocalSnapshot((current) => ({
+        ...current,
+        eventHistory: createNarrativeHistory({
+          moves: current.moveHistory,
+          characters: current.characters,
+          tonePreset: nextTonePreset
+        })
+      }));
+      setStudyReplay((current) =>
+        current
+          ? {
+              ...current,
+              snapshots: withNarrativeHistory(current.snapshots, nextTonePreset)
+            }
+          : null
+      );
+    });
+  };
+
   return {
     snapshot,
     boardSquares,
     selectedSquare,
     selectedPiece,
     selectedCharacter,
+    selectedCharacterMoments,
     legalMoves,
     canUndo,
     isStudyMode,
+    tonePreset,
     studySession: studyReplay
       ? {
           title: studyReplay.title,
@@ -309,6 +318,7 @@ export function useChessMatch() {
     jumpToStart,
     stepBackward,
     stepForward,
-    jumpToEnd
+    jumpToEnd,
+    updateTonePreset
   };
 }

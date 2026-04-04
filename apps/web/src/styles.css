@@ -422,6 +422,12 @@ button {
   gap: 12px;
 }
 
+.tone-switcher {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .study-panel__summary,
 .study-panel__source {
   margin: 0;
@@ -506,6 +512,40 @@ button {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 10px;
+}
+
+.memory-list {
+  margin-top: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.memory-list__label {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.memory-item {
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.memory-item__meta {
+  display: block;
+  color: var(--text-soft);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 6px;
+}
+
+.memory-item__headline {
+  margin: 0;
 }
 
 .chip {
