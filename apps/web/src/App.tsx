@@ -47,6 +47,11 @@ import {
 } from "./layoutFiles";
 import { referenceGames } from "./referenceGames";
 import {
+  connectRoleCatalogDirectory,
+  getConnectedRoleCatalogDirectoryName,
+  loadRoleCatalogFromDirectory,
+  saveRoleCatalogDraftToDirectory,
+  supportsDirectoryWrite as supportsRoleCatalogDirectory,
   connectWorkspaceLayoutDirectory,
   getConnectedWorkspaceLayoutDirectoryName,
   loadWorkspaceLayoutFileFromDirectory,
@@ -196,6 +201,10 @@ export default function App() {
   const [isCompactViewport, setIsCompactViewport] = useState(false);
   const [hoveredSquare, setHoveredSquare] = useState<Square | null>(null);
   const [roleCatalog, setRoleCatalog] = useState(() => listRoleCatalog());
+  const [roleCatalogDirectoryName, setRoleCatalogDirectoryName] = useState<string | null>(null);
+  const [roleCatalogFileBusyAction, setRoleCatalogFileBusyAction] = useState<string | null>(null);
+  const [roleCatalogFileNotice, setRoleCatalogFileNotice] = useState<LayoutFileNotice | null>(null);
+  const [isRoleCatalogDirectorySupported, setIsRoleCatalogDirectorySupported] = useState(false);
   const [workspaceLayout, setWorkspaceLayout] = useState(() => listWorkspaceLayoutState());
   const [layoutFileName, setLayoutFileName] = useState("match-workspace");
   const [layoutDirectoryName, setLayoutDirectoryName] = useState<string | null>(null);
@@ -317,6 +326,14 @@ export default function App() {
     }
 
     let cancelled = false;
+
+    setIsRoleCatalogDirectorySupported(supportsRoleCatalogDirectory());
+
+    void getConnectedRoleCatalogDirectoryName().then((directoryName) => {
+      if (!cancelled) {
+        setRoleCatalogDirectoryName(directoryName);
+      }
+    });
 
     void getConnectedWorkspaceLayoutDirectoryName().then((directoryName) => {
       if (!cancelled) {
@@ -535,6 +552,66 @@ export default function App() {
 
   const handleRoleCatalogReset = () => {
     setRoleCatalog(resetRoleCatalog());
+  };
+
+  const runRoleCatalogFileAction = async (actionName: string, action: () => Promise<void>) => {
+    setRoleCatalogFileBusyAction(actionName);
+    setRoleCatalogFileNotice(null);
+
+    try {
+      await action();
+    } catch (error) {
+      setRoleCatalogFileNotice({
+        tone: "error",
+        text: error instanceof Error
+          ? error.message
+          : "Something went wrong while working with the role catalog file."
+      });
+    } finally {
+      setRoleCatalogFileBusyAction(null);
+    }
+  };
+
+  const handleConnectRoleCatalogDirectory = () => {
+    void runRoleCatalogFileAction("connect-role-catalog-directory", async () => {
+      const result = await connectRoleCatalogDirectory();
+      setRoleCatalogDirectoryName(result.directoryName);
+      setRoleCatalogFileNotice({
+        tone: "success",
+        text: `Connected role catalog files to ${result.directoryName}.`
+      });
+    });
+  };
+
+  const handleSaveRoleCatalogFile = () => {
+    void runRoleCatalogFileAction("save-role-catalog-file", async () => {
+      const result = await saveRoleCatalogDraftToDirectory(roleCatalog);
+      setRoleCatalogDirectoryName(result.directoryName);
+      setRoleCatalogFileNotice({
+        tone: "success",
+        text: `Saved role catalog to ${result.displayPath}.`
+      });
+    });
+  };
+
+  const handleLoadRoleCatalogFile = () => {
+    void runRoleCatalogFileAction("load-role-catalog-file", async () => {
+      const result = await loadRoleCatalogFromDirectory();
+      if (!result) {
+        setRoleCatalogFileNotice({
+          tone: "neutral",
+          text: "No role catalog file matched that name in the connected folder."
+        });
+        return;
+      }
+
+      setRoleCatalog(saveRoleCatalog(result.roleCatalog));
+      setRoleCatalogDirectoryName(result.directoryName);
+      setRoleCatalogFileNotice({
+        tone: "success",
+        text: `Loaded role catalog from ${result.relativePath}.`
+      });
+    });
   };
 
   const handleTogglePanelCollapse = (panelId: CollapsibleWorkspacePanelId) => {
@@ -818,11 +895,18 @@ export default function App() {
       ) : page === "roles" ? (
         <RoleCatalogPage
           roleCatalog={roleCatalog}
+          roleCatalogDirectoryName={roleCatalogDirectoryName}
+          isRoleCatalogDirectorySupported={isRoleCatalogDirectorySupported}
+          roleCatalogFileBusyAction={roleCatalogFileBusyAction}
+          roleCatalogFileNotice={roleCatalogFileNotice}
           onRoleCatalogChange={handleRoleCatalogChange}
           onRoleCatalogReset={handleRoleCatalogReset}
           onRoleCatalogAdd={handleRoleCatalogAdd}
           onRoleCatalogDuplicate={handleRoleCatalogDuplicate}
           onRoleCatalogRemove={handleRoleCatalogRemove}
+          onConnectRoleCatalogDirectory={handleConnectRoleCatalogDirectory}
+          onLoadRoleCatalogFromDirectory={handleLoadRoleCatalogFile}
+          onSaveRoleCatalogToDirectory={handleSaveRoleCatalogFile}
         />
       ) : page === "research" ? (
         <CompetitiveLandscapePage />
