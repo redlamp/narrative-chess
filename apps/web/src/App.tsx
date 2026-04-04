@@ -701,7 +701,7 @@ export default function App() {
                 onSquareLeave={() => setHoveredSquare(null)}
               />
 
-              <div className="board-panel__footer">
+              <div className="board-panel__footer" role="status" aria-live="polite">
                 <p>
                   {focusedSquare
                     ? `Focused ${focusedSquare}`

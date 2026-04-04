@@ -1,4 +1,5 @@
 import { cityBoardSchema, type CityBoard } from "@narrative-chess/content-schema";
+import { hydrateEdinburghBoardDraft } from "./edinburghReviewState";
 
 type LocalPermissionState = "granted" | "denied" | "prompt";
 
@@ -36,6 +37,7 @@ export type LocalDirectoryHandle = LocalFileSystemHandle & {
 
 type LocalFileHandle = LocalFileSystemHandle & {
   kind: "file";
+  getFile(): Promise<File>;
   createWritable(options?: {
     keepExistingData?: boolean;
   }): Promise<LocalFileSystemWritableFileStream>;
@@ -55,6 +57,80 @@ type LocalSaveTarget = {
 };
 
 const localDraftFileName = "edinburgh-board.local.json";
+const canonicalBoardFileName = "edinburgh-board.json";
+const directoryDbName = "narrative-chess-local-content";
+const directoryStoreName = "handles";
+const edinburghDirectoryHandleKey = "edinburgh-review-directory";
+
+type PersistedHandleRecord = {
+  id: string;
+  handle: LocalDirectoryHandle;
+};
+
+type LoadedDirectoryDraft = {
+  board: CityBoard;
+  relativePath: string;
+  sourceKind: "draft" | "canonical";
+};
+
+function openDirectoryDatabase() {
+  return new Promise<IDBDatabase>((resolve, reject) => {
+    const request = window.indexedDB.open(directoryDbName, 1);
+
+    request.onupgradeneeded = () => {
+      const database = request.result;
+      if (!database.objectStoreNames.contains(directoryStoreName)) {
+        database.createObjectStore(directoryStoreName, { keyPath: "id" });
+      }
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () =>
+      reject(request.error ?? new Error("Could not open the local content handle database."));
+  });
+}
+
+async function readStoredDirectoryHandle() {
+  if (typeof window === "undefined" || !("indexedDB" in window)) {
+    return null;
+  }
+
+  const database = await openDirectoryDatabase();
+
+  return new Promise<LocalDirectoryHandle | null>((resolve, reject) => {
+    const transaction = database.transaction(directoryStoreName, "readonly");
+    const store = transaction.objectStore(directoryStoreName);
+    const request = store.get(edinburghDirectoryHandleKey);
+
+    request.onsuccess = () => {
+      const result = request.result as PersistedHandleRecord | undefined;
+      resolve(result?.handle ?? null);
+    };
+    request.onerror = () =>
+      reject(request.error ?? new Error("Could not read the saved directory handle."));
+  });
+}
+
+async function writeStoredDirectoryHandle(handle: LocalDirectoryHandle) {
+  if (typeof window === "undefined" || !("indexedDB" in window)) {
+    return;
+  }
+
+  const database = await openDirectoryDatabase();
+
+  return new Promise<void>((resolve, reject) => {
+    const transaction = database.transaction(directoryStoreName, "readwrite");
+    const store = transaction.objectStore(directoryStoreName);
+    const request = store.put({
+      id: edinburghDirectoryHandleKey,
+      handle
+    } satisfies PersistedHandleRecord);
+
+    request.onsuccess = () => resolve();
+    request.onerror = () =>
+      reject(request.error ?? new Error("Could not store the selected directory handle."));
+  });
+}
 
 async function getOptionalDirectoryHandle(
   directoryHandle: LocalDirectoryHandle,
@@ -142,6 +218,8 @@ export function supportsDirectoryWrite() {
   );
 }
 
+export const supportsLocalContentDirectory = supportsDirectoryWrite;
+
 export async function pickLocalDirectory() {
   const localWindow = window as LocalWindowWithDirectoryPicker;
 
@@ -154,6 +232,20 @@ export async function pickLocalDirectory() {
   return localWindow.showDirectoryPicker({
     mode: "readwrite"
   });
+}
+
+export async function connectEdinburghReviewDirectory() {
+  const handle = await pickLocalDirectory();
+  await writeStoredDirectoryHandle(handle);
+
+  return {
+    directoryName: handle.name
+  };
+}
+
+export async function getConnectedEdinburghReviewDirectoryName() {
+  const handle = await readStoredDirectoryHandle();
+  return handle?.name ?? null;
 }
 
 export async function saveEdinburghBoardToDirectory(
@@ -178,4 +270,74 @@ export async function saveEdinburghBoardToDirectory(
     displayPath: target.displayPath,
     mode: target.fileExists ? "updated" : "created"
   } as const;
+}
+
+async function readJsonFile(
+  directoryHandle: LocalDirectoryHandle,
+  fileName: string
+) {
+  try {
+    const fileHandle = await directoryHandle.getFileHandle(fileName);
+    const file = await fileHandle.getFile();
+    return JSON.parse(await file.text()) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+async function requireStoredDirectoryHandle() {
+  const handle = await readStoredDirectoryHandle();
+
+  if (!handle) {
+    throw new Error("Connect a repo root or content folder before saving to disk.");
+  }
+
+  return handle;
+}
+
+export async function saveEdinburghDraftToDirectory(board: CityBoard) {
+  const handle = await requireStoredDirectoryHandle();
+  const result = await saveEdinburghBoardToDirectory(handle, board);
+
+  return {
+    directoryName: handle.name,
+    relativePath: result.displayPath,
+    mode: result.mode
+  };
+}
+
+export async function loadEdinburghDraftFromDirectory(
+  fallback: CityBoard
+): Promise<LoadedDirectoryDraft | null> {
+  const rootDirectoryHandle = await readStoredDirectoryHandle();
+
+  if (!rootDirectoryHandle) {
+    return null;
+  }
+
+  await ensureReadWritePermission(rootDirectoryHandle);
+
+  const target = await resolveEdinburghBoardTarget(rootDirectoryHandle);
+  const draftFile = await readJsonFile(target.directoryHandle, localDraftFileName);
+  if (draftFile) {
+    return {
+      board: hydrateEdinburghBoardDraft(draftFile, fallback),
+      relativePath: target.displayPath,
+      sourceKind: "draft"
+    };
+  }
+
+  const canonicalFile = await readJsonFile(target.directoryHandle, canonicalBoardFileName);
+  if (canonicalFile) {
+    return {
+      board: hydrateEdinburghBoardDraft(canonicalFile, fallback),
+      relativePath:
+        target.displayPath === localDraftFileName
+          ? canonicalBoardFileName
+          : target.displayPath.replace(localDraftFileName, canonicalBoardFileName),
+      sourceKind: "canonical"
+    };
+  }
+
+  return null;
 }

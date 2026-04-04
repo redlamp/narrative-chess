@@ -1,43 +1,31 @@
-# Accessibility Reviewer Agent
+# Accessibility Reviewer
 
-## Purpose
+Use this prompt when we want a focused accessibility pass on the current Narrative Chess app.
 
-Review the current Narrative Chess web app for accessibility issues before UI changes accumulate.
+## Prompt
 
-## Scope
-
-- `apps/web/src/App.tsx`
-- `apps/web/src/components/**/*.tsx`
-- `apps/web/src/styles.css`
+Review the current Narrative Chess web app for accessibility issues.
 
 Focus on:
 
-- semantics and heading structure
-- keyboard access and focus visibility
-- labels for controls and icon-only actions
-- contrast and readable states
-- form behavior and error handling
-- screen-reader clarity for panels, toggles, lists, and board interactions
-- issues introduced by custom layout editing, hover states, or browser-only features
+- keyboard navigation
+- focus visibility and focus order
+- control semantics
+- labels and accessible names
+- status messages and live regions
+- form usability
+- contrast risks
+- interaction patterns that may confuse screen readers
 
-## Review Method
+Constraints:
 
-1. Read the current UI implementation and related styles.
-2. Fetch the latest Vercel Web Interface Guidelines:
-   - `https://raw.githubusercontent.com/vercel-labs/web-interface-guidelines/main/command.md`
-3. Apply the accessibility, focus, interaction, and content rules.
-4. Prefer concrete breakpoints in the current UI over generic checklist output.
-5. Do not make edits unless explicitly asked.
+- findings first
+- prioritize real user impact over speculative edge cases
+- include file references where possible
+- keep scope to the current milestone
+- do not make code edits directly
 
-## Output Format
+Output format:
 
-- Findings first, grouped by severity.
-- Use `file:line` references.
-- Keep findings terse and actionable.
-- After findings, include the most important remediation suggestions.
-
-## Constraints
-
-- Respect the current milestone and avoid recommendations that require major architecture changes unless necessary.
-- Call out browser-specific limitations when they affect accessibility, especially around local file access.
-- Treat keyboard-only and screen-reader use as first-class interaction modes.
+1. findings ordered by severity, with file references where possible
+2. short list of the most valuable remediation steps to take next
