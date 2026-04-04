@@ -1,14 +1,5 @@
-import { useMemo, useState } from "react";
-import {
-  Building2,
-  Download,
-  FolderOpen,
-  MapPinned,
-  RefreshCcw,
-  Save,
-  Search
-} from "lucide-react";
-import { type ContentStatus, type ReviewStatus } from "@narrative-chess/content-schema";
+import { useEffect, useMemo, useState } from "react";
+import type { CityBoard, DistrictCell } from "@narrative-chess/content-schema";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,729 +16,757 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { edinburghBoard } from "../edinburghBoard";
 import {
-  formatMultilineList,
+  buildEdinburghBoardValidation,
   listEdinburghBoardDraft,
-  parseMultilineList,
   resetEdinburghBoardDraft,
-  saveEdinburghBoardDraft,
-  updateEdinburghBoardMeta,
-  updateEdinburghDistrictField
+  saveEdinburghBoardDraft
 } from "../edinburghReviewState";
 import {
-  type LocalDirectoryHandle,
-  pickLocalDirectory,
-  saveEdinburghBoardToDirectory,
-  supportsDirectoryWrite
+  connectEdinburghReviewDirectory,
+  getConnectedEdinburghReviewDirectoryName,
+  loadEdinburghDraftFromDirectory,
+  saveEdinburghDraftToDirectory,
+  supportsLocalContentDirectory
 } from "../fileSystemAccess";
 
-const contentStatusOptions: ContentStatus[] = ["empty", "procedural", "authored"];
-const reviewStatusOptions: ReviewStatus[] = ["empty", "needs review", "reviewed", "approved"];
+type SaveNotice = {
+  tone: "neutral" | "success" | "error";
+  text: string;
+};
 
-function createCounts(items: string[]) {
-  return [...items.reduce((counts, item) => counts.set(item, (counts.get(item) ?? 0) + 1), new Map<string, number>())]
-    .sort((left, right) => right[1] - left[1]);
+const statusOptions = ["empty", "procedural", "authored"] as const;
+const reviewOptions = ["empty", "needs review", "reviewed", "approved"] as const;
+
+function formatListValue(values: string[]) {
+  return values.join("\n");
 }
 
-function createDownloadUrl(contents: string) {
-  return URL.createObjectURL(
-    new Blob([contents], {
-      type: "application/json"
-    })
-  );
+function parseListValue(value: string) {
+  return value
+    .split(/\r?\n|,/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+function downloadDraft(board: CityBoard) {
+  const blob = new Blob([JSON.stringify(board, null, 2)], {
+    type: "application/json"
+  });
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = objectUrl;
+  anchor.download = "edinburgh-board.local.json";
+  anchor.click();
+  URL.revokeObjectURL(objectUrl);
+}
+
+function countByLocality(board: CityBoard) {
+  const localityCounts = new Map<string, number>();
+
+  board.districts.forEach((district) => {
+    localityCounts.set(district.locality, (localityCounts.get(district.locality) ?? 0) + 1);
+  });
+
+  return [...localityCounts.entries()].sort((left, right) => right[1] - left[1]);
+}
+
+function updateDistrict(
+  board: CityBoard,
+  districtId: string,
+  updater: (district: DistrictCell) => DistrictCell
+) {
+  return {
+    ...board,
+    districts: board.districts.map((district) =>
+      district.id === districtId ? updater(district) : district
+    )
+  };
+}
+
+function districtMatchesSearch(district: DistrictCell, query: string) {
+  if (!query) {
+    return true;
+  }
+
+  const haystack = [
+    district.square,
+    district.name,
+    district.locality,
+    district.reviewStatus,
+    ...district.descriptors,
+    ...district.landmarks,
+    ...district.toneCues
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  return haystack.includes(query.toLowerCase());
 }
 
 export function EdinburghReviewPage() {
-  const [boardDraft, setBoardDraft] = useState(() => listEdinburghBoardDraft());
-  const [selectedDistrictId, setSelectedDistrictId] = useState(boardDraft.districts[0]?.id ?? "");
-  const [query, setQuery] = useState("");
-  const [directoryHandle, setDirectoryHandle] = useState<LocalDirectoryHandle | null>(null);
-  const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [isSavingToDirectory, setIsSavingToDirectory] = useState(false);
+  const [draft, setDraft] = useState<CityBoard>(() => listEdinburghBoardDraft());
+  const [selectedDistrictId, setSelectedDistrictId] = useState(() => edinburghBoard.districts[0]?.id ?? "");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [directoryName, setDirectoryName] = useState<string | null>(null);
+  const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [saveNotice, setSaveNotice] = useState<SaveNotice | null>(null);
+  const [isDirectorySupported, setIsDirectorySupported] = useState(false);
+  const validation = useMemo(() => buildEdinburghBoardValidation(draft), [draft]);
 
-  const filteredDistricts = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) {
-      return boardDraft.districts;
+  useEffect(() => {
+    setIsDirectorySupported(supportsLocalContentDirectory());
+
+    let cancelled = false;
+
+    void getConnectedEdinburghReviewDirectoryName().then((name) => {
+      if (!cancelled) {
+        setDirectoryName(name);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (validation.isValid) {
+      saveEdinburghBoardDraft(draft);
     }
+  }, [draft, validation.isValid]);
 
-    return boardDraft.districts.filter((district) =>
-      [
-        district.square,
-        district.name,
-        district.locality,
-        district.dayProfile,
-        district.nightProfile,
-        district.descriptors.join(" "),
-        district.landmarks.join(" "),
-        district.toneCues.join(" ")
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(normalizedQuery)
-    );
-  }, [boardDraft.districts, query]);
-
+  useEffect(() => {
+    if (!draft.districts.some((district) => district.id === selectedDistrictId)) {
+      setSelectedDistrictId(draft.districts[0]?.id ?? "");
+    }
+  }, [draft, selectedDistrictId]);
+  const filteredDistricts = useMemo(
+    () =>
+      draft.districts.filter((district) => districtMatchesSearch(district, searchQuery)),
+    [draft.districts, searchQuery]
+  );
   const selectedDistrict =
-    filteredDistricts.find((district) => district.id === selectedDistrictId) ??
-    boardDraft.districts.find((district) => district.id === selectedDistrictId) ??
+    draft.districts.find((district) => district.id === selectedDistrictId) ??
     filteredDistricts[0] ??
-    boardDraft.districts[0] ??
+    draft.districts[0] ??
     null;
+  const localityCounts = useMemo(() => countByLocality(draft), [draft]);
+  const reviewedDistrictCount = draft.districts.filter(
+    (district) => district.reviewStatus === "reviewed" || district.reviewStatus === "approved"
+  ).length;
+  const uniqueLandmarkCount = new Set(
+    draft.districts.flatMap((district) => district.landmarks.map((landmark) => landmark.toLowerCase()))
+  ).size;
 
-  const localityCounts = useMemo(
-    () => createCounts(boardDraft.districts.map((district) => district.locality)),
-    [boardDraft.districts]
-  );
-  const reviewStatusCounts = useMemo(
-    () => createCounts(boardDraft.districts.map((district) => district.reviewStatus)),
-    [boardDraft.districts]
-  );
-  const hasLocalDraft = useMemo(
-    () => JSON.stringify(boardDraft) !== JSON.stringify(edinburghBoard),
-    [boardDraft]
-  );
-  const supportsDirectorySave = supportsDirectoryWrite();
-
-  const applyBoardUpdate = (nextBoard: typeof boardDraft) => {
-    setBoardDraft(saveEdinburghBoardDraft(nextBoard));
-    setSaveError(null);
-    setSaveMessage("Saved to local draft.");
+  const setCityField = <Field extends keyof CityBoard>(field: Field, value: CityBoard[Field]) => {
+    setDraft((current) => ({
+      ...current,
+      [field]: value
+    }));
   };
 
-  const handleDownload = () => {
-    const downloadUrl = createDownloadUrl(`${JSON.stringify(boardDraft, null, 2)}\n`);
-    const anchor = document.createElement("a");
-    anchor.href = downloadUrl;
-    anchor.download = "edinburgh-board.json";
-    anchor.click();
-    window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 250);
-    setSaveError(null);
-    setSaveMessage("Downloaded edinburgh-board.json.");
-  };
-
-  const handleChooseDirectory = async () => {
-    try {
-      const nextDirectoryHandle = await pickLocalDirectory();
-      setDirectoryHandle(nextDirectoryHandle);
-      setSaveError(null);
-      setSaveMessage(`Connected folder: ${nextDirectoryHandle.name}`);
-    } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "Could not connect a local folder.");
-      setSaveMessage(null);
+  const updateSelectedDistrict = (updater: (district: DistrictCell) => DistrictCell) => {
+    if (!selectedDistrict) {
+      return;
     }
+
+    setDraft((current) => updateDistrict(current, selectedDistrict.id, updater));
   };
 
-  const handleSaveToDirectory = async () => {
-    setIsSavingToDirectory(true);
+  const runDirectoryAction = async (actionName: string, action: () => Promise<void>) => {
+    setBusyAction(actionName);
+    setSaveNotice(null);
 
     try {
-      const activeDirectoryHandle = directoryHandle ?? (await pickLocalDirectory());
-      const result = await saveEdinburghBoardToDirectory(activeDirectoryHandle, boardDraft);
-      setDirectoryHandle(activeDirectoryHandle);
-      setSaveError(null);
-      setSaveMessage(
-        `${result.mode === "updated" ? "Updated" : "Created"} ${result.displayPath}`
-      );
+      await action();
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "Could not save to the selected folder.");
-      setSaveMessage(null);
+      setSaveNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Something went wrong."
+      });
     } finally {
-      setIsSavingToDirectory(false);
+      setBusyAction(null);
     }
-  };
-
-  const handleResetToCheckedInData = () => {
-    const nextBoard = resetEdinburghBoardDraft();
-    setBoardDraft(nextBoard);
-    setSelectedDistrictId(nextBoard.districts[0]?.id ?? "");
-    setSaveError(null);
-    setSaveMessage("Reset to checked-in Edinburgh data.");
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+    <main className="mx-auto flex w-full max-w-[1700px] flex-col gap-6">
       <Card>
         <CardHeader className="gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary">Edinburgh Review</Badge>
-            <Badge variant="outline">{boardDraft.districts.length} mapped squares</Badge>
-            {hasLocalDraft ? <Badge variant="outline">Local draft active</Badge> : null}
+            <Badge variant="outline">64 mapped districts</Badge>
+            <Badge variant={validation.isValid ? "outline" : "destructive"}>
+              {validation.isValid ? "Schema valid" : `${validation.issues.length} validation issues`}
+            </Badge>
+            {directoryName ? <Badge variant="outline">Connected: {directoryName}</Badge> : null}
           </div>
-          <CardTitle className="text-3xl tracking-tight">{boardDraft.name}</CardTitle>
-          <CardDescription className="max-w-3xl text-sm leading-6">
-            Review the current city mapping, inspect district coverage, and edit the gathered
-            material before saving it back into the repository or exporting a JSON snapshot.
+          <CardTitle className="text-3xl tracking-tight">Edinburgh and district review workspace</CardTitle>
+          <CardDescription className="max-w-4xl text-sm leading-6">
+            Review the gathered Edinburgh mapping, edit district details, and write a repo-local
+            draft file when you want the changes available to future passes. Browser edits
+            autosave locally, and the directory save writes a separate draft file so the canonical
+            board mapping stays untouched until we intentionally promote it.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-3">
-          <Button type="button" variant="outline" size="sm" onClick={handleDownload}>
-            <Download data-icon="inline-start" />
-            Download JSON
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={handleChooseDirectory}>
-            <FolderOpen data-icon="inline-start" />
-            {directoryHandle ? "Reconnect Folder" : "Choose Folder"}
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={handleSaveToDirectory}
-            disabled={isSavingToDirectory}
-          >
-            <Save data-icon="inline-start" />
-            {isSavingToDirectory ? "Saving…" : "Save to Directory"}
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={handleResetToCheckedInData}>
-            <RefreshCcw data-icon="inline-start" />
-            Reset to Checked-in Data
-          </Button>
-          <div className="min-w-0 text-sm text-muted-foreground">
-            {supportsDirectorySave
-              ? directoryHandle
-                ? `Connected folder: ${directoryHandle.name}`
-                : "Directory save is available on localhost in supported Chromium browsers."
-              : "Directory save is not available in this browser; use Download JSON instead."}
+        <CardContent className="grid gap-6">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Localities</p>
+              <p className="mt-2 text-2xl font-semibold">{localityCounts.length}</p>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Reviewed</p>
+              <p className="mt-2 text-2xl font-semibold">{reviewedDistrictCount}</p>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Landmarks</p>
+              <p className="mt-2 text-2xl font-semibold">{uniqueLandmarkCount}</p>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Review status</p>
+              <p className="mt-2 text-sm text-muted-foreground">{draft.reviewStatus}</p>
+            </div>
           </div>
-          {saveMessage ? <p className="text-sm text-muted-foreground">{saveMessage}</p> : null}
-          {saveError ? <p className="text-sm text-destructive">{saveError}</p> : null}
+
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_auto_auto_auto_auto] xl:items-start">
+            <div className="rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
+              Browser edits autosave immediately. To create a file I can inspect in the repo later,
+              connect the repo root or the `content` folder and save the draft to
+              `content/cities/edinburgh-board.local.json`.
+            </div>
+            <Button
+              variant="outline"
+              onClick={() =>
+                runDirectoryAction("connect-directory", async () => {
+                  const result = await connectEdinburghReviewDirectory();
+                  setDirectoryName(result.directoryName);
+                  setSaveNotice({
+                    tone: "success",
+                    text: `Connected to ${result.directoryName}.`
+                  });
+                })
+              }
+              disabled={!isDirectorySupported || busyAction !== null}
+            >
+              Connect folder
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() =>
+                runDirectoryAction("load-directory-draft", async () => {
+                  const result = await loadEdinburghDraftFromDirectory(edinburghBoard);
+                  if (!result) {
+                    setSaveNotice({
+                      tone: "neutral",
+                      text: "No local Edinburgh draft or canonical board file was found in the connected directory."
+                    });
+                    return;
+                  }
+
+                  setDraft(saveEdinburghBoardDraft(result.board));
+                  setSaveNotice({
+                    tone: "success",
+                    text: `Loaded ${result.sourceKind} data from ${result.relativePath}.`
+                  });
+                })
+              }
+              disabled={busyAction !== null}
+            >
+              Load file
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() =>
+                runDirectoryAction("save-directory-draft", async () => {
+                  const result = await saveEdinburghDraftToDirectory(draft);
+                  setSaveNotice({
+                    tone: "success",
+                    text: `Saved the current draft to ${result.relativePath} inside ${result.directoryName}.`
+                  });
+                })
+              }
+              disabled={busyAction !== null}
+            >
+              Save draft file
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                downloadDraft(draft);
+                setSaveNotice({
+                  tone: "neutral",
+                  text: "Downloaded edinburgh-board.local.json."
+                });
+              }}
+              disabled={busyAction !== null}
+            >
+              Download JSON
+            </Button>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                const nextDraft = resetEdinburghBoardDraft();
+                setDraft(nextDraft);
+                setSaveNotice({
+                  tone: "neutral",
+                  text: "Reset the working draft back to the bundled Edinburgh board."
+                });
+              }}
+            >
+              Reset browser draft
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDraft(saveEdinburghBoardDraft(draft));
+                setSaveNotice({
+                  tone: "success",
+                  text: "Re-saved the current browser draft."
+                });
+              }}
+            >
+              Re-save browser draft
+            </Button>
+          </div>
+
+          {saveNotice ? (
+            <div
+              aria-live="polite"
+              role="status"
+              className={cn(
+                "rounded-lg border p-3 text-sm",
+                saveNotice.tone === "error"
+                  ? "border-destructive/30 bg-destructive/10 text-destructive"
+                  : "bg-muted/30 text-muted-foreground"
+              )}
+            >
+              {saveNotice.text}
+            </div>
+          ) : null}
+
+          {!validation.isValid ? (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+              <p className="text-sm font-medium text-foreground">Validation notes</p>
+              <ul className="mt-3 grid gap-2 text-sm text-muted-foreground">
+                {validation.issues.slice(0, 8).map((issue) => (
+                  <li key={issue} className="rounded-md border bg-background px-3 py-2">
+                    {issue}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.35fr)]">
-        <div className="grid gap-6">
-          <Card>
-            <CardHeader className="gap-3">
-              <div className="flex items-center gap-2">
-                <MapPinned className="size-4 text-muted-foreground" aria-hidden="true" />
-                <CardTitle>Overview</CardTitle>
-              </div>
-              <CardDescription>{boardDraft.summary}</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-lg border bg-muted/40 p-3">
-                  <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                    Board Orientation
-                  </p>
-                  <p className="mt-2 text-sm">{boardDraft.boardOrientation}</p>
-                </div>
-                <div className="rounded-lg border bg-muted/40 p-3">
-                  <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                    Review Status
-                  </p>
-                  <p className="mt-2 text-sm">{boardDraft.reviewStatus}</p>
-                </div>
-              </div>
-
-              <div className="grid gap-3">
-                <p className="text-sm font-semibold">Source URLs</p>
-                <div className="grid gap-2">
-                  {boardDraft.sourceUrls.map((sourceUrl) => (
-                    <a
-                      key={sourceUrl}
-                      href={sourceUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-                    >
-                      {sourceUrl}
-                    </a>
-                  ))}
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="grid gap-3">
-                <p className="text-sm font-semibold">Localities</p>
-                <div className="flex flex-wrap gap-2">
-                  {localityCounts.map(([locality, count]) => (
-                    <Badge key={locality} variant="secondary">
-                      {locality}: {count}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid gap-3">
-                <p className="text-sm font-semibold">District Review Status</p>
-                <div className="flex flex-wrap gap-2">
-                  {reviewStatusCounts.map(([status, count]) => (
-                    <Badge key={status} variant="outline">
-                      {status}: {count}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="gap-3">
-              <div className="flex items-center gap-2">
-                <Building2 className="size-4 text-muted-foreground" aria-hidden="true" />
-                <CardTitle>Districts</CardTitle>
-              </div>
-              <CardDescription>Search and select a square to inspect or edit its notes.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-4">
-              <label className="grid gap-2">
-                <span className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                  Search
-                </span>
-                <div className="relative">
-                  <Search
-                    className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                  <Input
-                    name="district-search"
-                    value={query}
-                    onChange={(event) => setQuery(event.currentTarget.value)}
-                    placeholder="Search square, district, locality, or note…"
-                    className="pl-8"
-                  />
-                </div>
-              </label>
-
-              <ScrollArea className="h-[36rem] rounded-lg border">
-                <div className="grid gap-2 p-2">
-                  {filteredDistricts.map((district) => (
-                    <button
-                      key={district.id}
-                      type="button"
-                      className={cn(
-                        "grid gap-2 rounded-lg border p-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                        selectedDistrict?.id === district.id ? "bg-muted" : "bg-background"
-                      )}
-                      onClick={() => setSelectedDistrictId(district.id)}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="truncate font-medium">{district.name}</p>
-                          <p className="text-sm text-muted-foreground">{district.locality}</p>
-                        </div>
-                        <Badge variant="outline">{district.square}</Badge>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {district.descriptors.slice(0, 3).map((descriptor) => (
-                          <Badge key={`${district.id}-${descriptor}`} variant="secondary">
-                            {descriptor}
-                          </Badge>
-                        ))}
-                      </div>
-                    </button>
-                  ))}
-                  {!filteredDistricts.length ? (
-                    <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                      No districts match that filter.
-                    </div>
-                  ) : null}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid gap-6">
-          <Card>
-            <CardHeader className="gap-3">
-              <CardTitle>City Metadata</CardTitle>
+      <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+        <Card className="min-h-[720px]">
+          <CardHeader className="gap-4">
+            <div className="grid gap-2">
+              <CardTitle>District index</CardTitle>
               <CardDescription>
-                These fields describe the board-wide Edinburgh mapping and review provenance.
+                Search the 64 mapped squares and jump into a district record for review.
+              </CardDescription>
+            </div>
+            <Input
+              name="district-search"
+              autoComplete="off"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.currentTarget.value)}
+              placeholder="Search by square, name, locality, or descriptor"
+              aria-label="Search Edinburgh districts"
+            />
+            <div className="flex flex-wrap gap-2">
+              {localityCounts.slice(0, 8).map(([locality, count]) => (
+                <Badge key={locality} variant="outline">
+                  {locality}: {count}
+                </Badge>
+              ))}
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <ScrollArea className="h-[560px] rounded-lg border">
+              <div className="grid gap-2 p-3">
+                {filteredDistricts.map((district) => (
+                  <button
+                    key={district.id}
+                    type="button"
+                    onClick={() => setSelectedDistrictId(district.id)}
+                    className={cn(
+                      "grid gap-2 rounded-lg border px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      district.id === selectedDistrict?.id
+                        ? "border-foreground/15 bg-muted"
+                        : "bg-background hover:bg-muted/50"
+                    )}
+                    aria-pressed={district.id === selectedDistrict?.id}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-medium">{district.name}</span>
+                      <Badge variant="outline">{district.square}</Badge>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="secondary">{district.locality}</Badge>
+                      <Badge variant="outline">{district.reviewStatus}</Badge>
+                    </div>
+                  </button>
+                ))}
+                {!filteredDistricts.length ? (
+                  <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                    No districts matched that search.
+                  </div>
+                ) : null}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-6">
+          <Card>
+            <CardHeader className="gap-2">
+              <CardTitle>City summary and provenance</CardTitle>
+              <CardDescription>
+                This section captures the top-level story of the Edinburgh mapping and where the
+                current board came from.
               </CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <label className="grid gap-2 md:col-span-2">
-                <span className="text-sm font-medium">Summary</span>
-                <Textarea
-                  name="edinburgh-summary"
-                  value={boardDraft.summary}
-                  onChange={(event) =>
-                    applyBoardUpdate(
-                      updateEdinburghBoardMeta(boardDraft, "summary", event.currentTarget.value)
-                    )
-                  }
-                  rows={4}
-                />
-              </label>
-
-              <label className="grid gap-2 md:col-span-2">
-                <span className="text-sm font-medium">Board orientation</span>
-                <Textarea
-                  name="edinburgh-board-orientation"
-                  value={boardDraft.boardOrientation}
-                  onChange={(event) =>
-                    applyBoardUpdate(
-                      updateEdinburghBoardMeta(
-                        boardDraft,
-                        "boardOrientation",
-                        event.currentTarget.value
-                      )
-                    )
-                  }
-                  rows={3}
-                />
-              </label>
-
-              <label className="grid gap-2 md:col-span-2">
-                <span className="text-sm font-medium">Source URLs</span>
-                <Textarea
-                  name="edinburgh-source-urls"
-                  value={formatMultilineList(boardDraft.sourceUrls)}
-                  onChange={(event) =>
-                    applyBoardUpdate(
-                      updateEdinburghBoardMeta(
-                        boardDraft,
-                        "sourceUrls",
-                        parseMultilineList(event.currentTarget.value)
-                      )
-                    )
-                  }
-                  rows={5}
-                />
-              </label>
-
-              <label className="grid gap-2">
-                <span className="text-sm font-medium">Generation source</span>
-                <Input
-                  name="edinburgh-generation-source"
-                  value={boardDraft.generationSource}
-                  onChange={(event) =>
-                    applyBoardUpdate(
-                      updateEdinburghBoardMeta(
-                        boardDraft,
-                        "generationSource",
-                        event.currentTarget.value
-                      )
-                    )
-                  }
-                />
-              </label>
-
-              <label className="grid gap-2">
-                <span className="text-sm font-medium">Last reviewed</span>
-                <Input
-                  name="edinburgh-last-reviewed-at"
-                  value={boardDraft.lastReviewedAt ?? ""}
-                  onChange={(event) =>
-                    applyBoardUpdate(
-                      updateEdinburghBoardMeta(
-                        boardDraft,
-                        "lastReviewedAt",
-                        event.currentTarget.value || null
-                      )
-                    )
-                  }
-                  placeholder="YYYY-MM-DD…"
-                />
-              </label>
-
-              <label className="grid gap-2">
-                <span className="text-sm font-medium">Content status</span>
-                <select
-                  className="field-select"
-                  value={boardDraft.contentStatus}
-                  onChange={(event) =>
-                    applyBoardUpdate(
-                      updateEdinburghBoardMeta(
-                        boardDraft,
-                        "contentStatus",
-                        event.currentTarget.value as ContentStatus
-                      )
-                    )
-                  }
-                >
-                  {contentStatusOptions.map((status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="grid gap-2">
-                <span className="text-sm font-medium">Review status</span>
-                <select
-                  className="field-select"
-                  value={boardDraft.reviewStatus}
-                  onChange={(event) =>
-                    applyBoardUpdate(
-                      updateEdinburghBoardMeta(
-                        boardDraft,
-                        "reviewStatus",
-                        event.currentTarget.value as ReviewStatus
-                      )
-                    )
-                  }
-                >
-                  {reviewStatusOptions.map((status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="grid gap-2 md:col-span-2">
-                <span className="text-sm font-medium">Review notes</span>
-                <Textarea
-                  name="edinburgh-review-notes"
-                  value={boardDraft.reviewNotes ?? ""}
-                  onChange={(event) =>
-                    applyBoardUpdate(
-                      updateEdinburghBoardMeta(
-                        boardDraft,
-                        "reviewNotes",
-                        event.currentTarget.value || null
-                      )
-                    )
-                  }
-                  rows={4}
-                />
-              </label>
-            </CardContent>
-          </Card>
-
-          {selectedDistrict ? (
-            <Card>
-              <CardHeader className="gap-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="secondary">{selectedDistrict.square}</Badge>
-                  <Badge variant="outline">{selectedDistrict.locality}</Badge>
-                </div>
-                <CardTitle>{selectedDistrict.name}</CardTitle>
-                <CardDescription>
-                  Edit the gathered district detail for this mapped square.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-4 md:grid-cols-2">
+            <CardContent className="grid gap-4">
+              <div className="grid gap-4 lg:grid-cols-2">
                 <label className="grid gap-2">
-                  <span className="text-sm font-medium">District name</span>
+                  <span className="text-sm font-medium">City name</span>
                   <Input
-                    name={`district-name-${selectedDistrict.id}`}
-                    value={selectedDistrict.name}
-                    onChange={(event) =>
-                      applyBoardUpdate(
-                        updateEdinburghDistrictField(
-                          boardDraft,
-                          selectedDistrict.id,
-                          "name",
-                          event.currentTarget.value
-                        )
-                      )
-                    }
+                    name="city-name"
+                    autoComplete="off"
+                    value={draft.name}
+                    onChange={(event) => setCityField("name", event.currentTarget.value)}
                   />
                 </label>
-
                 <label className="grid gap-2">
-                  <span className="text-sm font-medium">Locality</span>
+                  <span className="text-sm font-medium">Country / region</span>
                   <Input
-                    name={`district-locality-${selectedDistrict.id}`}
-                    value={selectedDistrict.locality}
-                    onChange={(event) =>
-                      applyBoardUpdate(
-                        updateEdinburghDistrictField(
-                          boardDraft,
-                          selectedDistrict.id,
-                          "locality",
-                          event.currentTarget.value
-                        )
-                      )
-                    }
+                    name="city-country"
+                    autoComplete="off"
+                    value={draft.country}
+                    onChange={(event) => setCityField("country", event.currentTarget.value)}
                   />
                 </label>
-
-                <label className="grid gap-2 md:col-span-2">
-                  <span className="text-sm font-medium">Descriptors</span>
+                <label className="grid gap-2 lg:col-span-2">
+                  <span className="text-sm font-medium">Summary</span>
                   <Textarea
-                    name={`district-descriptors-${selectedDistrict.id}`}
-                    value={formatMultilineList(selectedDistrict.descriptors)}
-                    onChange={(event) =>
-                      applyBoardUpdate(
-                        updateEdinburghDistrictField(
-                          boardDraft,
-                          selectedDistrict.id,
-                          "descriptors",
-                          parseMultilineList(event.currentTarget.value)
-                        )
-                      )
-                    }
+                    name="city-summary"
+                    autoComplete="off"
+                    value={draft.summary}
+                    onChange={(event) => setCityField("summary", event.currentTarget.value)}
                     rows={4}
                   />
                 </label>
-
-                <label className="grid gap-2 md:col-span-2">
-                  <span className="text-sm font-medium">Landmarks</span>
+                <label className="grid gap-2 lg:col-span-2">
+                  <span className="text-sm font-medium">Board orientation</span>
                   <Textarea
-                    name={`district-landmarks-${selectedDistrict.id}`}
-                    value={formatMultilineList(selectedDistrict.landmarks)}
-                    onChange={(event) =>
-                      applyBoardUpdate(
-                        updateEdinburghDistrictField(
-                          boardDraft,
-                          selectedDistrict.id,
-                          "landmarks",
-                          parseMultilineList(event.currentTarget.value)
-                        )
-                      )
-                    }
-                    rows={4}
+                    name="city-board-orientation"
+                    autoComplete="off"
+                    value={draft.boardOrientation}
+                    onChange={(event) => setCityField("boardOrientation", event.currentTarget.value)}
+                    rows={2}
                   />
                 </label>
-
-                <label className="grid gap-2 md:col-span-2">
-                  <span className="text-sm font-medium">Day profile</span>
-                  <Textarea
-                    name={`district-day-profile-${selectedDistrict.id}`}
-                    value={selectedDistrict.dayProfile}
-                    onChange={(event) =>
-                      applyBoardUpdate(
-                        updateEdinburghDistrictField(
-                          boardDraft,
-                          selectedDistrict.id,
-                          "dayProfile",
-                          event.currentTarget.value
-                        )
-                      )
-                    }
-                    rows={3}
-                  />
-                </label>
-
-                <label className="grid gap-2 md:col-span-2">
-                  <span className="text-sm font-medium">Night profile</span>
-                  <Textarea
-                    name={`district-night-profile-${selectedDistrict.id}`}
-                    value={selectedDistrict.nightProfile}
-                    onChange={(event) =>
-                      applyBoardUpdate(
-                        updateEdinburghDistrictField(
-                          boardDraft,
-                          selectedDistrict.id,
-                          "nightProfile",
-                          event.currentTarget.value
-                        )
-                      )
-                    }
-                    rows={3}
-                  />
-                </label>
-
-                <label className="grid gap-2 md:col-span-2">
-                  <span className="text-sm font-medium">Tone cues</span>
-                  <Textarea
-                    name={`district-tone-cues-${selectedDistrict.id}`}
-                    value={formatMultilineList(selectedDistrict.toneCues)}
-                    onChange={(event) =>
-                      applyBoardUpdate(
-                        updateEdinburghDistrictField(
-                          boardDraft,
-                          selectedDistrict.id,
-                          "toneCues",
-                          parseMultilineList(event.currentTarget.value)
-                        )
-                      )
-                    }
-                    rows={4}
-                  />
-                </label>
-
                 <label className="grid gap-2">
                   <span className="text-sm font-medium">Content status</span>
                   <select
+                    name="city-content-status"
                     className="field-select"
-                    value={selectedDistrict.contentStatus}
+                    value={draft.contentStatus}
                     onChange={(event) =>
-                      applyBoardUpdate(
-                        updateEdinburghDistrictField(
-                          boardDraft,
-                          selectedDistrict.id,
-                          "contentStatus",
-                          event.currentTarget.value as ContentStatus
-                        )
-                      )
+                      setCityField("contentStatus", event.currentTarget.value as CityBoard["contentStatus"])
                     }
                   >
-                    {contentStatusOptions.map((status) => (
-                      <option key={`${selectedDistrict.id}-${status}`} value={status}>
+                    {statusOptions.map((status) => (
+                      <option key={status} value={status}>
                         {status}
                       </option>
                     ))}
                   </select>
                 </label>
-
                 <label className="grid gap-2">
                   <span className="text-sm font-medium">Review status</span>
                   <select
+                    name="city-review-status"
                     className="field-select"
-                    value={selectedDistrict.reviewStatus}
+                    value={draft.reviewStatus}
                     onChange={(event) =>
-                      applyBoardUpdate(
-                        updateEdinburghDistrictField(
-                          boardDraft,
-                          selectedDistrict.id,
-                          "reviewStatus",
-                          event.currentTarget.value as ReviewStatus
-                        )
-                      )
+                      setCityField("reviewStatus", event.currentTarget.value as CityBoard["reviewStatus"])
                     }
                   >
-                    {reviewStatusOptions.map((status) => (
-                      <option key={`${selectedDistrict.id}-review-${status}`} value={status}>
+                    {reviewOptions.map((status) => (
+                      <option key={status} value={status}>
                         {status}
                       </option>
                     ))}
                   </select>
                 </label>
-
                 <label className="grid gap-2">
                   <span className="text-sm font-medium">Last reviewed</span>
                   <Input
-                    name={`district-last-reviewed-${selectedDistrict.id}`}
-                    value={selectedDistrict.lastReviewedAt ?? ""}
-                    onChange={(event) =>
-                      applyBoardUpdate(
-                        updateEdinburghDistrictField(
-                          boardDraft,
-                          selectedDistrict.id,
-                          "lastReviewedAt",
-                          event.currentTarget.value || null
-                        )
-                      )
-                    }
-                    placeholder="YYYY-MM-DD…"
+                    name="city-last-reviewed-at"
+                    autoComplete="off"
+                    type="date"
+                    value={draft.lastReviewedAt ?? ""}
+                    onChange={(event) => setCityField("lastReviewedAt", event.currentTarget.value || null)}
                   />
                 </label>
-
                 <label className="grid gap-2">
-                  <span className="text-sm font-medium">Square</span>
-                  <Input name={`district-square-${selectedDistrict.id}`} value={selectedDistrict.square} disabled />
+                  <span className="text-sm font-medium">Generation source</span>
+                  <Input
+                    name="city-generation-source"
+                    autoComplete="off"
+                    value={draft.generationSource}
+                    onChange={(event) => setCityField("generationSource", event.currentTarget.value)}
+                  />
                 </label>
-
-                <label className="grid gap-2 md:col-span-2">
+                <label className="grid gap-2 lg:col-span-2">
                   <span className="text-sm font-medium">Review notes</span>
                   <Textarea
-                    name={`district-review-notes-${selectedDistrict.id}`}
-                    value={selectedDistrict.reviewNotes ?? ""}
-                    onChange={(event) =>
-                      applyBoardUpdate(
-                        updateEdinburghDistrictField(
-                          boardDraft,
-                          selectedDistrict.id,
-                          "reviewNotes",
-                          event.currentTarget.value || null
-                        )
-                      )
-                    }
+                    name="city-review-notes"
+                    autoComplete="off"
+                    value={draft.reviewNotes ?? ""}
+                    onChange={(event) => setCityField("reviewNotes", event.currentTarget.value || null)}
+                    rows={3}
+                  />
+                </label>
+                <label className="grid gap-2 lg:col-span-2">
+                  <span className="text-sm font-medium">Source URLs</span>
+                  <Textarea
+                    name="city-source-urls"
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={formatListValue(draft.sourceUrls)}
+                    onChange={(event) => setCityField("sourceUrls", parseListValue(event.currentTarget.value))}
                     rows={4}
                   />
                 </label>
-              </CardContent>
-            </Card>
-          ) : null}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <CardTitle>District detail editor</CardTitle>
+                {selectedDistrict ? <Badge variant="outline">{selectedDistrict.square}</Badge> : null}
+                {selectedDistrict ? <Badge variant="secondary">{selectedDistrict.locality}</Badge> : null}
+              </div>
+              <CardDescription>
+                Edit the district record and keep the draft grounded in readable, reviewable city context.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              {selectedDistrict ? (
+                <>
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <label className="grid gap-2">
+                      <span className="text-sm font-medium">District name</span>
+                      <Input
+                        name="district-name"
+                        autoComplete="off"
+                        value={selectedDistrict.name}
+                        onChange={(event) =>
+                          updateSelectedDistrict((district) => ({
+                            ...district,
+                            name: event.currentTarget.value
+                          }))
+                        }
+                      />
+                    </label>
+                    <label className="grid gap-2">
+                      <span className="text-sm font-medium">Square</span>
+                      <Input
+                        name="district-square"
+                        autoComplete="off"
+                        value={selectedDistrict.square}
+                        onChange={(event) =>
+                          updateSelectedDistrict((district) => ({
+                            ...district,
+                            square: event.currentTarget.value as DistrictCell["square"]
+                          }))
+                        }
+                      />
+                    </label>
+                    <label className="grid gap-2">
+                      <span className="text-sm font-medium">Locality</span>
+                      <Input
+                        name="district-locality"
+                        autoComplete="off"
+                        value={selectedDistrict.locality}
+                        onChange={(event) =>
+                          updateSelectedDistrict((district) => ({
+                            ...district,
+                            locality: event.currentTarget.value
+                          }))
+                        }
+                      />
+                    </label>
+                    <label className="grid gap-2">
+                      <span className="text-sm font-medium">Last reviewed</span>
+                      <Input
+                        name="district-last-reviewed-at"
+                        autoComplete="off"
+                        type="date"
+                        value={selectedDistrict.lastReviewedAt ?? ""}
+                        onChange={(event) =>
+                          updateSelectedDistrict((district) => ({
+                            ...district,
+                            lastReviewedAt: event.currentTarget.value || null
+                          }))
+                        }
+                      />
+                    </label>
+                    <label className="grid gap-2">
+                      <span className="text-sm font-medium">Content status</span>
+                      <select
+                        name="district-content-status"
+                        className="field-select"
+                        value={selectedDistrict.contentStatus}
+                        onChange={(event) =>
+                          updateSelectedDistrict((district) => ({
+                            ...district,
+                            contentStatus: event.currentTarget.value as DistrictCell["contentStatus"]
+                          }))
+                        }
+                      >
+                        {statusOptions.map((status) => (
+                          <option key={status} value={status}>
+                            {status}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="grid gap-2">
+                      <span className="text-sm font-medium">Review status</span>
+                      <select
+                        name="district-review-status"
+                        className="field-select"
+                        value={selectedDistrict.reviewStatus}
+                        onChange={(event) =>
+                          updateSelectedDistrict((district) => ({
+                            ...district,
+                            reviewStatus: event.currentTarget.value as DistrictCell["reviewStatus"]
+                          }))
+                        }
+                      >
+                        {reviewOptions.map((status) => (
+                          <option key={status} value={status}>
+                            {status}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <Separator />
+
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <label className="grid gap-2 lg:col-span-2">
+                      <span className="text-sm font-medium">Day profile</span>
+                      <Textarea
+                        name="district-day-profile"
+                        autoComplete="off"
+                        value={selectedDistrict.dayProfile}
+                        onChange={(event) =>
+                          updateSelectedDistrict((district) => ({
+                            ...district,
+                            dayProfile: event.currentTarget.value
+                          }))
+                        }
+                        rows={3}
+                      />
+                    </label>
+                    <label className="grid gap-2 lg:col-span-2">
+                      <span className="text-sm font-medium">Night profile</span>
+                      <Textarea
+                        name="district-night-profile"
+                        autoComplete="off"
+                        value={selectedDistrict.nightProfile}
+                        onChange={(event) =>
+                          updateSelectedDistrict((district) => ({
+                            ...district,
+                            nightProfile: event.currentTarget.value
+                          }))
+                        }
+                        rows={3}
+                      />
+                    </label>
+                    <label className="grid gap-2">
+                      <span className="text-sm font-medium">Descriptors</span>
+                      <Textarea
+                        name="district-descriptors"
+                        autoComplete="off"
+                        value={formatListValue(selectedDistrict.descriptors)}
+                        onChange={(event) =>
+                          updateSelectedDistrict((district) => ({
+                            ...district,
+                            descriptors: parseListValue(event.currentTarget.value)
+                          }))
+                        }
+                        rows={5}
+                      />
+                    </label>
+                    <label className="grid gap-2">
+                      <span className="text-sm font-medium">Tone cues</span>
+                      <Textarea
+                        name="district-tone-cues"
+                        autoComplete="off"
+                        value={formatListValue(selectedDistrict.toneCues)}
+                        onChange={(event) =>
+                          updateSelectedDistrict((district) => ({
+                            ...district,
+                            toneCues: parseListValue(event.currentTarget.value)
+                          }))
+                        }
+                        rows={5}
+                      />
+                    </label>
+                    <label className="grid gap-2 lg:col-span-2">
+                      <span className="text-sm font-medium">Landmarks</span>
+                      <Textarea
+                        name="district-landmarks"
+                        autoComplete="off"
+                        value={formatListValue(selectedDistrict.landmarks)}
+                        onChange={(event) =>
+                          updateSelectedDistrict((district) => ({
+                            ...district,
+                            landmarks: parseListValue(event.currentTarget.value)
+                          }))
+                        }
+                        rows={4}
+                      />
+                    </label>
+                    <label className="grid gap-2 lg:col-span-2">
+                      <span className="text-sm font-medium">Review notes</span>
+                      <Textarea
+                        name="district-review-notes"
+                        autoComplete="off"
+                        value={selectedDistrict.reviewNotes ?? ""}
+                        onChange={(event) =>
+                          updateSelectedDistrict((district) => ({
+                            ...district,
+                            reviewNotes: event.currentTarget.value || null
+                          }))
+                        }
+                        rows={4}
+                      />
+                    </label>
+                  </div>
+                </>
+              ) : (
+                <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                  Select a district from the left to review it in detail.
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </main>

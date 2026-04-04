@@ -180,7 +180,7 @@ select {
 .memory-list__label,
 .slider-field__header span {
   color: var(--muted-foreground);
-  font-size: 0.74rem;
+  font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
 }
@@ -615,9 +615,10 @@ select {
 }
 
 .board-square__district--board {
-  font-size: 0.56rem;
+  font-size: 0.64rem;
   line-height: 1.2;
-  opacity: 0.82;
+  opacity: 0.92;
+  font-weight: 700;
 }
 
 .board-square__district--map {

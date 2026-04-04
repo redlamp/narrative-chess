@@ -56,6 +56,7 @@ export function StudyPanel({
 }: StudyPanelProps) {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const shouldShowImport = isImportOpen || Boolean(importError);
+  const pgnErrorId = importError ? "pgn-import-error" : undefined;
 
   const handleSelectChange = (event: ChangeEvent<HTMLSelectElement>) => {
     onSelectReferenceGame(event.currentTarget.value);
@@ -115,9 +116,13 @@ export function StudyPanel({
             </label>
             <Textarea
               id="pgn-input"
+              name="pgn-input"
+              autoComplete="off"
               value={pastedPgn}
               onChange={handlePgnChange}
               placeholder="Paste a PGN here to load a classic game or opening line."
+              aria-invalid={Boolean(importError)}
+              aria-describedby={pgnErrorId}
               rows={8}
             />
             <div className="study-panel__actions">
@@ -125,7 +130,11 @@ export function StudyPanel({
                 Import PGN
               </Button>
             </div>
-            {importError ? <p className="field-error">{importError}</p> : null}
+            {importError ? (
+              <p id={pgnErrorId} className="field-error" role="alert">
+                {importError}
+              </p>
+            ) : null}
             </>
           ) : null}
         </CollapsibleContent>

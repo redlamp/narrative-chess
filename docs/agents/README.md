@@ -1,8 +1,15 @@
 # Review Agents
 
-This folder holds reusable review-agent prompts for Narrative Chess.
+This folder keeps reusable prompts for two lightweight review passes that pair well with the current prototype:
 
-- `design-reviewer.md`: visual design, layout, hierarchy, and interaction review
-- `accessibility-reviewer.md`: semantic, keyboard, focus, and screen-reader review
+- `design-reviewer.md`
+- `accessibility-reviewer.md`
 
-Use them as starting prompts for future Codex or agent-based review passes against `apps/web`.
+They are intentionally narrow:
+
+- review the current app state
+- focus on findings first
+- avoid making code changes directly
+- stay aligned with the current milestone
+
+These prompts are useful when the app has changed enough that we want a fresh outside pass before deeper feature work.
