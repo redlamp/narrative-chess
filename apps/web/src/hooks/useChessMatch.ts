@@ -19,8 +19,11 @@ import type {
   MoveRecord,
   PieceState,
   ReferenceGame,
+  StartingPieceBlueprint,
   Square
 } from "@narrative-chess/content-schema";
+import { startingPieceBlueprints } from "@narrative-chess/content-schema";
+import { edinburghDistrictsBySquare } from "../edinburghBoard";
 
 function createFallbackCharacter(piece: PieceState): CharacterSummary {
   const sideLabel = piece.side === "white" ? "North" : "South";
@@ -54,8 +57,32 @@ function isPromotionMove(piece: PieceState | null, to: Square): boolean {
   return (piece.side === "white" && to.endsWith("8")) || (piece.side === "black" && to.endsWith("1"));
 }
 
+function applyDistrictOrigins(
+  characters: Record<string, CharacterSummary>,
+  blueprints: StartingPieceBlueprint[]
+) {
+  const nextCharacters = { ...characters };
+
+  for (const blueprint of blueprints) {
+    const district = edinburghDistrictsBySquare.get(blueprint.square);
+    if (!district || !nextCharacters[blueprint.pieceId]) {
+      continue;
+    }
+
+    nextCharacters[blueprint.pieceId] = {
+      ...nextCharacters[blueprint.pieceId],
+      districtOfOrigin: district.name
+    };
+  }
+
+  return nextCharacters;
+}
+
 function createSnapshot(): GameSnapshot {
-  const characters = createInitialCharacterRoster();
+  const characters = applyDistrictOrigins(
+    createInitialCharacterRoster(),
+    startingPieceBlueprints
+  );
   return createInitialGameSnapshot(characters);
 }
 
@@ -192,7 +219,7 @@ export function useChessMatch() {
       return;
     }
 
-    setSelectedSquare(null);
+    setSelectedSquare(square);
   };
 
   const handleUndo = () => {
