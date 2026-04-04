@@ -13,11 +13,9 @@ Shipped:
 - layout editing, theme toggle, local match saves, and named workspace layout files
 
 Gaps that still matter:
-- Roles are editable but only persist to browser storage
-- Classics are curated in JSON but not editable in-app
-- Cities have a file-backed draft flow, but Roles and Classics do not share it
 - content editing patterns are still inconsistent across Cities, Roles, and Classics
-- keyboard/accessibility quality still trails the visual/editor work
+- board keyboard support is underway, but layout editing and editor-page semantics still need an accessibility pass
+- the match shell still feels busier than a chess-first tool should
 
 ## Active Queue
 
@@ -65,7 +63,7 @@ Deliverables:
 - consistent validation and save notices
 
 ### 4. Accessibility Pass
-Status: queued
+Status: in progress
 
 Goal:
 - fix the biggest interaction and semantics gaps without redesigning the app
@@ -74,6 +72,9 @@ Deliverables:
 - proper keyboard model for the board
 - keyboard support for layout editing or a guarded non-keyboard fallback
 - better live-region and form relationships across editor pages
+
+Progress:
+- board arrow-key navigation is now being committed with tests so the chess surface is no longer pointer-only
 
 ### 5. Design Cleanup
 Status: queued
