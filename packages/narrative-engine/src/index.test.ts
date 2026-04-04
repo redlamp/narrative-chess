@@ -109,7 +109,7 @@ describe("createNarrativeEvent", () => {
         id: "move-7",
         moveNumber: 7,
         to: "a8",
-        promotion: "q"
+        promotion: "queen"
       }),
       actor: makeActor({
         pieceId: "white-pawn-a",
