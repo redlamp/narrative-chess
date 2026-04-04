@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { edinburghBoard, edinburghDistrictsBySquare, getDistrictForSquare } from "./edinburghBoard";
 import { referenceGames } from "./referenceGames";
 import { Board } from "./components/Board";
 import { Panel } from "./components/Panel";
@@ -28,6 +29,7 @@ function turnLabel(turn: "white" | "black") {
 export default function App() {
   const [selectedReferenceGameId, setSelectedReferenceGameId] = useState(referenceGames[0]?.id ?? "");
   const [pastedPgn, setPastedPgn] = useState("");
+  const [viewMode, setViewMode] = useState<"board" | "map">("board");
   const {
     snapshot,
     boardSquares,
@@ -57,6 +59,8 @@ export default function App() {
   const lastEvent = snapshot.eventHistory.at(-1) ?? null;
   const moveHistory = [...snapshot.moveHistory].reverse();
   const narrativeHistory = [...snapshot.eventHistory].reverse();
+  const inspectedSquare = selectedSquare ?? (lastMove?.to ?? null);
+  const selectedDistrict = getDistrictForSquare(inspectedSquare);
   const selectedReferenceGame =
     referenceGames.find((game) => game.id === selectedReferenceGameId) ?? referenceGames[0] ?? null;
 
@@ -87,7 +91,7 @@ export default function App() {
           <h1>Play the board first. Let the story follow.</h1>
           <p className="hero__lede">
             A clean local chess slice with a minimal narrative trail, move history, undo,
-            and a built-in study mode for classic games and pasted PGN.
+            built-in study mode for classic games and pasted PGN, and a first-pass Edinburgh board mapping.
           </p>
         </div>
 
@@ -116,9 +120,23 @@ export default function App() {
           <div className="board-panel__header">
             <div>
               <p className="section-eyebrow">Board</p>
-              <h2>{isStudyMode ? "Study replay board" : "2D local play surface"}</h2>
+              <h2>{isStudyMode ? "Study replay board" : "2D Edinburgh play surface"}</h2>
             </div>
             <div className="board-panel__actions">
+              <button
+                type="button"
+                className={`button button--ghost ${viewMode === "board" ? "button--active" : ""}`}
+                onClick={() => setViewMode("board")}
+              >
+                Board
+              </button>
+              <button
+                type="button"
+                className={`button button--ghost ${viewMode === "map" ? "button--active" : ""}`}
+                onClick={() => setViewMode("map")}
+              >
+                Map
+              </button>
               <button type="button" className="button button--ghost" onClick={handleUndo} disabled={!canUndo}>
                 {isStudyMode ? "Undo disabled" : "Undo"}
               </button>
@@ -130,6 +148,8 @@ export default function App() {
             cells={boardSquares}
             selectedSquare={selectedSquare}
             legalMoves={legalMoves}
+            viewMode={viewMode}
+            districtsBySquare={edinburghDistrictsBySquare}
             onSquareClick={handleSquareClick}
           />
 
@@ -138,8 +158,8 @@ export default function App() {
               {selectedSquare
                 ? `Selected ${selectedSquare}`
                 : isStudyMode
-                  ? "Study mode is read-only. Select a piece to inspect the position."
-                  : "Select a piece, then choose a legal square."}
+                  ? "Study mode is read-only. Select any square to inspect the position and district."
+                  : "Select a piece to move, or any square to inspect its Edinburgh district."}
             </p>
             {lastMove ? <p>Last move: {lastMove.san}</p> : <p>No moves yet.</p>}
           </div>
@@ -165,6 +185,61 @@ export default function App() {
             onJumpToEnd={jumpToEnd}
             onExitStudy={exitStudyMode}
           />
+
+          <Panel title="Selected District" eyebrow="Edinburgh">
+            {selectedDistrict ? (
+              <div className="detail-card">
+                <div className="detail-card__title-row">
+                  <h3>{selectedDistrict.name}</h3>
+                  <span className="side-pill side-pill--white">{selectedDistrict.square}</span>
+                </div>
+                <p className="detail-card__description">{edinburghBoard.summary}</p>
+                <dl className="detail-grid">
+                  <div>
+                    <dt>Locality</dt>
+                    <dd>{selectedDistrict.locality}</dd>
+                  </div>
+                  <div>
+                    <dt>Mode</dt>
+                    <dd>{viewMode === "map" ? "Map view" : "Board view"}</dd>
+                  </div>
+                  <div>
+                    <dt>Day</dt>
+                    <dd>{selectedDistrict.dayProfile}</dd>
+                  </div>
+                  <div>
+                    <dt>Night</dt>
+                    <dd>{selectedDistrict.nightProfile}</dd>
+                  </div>
+                </dl>
+                <div className="chip-row">
+                  {selectedDistrict.descriptors.map((descriptor) => (
+                    <span key={descriptor} className="chip">
+                      {descriptor}
+                    </span>
+                  ))}
+                </div>
+                <div className="chip-row">
+                  {selectedDistrict.landmarks.map((landmark) => (
+                    <span key={landmark} className="chip chip--soft">
+                      {landmark}
+                    </span>
+                  ))}
+                </div>
+                <div className="chip-row">
+                  {selectedDistrict.toneCues.map((cue) => (
+                    <span key={cue} className="chip chip--soft">
+                      {cue}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="muted">
+                Select any square to inspect the Edinburgh district mapped to that board cell.
+              </p>
+            )}
+          </Panel>
 
           <Panel title="Selected Piece" eyebrow="Character">
             {selectedCharacter ? (

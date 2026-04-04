@@ -199,6 +199,40 @@ export type ReferenceGame = z.infer<typeof referenceGameSchema>;
 export const referenceGameLibrarySchema = z.array(referenceGameSchema);
 export type ReferenceGameLibrary = z.infer<typeof referenceGameLibrarySchema>;
 
+export const districtCellSchema = z.object({
+  id: z.string(),
+  square: squareSchema,
+  name: z.string(),
+  locality: z.string(),
+  descriptors: z.array(z.string()).min(1),
+  landmarks: z.array(z.string()).min(1),
+  dayProfile: z.string(),
+  nightProfile: z.string(),
+  toneCues: z.array(z.string()).min(1),
+  contentStatus: contentStatusSchema,
+  reviewStatus: reviewStatusSchema,
+  reviewNotes: z.string().nullable(),
+  lastReviewedAt: z.string().nullable()
+});
+export type DistrictCell = z.infer<typeof districtCellSchema>;
+
+export const cityBoardSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  country: z.string(),
+  summary: z.string(),
+  boardOrientation: z.string(),
+  sourceUrls: z.array(z.string().url()).min(1),
+  generationSource: z.string(),
+  generationModel: z.string().nullable(),
+  contentStatus: contentStatusSchema,
+  reviewStatus: reviewStatusSchema,
+  reviewNotes: z.string().nullable(),
+  lastReviewedAt: z.string().nullable(),
+  districts: z.array(districtCellSchema).length(64)
+});
+export type CityBoard = z.infer<typeof cityBoardSchema>;
+
 export interface MoveInput {
   from: Square;
   to: Square;
