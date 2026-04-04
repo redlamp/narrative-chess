@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@narrative-chess/content-schema": ["../content-schema/src/index.ts"]
+    }
+  },
+  "include": ["src/index.ts"],
+  "exclude": ["src/**/*.test.ts"]
+}

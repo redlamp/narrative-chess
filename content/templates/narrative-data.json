@@ -1,0 +1,181 @@
+{
+  "roster": {
+    "sideFactions": {
+      "white": "Harbor Union",
+      "black": "Iron Accord"
+    },
+    "pieceRoles": {
+      "pawn": "runner",
+      "rook": "sentinel",
+      "knight": "courier",
+      "bishop": "mediator",
+      "queen": "strategist",
+      "king": "figurehead"
+    },
+    "districts": [
+      "North Gate",
+      "East Market",
+      "South Pier",
+      "West Yard",
+      "Old Quarry",
+      "Canal Row",
+      "Signal Hill",
+      "Foundry End"
+    ],
+    "firstNames": [
+      "Avery",
+      "Briar",
+      "Cameron",
+      "Dylan",
+      "Emery",
+      "Finley",
+      "Greer",
+      "Harper",
+      "Indigo",
+      "Jules",
+      "Kellan",
+      "Lane",
+      "Morgan",
+      "Noa",
+      "Orion",
+      "Parker",
+      "Quinn",
+      "Reese",
+      "Sage",
+      "Tatum",
+      "Uma",
+      "Vesper",
+      "Wren",
+      "Yael"
+    ],
+    "lastNames": [
+      "Ash",
+      "Bennett",
+      "Cairn",
+      "Dale",
+      "Ellis",
+      "Frost",
+      "Gale",
+      "Hale",
+      "Ives",
+      "Jasper",
+      "Keen",
+      "Lake",
+      "Merritt",
+      "North",
+      "Orchard",
+      "Pike",
+      "Quill",
+      "Rook",
+      "Stone",
+      "Vale",
+      "Wren",
+      "York"
+    ],
+    "traits": [
+      "steady",
+      "alert",
+      "patient",
+      "cautious",
+      "bold",
+      "wry",
+      "resilient",
+      "methodical",
+      "watchful",
+      "restless",
+      "resourceful",
+      "disciplined",
+      "warm",
+      "skeptical",
+      "adaptable",
+      "unyielding"
+    ],
+    "verbs": [
+      "patrols",
+      "threads",
+      "presses",
+      "guards",
+      "circles",
+      "anchors",
+      "signals",
+      "bridges",
+      "advances",
+      "holds",
+      "shifts",
+      "stalks",
+      "charts",
+      "shores up",
+      "redirects",
+      "outmaneuvers"
+    ]
+  },
+  "events": {
+    "move": {
+      "headlines": [
+        "{actor} advances",
+        "{actor} repositions",
+        "{actor} claims ground"
+      ],
+      "details": [
+        "{actor} {verb} from {from} to {to}.",
+        "{actor} moves from {from} to {to} with a measured step.",
+        "{actor} shifts from {from} to {to}, keeping the line open."
+      ]
+    },
+    "capture": {
+      "headlines": [
+        "{actor} takes the field",
+        "{actor} removes an enemy piece",
+        "{actor} seizes an opening"
+      ],
+      "details": [
+        "{actor} {verb} from {from} to {to} and takes {target} off the board.",
+        "{actor} moves from {from} to {to}, capturing {target}."
+      ]
+    },
+    "check": {
+      "headlines": [
+        "{actor} delivers check",
+        "{actor} pressures the king",
+        "{actor} corners the king"
+      ],
+      "details": [
+        "{actor} {verb} from {from} to {to}, putting the king under pressure.",
+        "{actor} moves from {from} to {to} and keeps the king exposed."
+      ]
+    },
+    "checkmate": {
+      "headlines": [
+        "{actor} delivers checkmate",
+        "{actor} finishes the game",
+        "{actor} seals the board"
+      ],
+      "details": [
+        "{actor} {verb} from {from} to {to} and ends the match.",
+        "{actor} moves from {from} to {to} for checkmate."
+      ]
+    },
+    "stalemate": {
+      "headlines": [
+        "The board locks up",
+        "{actor} forces stalemate",
+        "The position runs dry"
+      ],
+      "details": [
+        "{actor} {verb} from {from} to {to}, and the game ends in stalemate.",
+        "{actor} moves from {from} to {to}, but no one can continue."
+      ]
+    },
+    "promotion": {
+      "headlines": [
+        "{actor} is promoted",
+        "{actor} rises in rank",
+        "{actor} returns transformed"
+      ],
+      "details": [
+        "{actor} {verb} from {from} to {to} and is promoted to {promotion}.",
+        "{actor} reaches {to} and comes back as a {promotion}."
+      ]
+    }
+  }
+}
