@@ -1,4 +1,4 @@
-import type { MouseEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { getPieceAtSquare } from "@narrative-chess/game-core";
 import type {
   DistrictCell,
@@ -7,9 +7,12 @@ import type {
   Square
 } from "@narrative-chess/content-schema";
 import { getPieceGlyph } from "../chessPresentation";
-
-const files = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
-const ranks = ["8", "7", "6", "5", "4", "3", "2", "1"] as const;
+import {
+  boardFiles as files,
+  boardRanks as ranks,
+  getNextBoardFocusSquare,
+  squareName
+} from "../boardNavigation";
 
 type BoardCell = {
   square: Square;
@@ -31,10 +34,6 @@ type BoardProps = {
   onSquareHover: (square: Square) => void;
   onSquareLeave: () => void;
 };
-
-function squareName(file: (typeof files)[number], rank: (typeof ranks)[number]) {
-  return `${file}${rank}` as Square;
-}
 
 function getGlyph(piece: PieceState | null) {
   if (!piece) {
@@ -80,12 +79,52 @@ export function Board({
   onSquareLeave
 }: BoardProps) {
   const cellMap = new Map(cells.map((cell) => [cell.square, cell]));
+  const buttonRefs = useRef(new Map<Square, HTMLButtonElement>());
+  const [activeSquare, setActiveSquare] = useState<Square>(
+    selectedSquare ?? hoveredSquare ?? squareName(files[0], ranks[0])
+  );
+
+  useEffect(() => {
+    if (selectedSquare) {
+      setActiveSquare(selectedSquare);
+      return;
+    }
+
+    if (hoveredSquare) {
+      setActiveSquare(hoveredSquare);
+    }
+  }, [hoveredSquare, selectedSquare]);
 
   const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
     const square = event.currentTarget.dataset.square as Square | undefined;
     if (square) {
+      setActiveSquare(square);
       onSquareClick(square);
     }
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    const square = event.currentTarget.dataset.square as Square | undefined;
+    if (!square) {
+      return;
+    }
+
+    if (
+      event.key !== "ArrowUp" &&
+      event.key !== "ArrowDown" &&
+      event.key !== "ArrowLeft" &&
+      event.key !== "ArrowRight" &&
+      event.key !== "Home" &&
+      event.key !== "End"
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    const nextSquare = getNextBoardFocusSquare(square, event.key);
+    setActiveSquare(nextSquare);
+    onSquareHover(nextSquare);
+    buttonRefs.current.get(nextSquare)?.focus();
   };
 
   return (
@@ -94,6 +133,7 @@ export function Board({
         className={["board-grid", viewMode === "map" ? "board-grid--map" : ""].filter(Boolean).join(" ")}
         role="grid"
         aria-label="Chess board"
+        aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Home End"
       >
         {ranks.map((rank) =>
           files.map((file) => {
@@ -121,12 +161,27 @@ export function Board({
                   .join(" ")}
                 data-square={square}
                 aria-pressed={isSelected}
+                aria-colindex={files.indexOf(file) + 1}
                 aria-label={`${square}${piece ? `, ${piece.side} ${piece.kind}` : ""}${district ? `, ${district.name}` : ""}`}
+                aria-rowindex={ranks.indexOf(rank) + 1}
+                tabIndex={activeSquare === square ? 0 : -1}
                 onClick={handleClick}
                 onMouseEnter={() => onSquareHover(square)}
                 onMouseLeave={onSquareLeave}
-                onFocus={() => onSquareHover(square)}
+                onFocus={() => {
+                  setActiveSquare(square);
+                  onSquareHover(square);
+                }}
                 onBlur={onSquareLeave}
+                onKeyDown={handleKeyDown}
+                ref={(node) => {
+                  if (!node) {
+                    buttonRefs.current.delete(square);
+                    return;
+                  }
+
+                  buttonRefs.current.set(square, node);
+                }}
               >
                 {showCoordinates ? (
                   <>

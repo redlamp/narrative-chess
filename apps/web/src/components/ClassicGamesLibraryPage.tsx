@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { Copy, ExternalLink, FolderOpen, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import { createReplayFromPgn, getBoardSquares } from "@narrative-chess/game-core";
 import type {
@@ -167,6 +167,7 @@ export function ClassicGamesLibraryPage({
   const [directoryName, setDirectoryName] = useState<string | null>(null);
   const [fileNotice, setFileNotice] = useState<FileNotice | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  const previewStatusId = useId();
 
   const filteredGames = useMemo(
     () => games.filter((game) => gameMatchesQuery(game, searchQuery)),
@@ -810,7 +811,12 @@ export function ClassicGamesLibraryPage({
                   <div className="grid gap-4">
                     <div className="grid gap-1">
                       <p className="text-sm font-medium">Board preview</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p
+                        className="text-sm text-muted-foreground"
+                        id={previewStatusId}
+                        role="status"
+                        aria-live="polite"
+                      >
                         {activeMove
                           ? `Showing the position after ${activeMove.moveNumber}. ${activeMove.san}`
                           : "Showing the starting position before move 1."}
@@ -885,6 +891,9 @@ export function ClassicGamesLibraryPage({
                             ]
                               .filter(Boolean)
                               .join(" ")}
+                            aria-current={activePlyIndex === movePair.whitePlyIndex ? "step" : undefined}
+                            aria-describedby={previewStatusId}
+                            aria-label={`Move ${movePair.moveNumber}, White plays ${movePair.white}`}
                             onMouseEnter={() => setHoveredPlyIndex(movePair.whitePlyIndex)}
                             onFocus={() => setHoveredPlyIndex(movePair.whitePlyIndex)}
                             onBlur={() => setHoveredPlyIndex(null)}
@@ -906,6 +915,9 @@ export function ClassicGamesLibraryPage({
                               ]
                                 .filter(Boolean)
                                 .join(" ")}
+                              aria-current={activePlyIndex === movePair.blackPlyIndex ? "step" : undefined}
+                              aria-describedby={previewStatusId}
+                              aria-label={`Move ${movePair.moveNumber}, Black plays ${movePair.black}`}
                               onMouseEnter={() => setHoveredPlyIndex(movePair.blackPlyIndex)}
                               onFocus={() => setHoveredPlyIndex(movePair.blackPlyIndex)}
                               onBlur={() => setHoveredPlyIndex(null)}
