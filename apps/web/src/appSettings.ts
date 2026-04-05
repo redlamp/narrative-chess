@@ -1,7 +1,6 @@
 export type AppSettings = {
   theme: "light" | "dark";
   defaultViewMode: "board" | "map";
-  storyPanelLayout: "vertical" | "grid" | "row";
   showBoardCoordinates: boolean;
   showDistrictLabels: boolean;
   showRecentCharacterActions: boolean;
@@ -13,7 +12,6 @@ const storageKey = "narrative-chess:app-settings:v1";
 const defaultAppSettings: AppSettings = {
   theme: "light",
   defaultViewMode: "board",
-  storyPanelLayout: "vertical",
   showBoardCoordinates: true,
   showDistrictLabels: true,
   showRecentCharacterActions: true,
@@ -46,12 +44,6 @@ export function normalizeAppSettings(value: unknown): AppSettings {
   return {
     theme: normalizeAppTheme(candidate.theme),
     defaultViewMode: candidate.defaultViewMode === "map" ? "map" : "board",
-    storyPanelLayout:
-      candidate.storyPanelLayout === "row"
-        ? "row"
-        : candidate.storyPanelLayout === "grid" || candidate.storyPanelLayout === "horizontal"
-          ? "grid"
-          : "vertical",
     showBoardCoordinates:
       typeof candidate.showBoardCoordinates === "boolean"
         ? candidate.showBoardCoordinates

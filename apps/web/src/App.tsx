@@ -50,6 +50,14 @@ import {
 import { applyPieceStyleSheet, listPieceStyleSheet, resetPieceStyleSheet, savePieceStyleSheet } from "./pieceStyles";
 import { listReferenceGames, type ReferenceGameLibrary } from "./referenceGames";
 import {
+  listStoryPanelLayoutState,
+  saveStoryPanelLayoutState,
+  updateStoryPanelRect,
+  type StoryPanelLayoutState,
+  type StoryPanelSectionId,
+  type StoryPanelSectionRect
+} from "./storyPanelLayoutState";
+import {
   connectRoleCatalogDirectory,
   getConnectedRoleCatalogDirectoryName,
   loadRoleCatalogFromDirectory,
@@ -264,6 +272,9 @@ export default function App() {
   const [roleCatalogFileNotice, setRoleCatalogFileNotice] = useState<LayoutFileNotice | null>(null);
   const [isRoleCatalogDirectorySupported, setIsRoleCatalogDirectorySupported] = useState(false);
   const [workspaceLayout, setWorkspaceLayout] = useState(() => listWorkspaceLayoutState());
+  const [storyPanelLayout, setStoryPanelLayout] = useState<StoryPanelLayoutState>(() =>
+    listStoryPanelLayoutState()
+  );
   const [layoutFileName, setLayoutFileName] = useState("match-workspace");
   const [layoutDirectoryName, setLayoutDirectoryName] = useState<string | null>(null);
   const [layoutFileBusyAction, setLayoutFileBusyAction] = useState<string | null>(null);
@@ -416,6 +427,10 @@ export default function App() {
   useEffect(() => {
     saveWorkspaceLayoutState(workspaceLayout);
   }, [workspaceLayout]);
+
+  useEffect(() => {
+    saveStoryPanelLayoutState(storyPanelLayout);
+  }, [storyPanelLayout]);
 
   useEffect(() => {
     setIsLayoutDirectorySupported(supportsWorkspaceLayoutDirectory());
@@ -864,13 +879,6 @@ export default function App() {
     }));
   };
 
-  const handleStoryPanelLayoutChange = (storyPanelLayout: "vertical" | "grid" | "row") => {
-    setSettings((current) => ({
-      ...current,
-      storyPanelLayout
-    }));
-  };
-
   const handleBooleanSettingChange = (
     key:
       | "showBoardCoordinates"
@@ -1034,6 +1042,19 @@ export default function App() {
 
   const handlePieceStyleSheetChange = (value: string) => {
     setPieceStyleSheet(savePieceStyleSheet(value));
+  };
+
+  const handleStoryPanelRectChange = (
+    panelId: StoryPanelSectionId,
+    nextRect: StoryPanelSectionRect
+  ) => {
+    setStoryPanelLayout((currentLayout) =>
+      updateStoryPanelRect({
+        layoutState: currentLayout,
+        panelId,
+        nextRect
+      })
+    );
   };
 
   const renderPanelTools = (extraActions?: ReactNode) => {
@@ -1413,8 +1434,10 @@ export default function App() {
                 focusedCharacter={focusedCharacter}
                 focusedCharacterMoments={focusedCharacterMoments}
                 showRecentCharacterActions={settings.showRecentCharacterActions}
-                panelLayout={settings.storyPanelLayout}
-                onPanelLayoutChange={handleStoryPanelLayoutChange}
+                layoutState={storyPanelLayout}
+                layoutMode={effectiveLayoutMode}
+                onToggleLayoutMode={() => setIsLayoutMode((current) => !current)}
+                onLayoutRectChange={handleStoryPanelRectChange}
                 tonePreset={tonePreset}
                 onToneChange={updateTonePreset}
               />
