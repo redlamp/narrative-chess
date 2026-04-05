@@ -1,31 +1,32 @@
 # User Suggestions
 
-## Useful Agent Roles
+This file captures a few practical ways to keep the project moving without burning tokens or branching too wide.
 
-- `Editor Shell Agent`: keep Cities, Roles, and Classics aligned on one reusable list/detail pattern.
-- `Accessibility Agent`: focus on keyboard paths, focus order, live regions, and semantics.
-- `Docs Agent`: maintain the queue, PRD notes, and recovery logs when usage limits interrupt coding.
-- `Content Agent`: work on JSON content, research references, and reviewed editor data.
-- `UI Polish Agent`: make shell density, spacing, and hierarchy feel chess-first without changing core logic.
+## Helpful Agent Roles
 
-## Prompt Efficiency Tactics
+- `implementation agent`: takes one bounded slice and commits it.
+- `review agent`: checks design, accessibility, or PRD drift after a slice lands.
+- `docs agent`: keeps the queue, PRD notes, and user-facing guidance current.
+- `research agent`: gathers references, examples, and source links without editing code.
 
-- Keep each prompt to one visible outcome, one folder boundary, and one validation target.
-- Ask for a branch and commit per slice so interrupted work is easy to recover.
-- Prefer file names or component names over broad descriptions like "the whole UI."
-- When the task spans multiple surfaces, ask for the smallest shared contract first, then split implementation.
-- If usage limits are a risk, ask for a docs queue entry up front so the next run can resume cleanly.
-- Ask for a short final report with `summary`, `files changed`, `assumptions`, `schema changes`, and `branch + commit hash`.
+## Prompt Efficiency
 
-## Recovery Habits
+- Bundle closely related asks into one slice, but keep unrelated surfaces separate.
+- Name the target files and the ownership boundary up front.
+- Say what must not change, especially shared schemas and unrelated pages.
+- Ask for a branch and commit in the same message when you want the work to persist.
+- Prefer “make X and Y share a pattern” over separate one-off feature requests.
 
-- Put failed prompts into a durable queue doc immediately.
-- Use one integration branch and separate feature branches for parallel slices.
-- Keep docs changes separate from app changes when possible.
-- Re-run `lint`, `typecheck`, `test`, and `build` only after the slice is merged or otherwise stable.
+## Recovery Workflow
 
-## Good Prompt Shape
+- If a task fails because of usage limits, rebuild the queue from the prompt log before continuing.
+- Keep a small recovery branch per slice so the work can be merged cleanly.
+- Verify each merged slice with `lint`, `typecheck`, `test`, and `build` before moving on.
+- Record any open deviations from the PRD in a doc so the next pass is obvious.
 
-- "Change X in these files, keep Y behavior, and report Z."
-- "Review these pages against the PRD, then turn open gaps into a queue."
-- "Split this into 2-3 bounded branches if that reduces risk."
+## Branching Guidance
+
+- Use one branch per slice.
+- Commit the smallest coherent change that can stand on its own.
+- Merge only after the slice is verified.
+- Leave a clear note when a prompt is only partially satisfied.

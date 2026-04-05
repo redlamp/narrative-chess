@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createWorkspaceLayoutFileName,
   createWorkspaceLayoutFileRecord,
+  forgetWorkspaceLayoutFile,
   normalizeWorkspaceLayoutFileRecord,
   normalizeWorkspaceLayoutName,
   rememberWorkspaceLayoutFile
@@ -54,5 +55,20 @@ describe("layoutFiles", () => {
     expect(firstPass).toHaveLength(1);
     expect(secondPass).toHaveLength(1);
     expect(secondPass[0]?.savedAt).toBe("2026-04-04T11:00:00.000Z");
+  });
+
+  it("forgets a named layout file by file name", () => {
+    window.localStorage.clear();
+
+    rememberWorkspaceLayoutFile({
+      name: "Analysis layout",
+      fileName: "analysis-layout.workspace-layout.json",
+      relativePath: "content/layouts/analysis-layout.workspace-layout.json",
+      savedAt: "2026-04-04T11:00:00.000Z"
+    });
+
+    const nextFiles = forgetWorkspaceLayoutFile("analysis-layout.workspace-layout.json");
+
+    expect(nextFiles).toHaveLength(0);
   });
 });

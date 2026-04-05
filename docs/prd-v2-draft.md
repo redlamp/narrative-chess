@@ -1,106 +1,38 @@
-# Narrative Chess - PRD Draft v2
+# Narrative Chess PRD v2 Draft
 
-This draft updates the original PRD to better match the current codebase direction and the recovery notes from the latest prompt audit.
+This is a compact revision draft based on the current repo state and the recovery queue.
 
-## 1. Product Summary
+## What To Keep
 
-Narrative Chess is a chess-first web app with a lightweight narrative layer, city context, and reviewed content tooling. The board remains the product center. Utility pages exist to support chess play, content review, and future expansion.
+- Chess clarity and correctness stay first.
+- The 2D board remains the primary play surface.
+- Narrative support stays lightweight and explainable.
+- City-context and style research should remain editor-reviewed, not procedurally generated.
 
-## 2. Updated Principles
+## What The Current Prototype Suggests
 
-- Chess readability comes first.
-- Narrative should enrich move meaning without obscuring legality or board state.
-- City and district data should be reviewed, editable, and easy to inspect.
-- Utility surfaces such as research, style references, and content editors should share a small number of reusable patterns.
-- Page scrolling is preferable to deep nested scroll regions when content grows.
-- Accessibility and keyboard support are part of the feature, not a later polish layer.
+- The app benefits from shared editor shells for Cities, Roles, Classics, and research pages.
+- Match mode needs to feel more board-first and less dashboard-like.
+- Layout editing is useful, but it should remain a power-user tool rather than the default emphasis.
+- CSS and asset references are worth making editable because they help future visual passes stay grounded.
 
-## 3. Current Surface Areas
+## Recommended Adjustments
 
-- Match: playable chess, move history, narrative log, study/replay, and layout controls.
-- Cities: city overview, district review, and draft save/load support.
-- Roles: piece-family and role editing with reusable content patterns.
-- Classics: reference games, significance notes, study loading, and editable library behavior.
-- Research: competitive references and supporting materials.
-- Style Assets: a future review surface for piece art, CSS, and state styling references.
+1. Make Match the default landing experience and keep other pages secondary.
+2. Keep Cities, Roles, Classics, and Research on a consistent list/detail editor pattern.
+3. Preserve live local editing, but keep file-backed save/load simple and explicit.
+4. Treat style references as inspectable project content, not a hidden theme system.
+5. Continue to avoid 3D, multiplayer, and large simulation systems until the current shell feels stable.
 
-## 4. Scope Guidance
+## Known Deviations To Watch
 
-### In scope
+- The research area is growing into multiple subpages, so it needs to stay clearly separated from the match shell.
+- Layout editing can create visual noise if it becomes too prominent.
+- The style editor should remain a practical reference tool, not a design system in disguise.
 
-- legal chess
-- move history and undo
-- narrative event logging
-- reviewed city data
-- shared content editor shells
-- study/reference games
-- style and asset review tooling
+## Next Review Questions
 
-### Out of scope for the near term
-
-- multiplayer
-- 3D board or city rendering
-- full geospatial simulation
-- heavy procedural character generation
-- advanced engine strength
-
-## 5. UX Guidance
-
-- Keep the Match page compact and board-led.
-- Use one clear list/detail pattern across Cities, Roles, and Classics.
-- Make search fields easy to clear.
-- Favor sticky detail editors over cramped above-the-fold layouts when lists grow long.
-- Keep controls for theme, layout, and settings simple and obvious.
-
-## 6. Milestones
-
-### Milestone 0 - Foundation
-- repo setup
-- TypeScript and testing
-- shadcn baseline
-- shared schemas
-- docs and workflow conventions
-
-### Milestone 1 - Core Chess
-- legal local chess
-- move history
-- undo
-- narrative event log
-- study and replay support
-
-### Milestone 2 - Cities
-- one seeded city
-- district mapping
-- city and district review workflow
-- city-specific metadata and save/load
-
-### Milestone 3 - Shared Content Editing
-- consistent editor shell across Cities, Roles, and Classics
-- repo-local file saves where appropriate
-- list/detail consistency
-- validation and status handling
-
-### Milestone 4 - Narrative Depth
-- stronger narrative templates
-- memory hooks
-- tone presets
-
-### Milestone 5 - Style and Asset Review
-- piece art reference page
-- CSS/style reference page
-- configurable piece-state styling
-- file-backed style notes
-
-### Milestone 6 - Visual Expansion
-- optional map polish
-- optional 3D experiments
-
-### Milestone 7 - Multiplayer
-- session and sync support only after the single-player experience is stable
-
-## 7. Acceptance Notes
-
-- If a page starts to feel like a dashboard, reduce chrome before adding more panels.
-- If content is long, prefer the page to scroll.
-- If a workflow can be reviewed in the repo, save it in the repo.
-- If a feature changes schemas, call that out explicitly in the implementation summary.
+- Should Match collapse into a narrower board/move/inspector layout by default?
+- Should city, role, and classics editors all converge on one reusable shell component?
+- Which style states need to be first-class before the next visual pass?
+- Which saved files should be promoted from local drafts to checked-in project assets?

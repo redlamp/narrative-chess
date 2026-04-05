@@ -9,6 +9,7 @@ import { hydrateEdinburghBoardDraft } from "./edinburghReviewState";
 import {
   createWorkspaceLayoutFileName,
   createWorkspaceLayoutFileRecord,
+  forgetWorkspaceLayoutFile,
   normalizeWorkspaceLayoutName,
   normalizeWorkspaceLayoutFileRecord,
   rememberWorkspaceLayoutFile,
@@ -31,6 +32,7 @@ type LocalFileSystemHandle = {
   requestPermission?: (
     descriptor?: LocalFileSystemPermissionDescriptor
   ) => Promise<LocalPermissionState>;
+  removeEntry?: (name: string, options?: { recursive?: boolean }) => Promise<void>;
 };
 
 type LocalFileSystemWritableFileStream = {
@@ -83,6 +85,7 @@ const edinburghDirectoryHandleKey = "edinburgh-review-directory";
 const classicGamesDirectoryHandleKey = "classic-games-directory";
 const roleCatalogDirectoryHandleKey = "role-catalog-directory";
 const workspaceLayoutDirectoryHandleKey = "workspace-layout-directory";
+const pieceStylesDirectoryHandleKey = "piece-styles-directory";
 
 type PersistedHandleRecord = {
   id: string;
@@ -103,6 +106,14 @@ type LoadedWorkspaceLayoutFile = {
   relativePath: string;
   savedAt: string;
   knownFiles: WorkspaceLayoutFileReference[];
+};
+
+type LoadedPieceStyles = {
+  directoryName: string;
+  fileName: string;
+  cssText: string;
+  relativePath: string;
+  sourceKind: "draft" | "canonical";
 };
 
 type LoadedClassicGamesLibrary = {
@@ -204,6 +215,16 @@ async function getOptionalFileHandle(
 ) {
   try {
     return await directoryHandle.getFileHandle(name);
+  } catch {
+    return null;
+  }
+}
+
+async function readTextFile(directoryHandle: LocalDirectoryHandle, name: string) {
+  try {
+    const fileHandle = await directoryHandle.getFileHandle(name);
+    const file = await fileHandle.getFile();
+    return await file.text();
   } catch {
     return null;
   }
@@ -545,6 +566,112 @@ async function resolveWorkspaceLayoutSearchTargets(
         directoryHandle: directLayoutsDirectory,
         fileName,
         displayPath: `layouts/${fileName}`,
+        fileExists: true
+      });
+    }
+  }
+
+  const directFile = await getOptionalFileHandle(rootDirectoryHandle, fileName);
+  if (directFile) {
+    targets.push({
+      directoryHandle: rootDirectoryHandle,
+      fileName,
+      displayPath: fileName,
+      fileExists: true
+    });
+  }
+
+  return targets;
+}
+
+async function resolvePieceStylesTarget(
+  rootDirectoryHandle: LocalDirectoryHandle
+): Promise<LocalSaveTarget> {
+  const fileName = "piece-styles.local.css";
+
+  if (rootDirectoryHandle.name.toLowerCase() === "styles") {
+    const existingFile = await getOptionalFileHandle(rootDirectoryHandle, fileName);
+    return {
+      directoryHandle: rootDirectoryHandle,
+      fileName,
+      displayPath: fileName,
+      fileExists: Boolean(existingFile)
+    };
+  }
+
+  const contentDirectory = await getOptionalDirectoryHandle(rootDirectoryHandle, "content");
+  if (contentDirectory) {
+    const stylesDirectory = await getOrCreateDirectoryHandle(contentDirectory, "styles");
+    const existingFile = await getOptionalFileHandle(stylesDirectory, fileName);
+    return {
+      directoryHandle: stylesDirectory,
+      fileName,
+      displayPath: `content/styles/${fileName}`,
+      fileExists: Boolean(existingFile)
+    };
+  }
+
+  const directStylesDirectory = await getOptionalDirectoryHandle(rootDirectoryHandle, "styles");
+  if (directStylesDirectory) {
+    const existingFile = await getOptionalFileHandle(directStylesDirectory, fileName);
+    return {
+      directoryHandle: directStylesDirectory,
+      fileName,
+      displayPath: `styles/${fileName}`,
+      fileExists: Boolean(existingFile)
+    };
+  }
+
+  const rootStylesDirectory = await getOrCreateDirectoryHandle(rootDirectoryHandle, "styles");
+  const existingFile = await getOptionalFileHandle(rootStylesDirectory, fileName);
+  return {
+    directoryHandle: rootStylesDirectory,
+    fileName,
+    displayPath: `styles/${fileName}`,
+    fileExists: Boolean(existingFile)
+  };
+}
+
+async function resolvePieceStylesSearchTargets(rootDirectoryHandle: LocalDirectoryHandle) {
+  const targets: LocalSaveTarget[] = [];
+  const fileName = "piece-styles.local.css";
+
+  if (rootDirectoryHandle.name.toLowerCase() === "styles") {
+    const existingFile = await getOptionalFileHandle(rootDirectoryHandle, fileName);
+    if (existingFile) {
+      targets.push({
+        directoryHandle: rootDirectoryHandle,
+        fileName,
+        displayPath: fileName,
+        fileExists: true
+      });
+    }
+  }
+
+  const contentDirectory = await getOptionalDirectoryHandle(rootDirectoryHandle, "content");
+  if (contentDirectory) {
+    const stylesDirectory = await getOptionalDirectoryHandle(contentDirectory, "styles");
+    if (stylesDirectory) {
+      const existingFile = await getOptionalFileHandle(stylesDirectory, fileName);
+      if (existingFile) {
+        targets.push({
+          directoryHandle: stylesDirectory,
+          fileName,
+          displayPath: `content/styles/${fileName}`,
+          fileExists: true
+        });
+      }
+    }
+  }
+
+  const directStylesDirectory = await getOptionalDirectoryHandle(rootDirectoryHandle, "styles");
+  if (directStylesDirectory) {
+    const existingFile = await getOptionalFileHandle(directStylesDirectory, fileName);
+    if (existingFile) {
+      targets.push({
+        directoryHandle: directStylesDirectory,
+        fileName,
+        displayPath: `styles/${fileName}`,
         fileExists: true
       });
     }
@@ -976,6 +1103,33 @@ export async function saveWorkspaceLayoutFileToDirectory(input: {
   } as const;
 }
 
+export async function deleteWorkspaceLayoutFileFromDirectory(name: string) {
+  const handle = await requireWorkspaceLayoutDirectoryHandle();
+  const normalizedName = normalizeWorkspaceLayoutName(name);
+  const fileName = createWorkspaceLayoutFileName(normalizedName);
+
+  await ensureReadWritePermission(handle);
+
+  const targets = await resolveWorkspaceLayoutSearchTargets(handle, fileName);
+  const target = targets[0] ?? null;
+
+  if (target && target.directoryHandle.removeEntry) {
+    await target.directoryHandle.removeEntry(fileName);
+  } else if (target) {
+    throw new Error("The selected folder cannot remove files from this browser session.");
+  }
+
+  const knownFiles = forgetWorkspaceLayoutFile(fileName);
+
+  return {
+    directoryName: handle.name,
+    fileName,
+    knownFiles,
+    layoutName: normalizedName,
+    relativePath: target?.displayPath ?? fileName
+  } as const;
+}
+
 export async function loadWorkspaceLayoutFileFromDirectory(
   name: string
 ): Promise<LoadedWorkspaceLayoutFile | null> {
@@ -1009,6 +1163,103 @@ export async function loadWorkspaceLayoutFileFromDirectory(
       layoutState: parsedLayoutFile.layoutState,
       relativePath: target.displayPath,
       savedAt: parsedLayoutFile.savedAt
+    };
+  }
+
+  return null;
+}
+
+async function requirePieceStylesDirectoryHandle() {
+  const handle = await readStoredDirectoryHandle(pieceStylesDirectoryHandleKey);
+
+  if (!handle) {
+    throw new Error("Connect a repo root or content folder before saving piece styles to disk.");
+  }
+
+  return handle;
+}
+
+export async function connectPieceStylesDirectory() {
+  const handle = await pickLocalDirectory();
+  await writeStoredDirectoryHandle(pieceStylesDirectoryHandleKey, handle);
+
+  return {
+    directoryName: handle.name
+  };
+}
+
+export async function getConnectedPieceStylesDirectoryName() {
+  const handle = await readStoredDirectoryHandle(pieceStylesDirectoryHandleKey);
+  return handle?.name ?? null;
+}
+
+export async function savePieceStylesToDirectory(
+  rootDirectoryHandle: LocalDirectoryHandle,
+  cssText: string
+) {
+  await ensureReadWritePermission(rootDirectoryHandle);
+  const target = await resolvePieceStylesTarget(rootDirectoryHandle);
+  await ensureReadWritePermission(target.directoryHandle);
+
+  const fileHandle = await target.directoryHandle.getFileHandle(target.fileName, {
+    create: true
+  });
+  const writable = await fileHandle.createWritable();
+
+  await writable.write(`${cssText.trimEnd()}\n`);
+  await writable.close();
+
+  return {
+    displayPath: target.displayPath,
+    mode: target.fileExists ? "updated" : "created"
+  } as const;
+}
+
+export async function savePieceStylesDraftToDirectory(cssText: string) {
+  const handle = await requirePieceStylesDirectoryHandle();
+  const result = await savePieceStylesToDirectory(handle, cssText);
+
+  return {
+    directoryName: handle.name,
+    displayPath: result.displayPath,
+    relativePath: result.displayPath,
+    mode: result.mode
+  };
+}
+
+export async function loadPieceStylesFromDirectory(): Promise<LoadedPieceStyles | null> {
+  const handle = await readStoredDirectoryHandle(pieceStylesDirectoryHandleKey);
+
+  if (!handle) {
+    return null;
+  }
+
+  await ensureReadWritePermission(handle);
+
+  const targets = await resolvePieceStylesSearchTargets(handle);
+  for (const target of targets) {
+    const cssText = await readTextFile(target.directoryHandle, target.fileName);
+    if (cssText === null) {
+      continue;
+    }
+
+    return {
+      directoryName: handle.name,
+      fileName: target.fileName,
+      cssText,
+      relativePath: target.displayPath,
+      sourceKind: target.fileName === "piece-styles.local.css" ? "draft" : "canonical"
+    };
+  }
+
+  const canonicalText = await readTextFile(handle, "piece-styles.css");
+  if (canonicalText !== null) {
+    return {
+      directoryName: handle.name,
+      fileName: "piece-styles.css",
+      cssText: canonicalText,
+      relativePath: "piece-styles.css",
+      sourceKind: "canonical"
     };
   }
 

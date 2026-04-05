@@ -157,3 +157,14 @@ export function rememberWorkspaceLayoutFile(reference: WorkspaceLayoutFileRefere
 
   return nextFiles;
 }
+
+export function forgetWorkspaceLayoutFile(fileName: string) {
+  const nextFiles = listKnownWorkspaceLayoutFiles().filter((entry) => entry.fileName !== fileName);
+  const storage = getStorage();
+
+  if (storage) {
+    storage.setItem(knownWorkspaceLayoutFilesStorageKey, JSON.stringify(nextFiles, null, 2));
+  }
+
+  return nextFiles;
+}
