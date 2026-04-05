@@ -884,8 +884,7 @@ select {
 .board-panel__header,
 .saved-match,
 .study-panel__session-header,
-.role-page__intro-header,
-.board-panel__footer {
+.role-page__intro-header {
   justify-content: space-between;
   align-items: flex-start;
 }
@@ -1004,8 +1003,8 @@ select {
 
 .board-panel {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 16px;
-  align-content: start;
   padding: 18px;
   min-height: 0;
   overflow: hidden;
@@ -1013,22 +1012,26 @@ select {
 
 .board-shell {
   display: flex;
+  align-items: center;
   justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  inline-size: 100%;
+  block-size: 100%;
 }
 
 .board-grid {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
-  width: min(100%, 520px);
-  max-width: 520px;
+  inline-size: 100%;
+  aspect-ratio: 1;
   border: 1px solid var(--border);
   box-shadow: 0 2px 10px rgb(15 23 42 / 0.08);
   overflow: hidden;
 }
 
 .board-grid--map {
-  width: min(100%, 580px);
-  max-width: 580px;
+  inline-size: 100%;
 }
 
 .board-square {
@@ -1184,17 +1187,6 @@ select {
   z-index: 0;
   border-radius: 999px;
   background: rgb(17 24 39 / 0.18);
-}
-
-.board-panel__footer,
-.board-panel__footer p {
-  margin: 0;
-  color: var(--muted-foreground);
-  font-size: 0.9rem;
-}
-
-.board-panel__footer {
-  min-height: 2.75rem;
 }
 
 .hover-panel {
@@ -1623,7 +1615,6 @@ select {
   .app-header__actions,
   .panel__header,
   .board-panel__header,
-  .board-panel__footer,
   .study-panel__session-header,
   .saved-match,
   .saved-match__actions,

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
 import { getPieceAtSquare } from "@narrative-chess/game-core";
 import type {
   DistrictCell,
@@ -81,10 +81,12 @@ export function Board({
   onSquareLeave
 }: BoardProps) {
   const cellMap = new Map(cells.map((cell) => [cell.square, cell]));
+  const shellRef = useRef<HTMLDivElement | null>(null);
   const buttonRefs = useRef(new Map<Square, HTMLButtonElement>());
   const [activeSquare, setActiveSquare] = useState<Square>(
     selectedSquare ?? hoveredSquare ?? squareName(files[0], ranks[0])
   );
+  const [boardSize, setBoardSize] = useState<number | null>(null);
 
   useEffect(() => {
     if (selectedSquare) {
@@ -96,6 +98,37 @@ export function Board({
       setActiveSquare(hoveredSquare);
     }
   }, [hoveredSquare, selectedSquare]);
+
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const updateBoardSize = () => {
+      const nextSize = Math.max(0, Math.floor(Math.min(shell.clientWidth, shell.clientHeight || shell.clientWidth)));
+      setBoardSize(nextSize || null);
+    };
+
+    updateBoardSize();
+
+    const observer = new ResizeObserver(() => {
+      updateBoardSize();
+    });
+
+    observer.observe(shell);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  const boardStyle: CSSProperties | undefined = boardSize
+    ? {
+        width: `${boardSize}px`,
+        height: `${boardSize}px`
+      }
+    : undefined;
 
   const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
     const square = event.currentTarget.dataset.square as Square | undefined;
@@ -130,12 +163,13 @@ export function Board({
   };
 
   return (
-    <div className="board-shell">
+    <div className="board-shell" ref={shellRef}>
       <div
         className={["board-grid", viewMode === "map" ? "board-grid--map" : ""].filter(Boolean).join(" ")}
         role="grid"
         aria-label="Chess board"
         aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Home End"
+        style={boardStyle}
       >
         {ranks.map((rank) =>
           files.map((file) => {

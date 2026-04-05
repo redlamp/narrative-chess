@@ -225,7 +225,6 @@ export default function App() {
   );
   const [pastedPgn, setPastedPgn] = useState("");
   const [settings, setSettings] = useState<AppSettings>(() => listAppSettings());
-  const [viewMode, setViewMode] = useState<"board" | "map">(() => listAppSettings().defaultViewMode);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLayoutMode, setIsLayoutMode] = useState(false);
   const [isCompactViewport, setIsCompactViewport] = useState(false);
@@ -823,7 +822,6 @@ export default function App() {
   const handleResetSettings = () => {
     const nextSettings = resetAppSettings();
     setSettings(nextSettings);
-    setViewMode(nextSettings.defaultViewMode);
   };
 
   const handleThemeChange = (theme: AppSettings["theme"]) => {
@@ -838,7 +836,6 @@ export default function App() {
       ...current,
       defaultViewMode: nextViewMode
     }));
-    setViewMode(nextViewMode);
   };
 
   const handleBooleanSettingChange = (
@@ -1289,20 +1286,6 @@ export default function App() {
                 <div className="board-panel__actions">
                   <button
                     type="button"
-                    className={`button button--ghost ${viewMode === "board" ? "button--active" : ""}`}
-                    onClick={() => setViewMode("board")}
-                  >
-                    Board
-                  </button>
-                  <button
-                    type="button"
-                    className={`button button--ghost ${viewMode === "map" ? "button--active" : ""}`}
-                    onClick={() => setViewMode("map")}
-                  >
-                    Map
-                  </button>
-                  <button
-                    type="button"
                     className="button button--ghost"
                     onClick={handleUndo}
                     disabled={!canUndo}
@@ -1319,19 +1302,14 @@ export default function App() {
                 hoveredSquare={hoveredSquare}
                 inspectedSquare={inspectedSquare}
                 legalMoves={legalMoves}
-                viewMode={viewMode}
+                viewMode="board"
                 districtsBySquare={edinburghDistrictsBySquare}
                 showCoordinates={settings.showBoardCoordinates}
-                showDistrictLabels={viewMode === "map" && settings.showDistrictLabels}
+                showDistrictLabels={false}
                 onSquareClick={handleSquareClick}
                 onSquareHover={setHoveredSquare}
                 onSquareLeave={() => setHoveredSquare(null)}
               />
-
-              <div className="board-panel__footer" role="status" aria-live="polite" aria-atomic="true">
-                <p>{focusedSquareSummary}</p>
-                {lastMove ? <p>Last move: {lastMove.san}</p> : <p>No moves yet.</p>}
-              </div>
 
               {renderMoveSurface("board")}
               {renderResizeHandle("board")}
