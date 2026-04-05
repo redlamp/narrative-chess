@@ -30,6 +30,7 @@ type LayoutToolbarProps = {
   onConnectLayoutDirectory: () => void;
   onLoadLayoutFile: () => void;
   onSaveLayoutFile: () => void;
+  onDeleteLayoutFile: () => void;
   onSelectKnownLayoutFile: (name: string) => void;
   onResetLayout: () => void;
 };
@@ -53,6 +54,7 @@ export function LayoutToolbar({
   onConnectLayoutDirectory,
   onLoadLayoutFile,
   onSaveLayoutFile,
+  onDeleteLayoutFile,
   onSelectKnownLayoutFile,
   onResetLayout
 }: LayoutToolbarProps) {
@@ -202,7 +204,7 @@ export function LayoutToolbar({
                 variant="outline"
                 size="sm"
                 onClick={onLoadLayoutFile}
-                disabled={layoutFileBusyAction !== null}
+                disabled={!layoutDirectoryName || layoutFileBusyAction !== null}
               >
                 Load named file
               </Button>
@@ -211,9 +213,18 @@ export function LayoutToolbar({
                 variant="outline"
                 size="sm"
                 onClick={onSaveLayoutFile}
-                disabled={layoutFileBusyAction !== null}
+                disabled={!layoutDirectoryName || layoutFileBusyAction !== null}
               >
                 Save named file
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={onDeleteLayoutFile}
+                disabled={!layoutDirectoryName || layoutFileBusyAction !== null}
+              >
+                Remove named file
               </Button>
             </div>
           </div>

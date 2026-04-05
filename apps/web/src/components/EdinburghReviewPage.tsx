@@ -29,6 +29,7 @@ import {
 import { WorkspaceIntroCard } from "./WorkspaceIntroCard";
 import { WorkspaceListItem } from "./WorkspaceListItem";
 import { WorkspaceNoticeCard } from "./WorkspaceNoticeCard";
+import { ClearableSearchField } from "./ClearableSearchField";
 
 type SaveNotice = {
   tone: "neutral" | "success" | "error";
@@ -46,6 +47,15 @@ type TrackedCity = {
 const cityOverviewId = "city-overview";
 const statusOptions = ["empty", "procedural", "authored"] as const;
 const reviewOptions = ["empty", "needs review", "reviewed", "approved"] as const;
+const districtSortOptions = [
+  { value: "name", label: "Name" },
+  { value: "square", label: "Square" },
+  { value: "locality", label: "Locality" },
+  { value: "review-status", label: "Review status" },
+  { value: "recently-reviewed", label: "Recently reviewed" }
+] as const;
+
+type DistrictSortMode = (typeof districtSortOptions)[number]["value"];
 
 function formatListValue(values: string[]) {
   return values.join("\n");
@@ -113,11 +123,44 @@ function districtMatchesSearch(district: DistrictCell, query: string) {
   return haystack.includes(query.toLowerCase());
 }
 
+function compareDistricts(left: DistrictCell, right: DistrictCell, sortMode: DistrictSortMode) {
+  if (sortMode === "square") {
+    return left.square.localeCompare(right.square);
+  }
+
+  if (sortMode === "locality") {
+    const localityDelta = left.locality.localeCompare(right.locality);
+    if (localityDelta !== 0) {
+      return localityDelta;
+    }
+  }
+
+  if (sortMode === "review-status") {
+    const reviewOrder = new Map(reviewOptions.map((status, index) => [status, index] as const));
+    const reviewDelta =
+      (reviewOrder.get(left.reviewStatus) ?? 0) - (reviewOrder.get(right.reviewStatus) ?? 0);
+    if (reviewDelta !== 0) {
+      return reviewDelta;
+    }
+  }
+
+  if (sortMode === "recently-reviewed") {
+    const leftReviewed = left.lastReviewedAt ? Date.parse(left.lastReviewedAt) : Number.NEGATIVE_INFINITY;
+    const rightReviewed = right.lastReviewedAt ? Date.parse(right.lastReviewedAt) : Number.NEGATIVE_INFINITY;
+    if (leftReviewed !== rightReviewed) {
+      return rightReviewed - leftReviewed;
+    }
+  }
+
+  return left.name.localeCompare(right.name);
+}
+
 export function EdinburghReviewPage() {
   const [draft, setDraft] = useState<CityBoard>(() => listEdinburghBoardDraft());
   const [selectedCityId, setSelectedCityId] = useState(() => edinburghBoard.id);
   const [selectedRecordId, setSelectedRecordId] = useState(cityOverviewId);
   const [searchQuery, setSearchQuery] = useState("");
+  const [districtSortMode, setDistrictSortMode] = useState<DistrictSortMode>("name");
   const [directoryName, setDirectoryName] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState<SaveNotice | null>(null);
@@ -178,8 +221,10 @@ export function EdinburghReviewPage() {
   }, [draft, selectedRecordId]);
   const filteredDistricts = useMemo(
     () =>
-      draft.districts.filter((district) => districtMatchesSearch(district, searchQuery)),
-    [draft.districts, searchQuery]
+      [...draft.districts.filter((district) => districtMatchesSearch(district, searchQuery))].sort(
+        (left, right) => compareDistricts(left, right, districtSortMode)
+      ),
+    [draft.districts, districtSortMode, searchQuery]
   );
   const selectedDistrict =
     selectedRecordId === cityOverviewId
@@ -413,8 +458,7 @@ export function EdinburghReviewPage() {
                   }}
                   selected={city.id === selectedCity?.id}
                   title={city.name}
-                  description={`${city.country} · ${city.summary}`}
-                  meta={<Badge variant="outline">{city.districtCount}</Badge>}
+                  meta={<Badge variant="outline">{city.districtCount} districts</Badge>}
                 />
               ))}
             </div>
@@ -432,14 +476,31 @@ export function EdinburghReviewPage() {
                 Select the city overview or drill into a district record like Edinburgh {">"} Broughton.
               </CardDescription>
             </div>
-            <Input
-              name="district-search"
-              autoComplete="off"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.currentTarget.value)}
-              placeholder="Search by square, name, locality, or descriptor"
-              aria-label="Search Edinburgh districts"
-            />
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_11rem]">
+              <ClearableSearchField
+                label="Search districts"
+                name="district-search"
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Search by square, name, locality, or descriptor"
+                ariaLabel="Search Edinburgh districts"
+              />
+              <label className="grid gap-2">
+                <span className="text-sm font-medium">Sort by</span>
+                <select
+                  name="district-sort"
+                  className="field-select"
+                  value={districtSortMode}
+                  onChange={(event) => setDistrictSortMode(event.currentTarget.value as DistrictSortMode)}
+                >
+                  {districtSortOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
             <div className="flex flex-wrap gap-2">
               {localityCounts.slice(0, 8).map(([locality, count]) => (
                 <Badge key={locality} variant="outline">
@@ -454,31 +515,33 @@ export function EdinburghReviewPage() {
                 type="button"
                 onClick={() => setSelectedRecordId(cityOverviewId)}
                 selected={selectedRecordId === cityOverviewId}
+                className="workspace-list-item--overview"
+                leading={<Badge variant="secondary">Overview</Badge>}
                 title={draft.name}
                 description={draft.summary}
                 meta={<Badge variant="secondary">City overview</Badge>}
               />
-                {filteredDistricts.map((district) => (
-                  <WorkspaceListItem
-                    key={district.id}
-                    type="button"
-                    onClick={() => setSelectedRecordId(district.id)}
-                    selected={district.id === selectedDistrict?.id}
-                    title={district.name}
-                    description={district.locality}
-                    meta={
-                      <>
-                        <Badge variant="outline">{district.square}</Badge>
-                        <Badge variant="secondary">{district.reviewStatus}</Badge>
-                      </>
-                    }
-                  />
-                ))}
-                {!filteredDistricts.length ? (
-                  <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                    No districts matched that search.
-                  </div>
-                ) : null}
+              {filteredDistricts.map((district) => (
+                <WorkspaceListItem
+                  key={district.id}
+                  type="button"
+                  onClick={() => setSelectedRecordId(district.id)}
+                  selected={district.id === selectedDistrict?.id}
+                  title={district.name}
+                  description={district.locality}
+                  meta={
+                    <>
+                      <Badge variant="outline">{district.square}</Badge>
+                      <Badge variant="secondary">{district.reviewStatus}</Badge>
+                    </>
+                  }
+                />
+              ))}
+              {!filteredDistricts.length ? (
+                <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                  No districts matched that search.
+                </div>
+              ) : null}
             </div>
           </CardContent>
         </Card>
@@ -615,6 +678,7 @@ export function EdinburghReviewPage() {
           ) : null}
 
           {selectedDistrict ? (
+          <div className="cities-workspace__detail-sticky">
           <Card className="page-card page-card--detail">
             <CardHeader className="gap-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -826,6 +890,7 @@ export function EdinburghReviewPage() {
                 </>
             </CardContent>
           </Card>
+          </div>
           ) : null}
         </div>
       </div>

@@ -45,6 +45,7 @@ import {
   listKnownWorkspaceLayoutFiles,
   type WorkspaceLayoutFileReference
 } from "./layoutFiles";
+import { applyPieceStyleSheet, listPieceStyleSheet, resetPieceStyleSheet, savePieceStyleSheet } from "./pieceStyles";
 import { listReferenceGames, type ReferenceGameLibrary } from "./referenceGames";
 import {
   connectRoleCatalogDirectory,
@@ -54,17 +55,22 @@ import {
   supportsDirectoryWrite as supportsRoleCatalogDirectory,
   connectWorkspaceLayoutDirectory,
   getConnectedWorkspaceLayoutDirectoryName,
+  deleteWorkspaceLayoutFileFromDirectory,
   loadWorkspaceLayoutFileFromDirectory,
   saveWorkspaceLayoutFileToDirectory,
+  connectPieceStylesDirectory,
+  getConnectedPieceStylesDirectoryName,
+  loadPieceStylesFromDirectory,
+  savePieceStylesDraftToDirectory,
   supportsWorkspaceLayoutDirectory
 } from "./fileSystemAccess";
 import { Board } from "./components/Board";
 import { Panel } from "./components/Panel";
 import { AppMenu } from "./components/AppMenu";
 import { ClassicGamesLibraryPage } from "./components/ClassicGamesLibraryPage";
-import { CompetitiveLandscapePage } from "./components/CompetitiveLandscapePage";
 import { EdinburghReviewPage } from "./components/EdinburghReviewPage";
 import { LayoutToolbar } from "./components/LayoutToolbar";
+import { ResearchPage } from "./components/ResearchPage";
 import { RoleCatalogPage } from "./components/RoleCatalogPage";
 import { StudyPanel } from "./components/StudyPanel";
 import { useChessMatch } from "./hooks/useChessMatch";
@@ -229,6 +235,11 @@ export default function App() {
   );
   const [isLayoutDirectorySupported, setIsLayoutDirectorySupported] = useState(false);
   const [activeLayoutEdit, setActiveLayoutEdit] = useState<ActiveLayoutEdit | null>(null);
+  const [pieceStyleSheet, setPieceStyleSheet] = useState(() => listPieceStyleSheet());
+  const [pieceStyleDirectoryName, setPieceStyleDirectoryName] = useState<string | null>(null);
+  const [pieceStyleFileBusyAction, setPieceStyleFileBusyAction] = useState<string | null>(null);
+  const [pieceStyleFileNotice, setPieceStyleFileNotice] = useState<LayoutFileNotice | null>(null);
+  const [isPieceStyleDirectorySupported, setIsPieceStyleDirectorySupported] = useState(false);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
   const {
     snapshot,
@@ -353,6 +364,10 @@ export default function App() {
   }, [settings.theme]);
 
   useEffect(() => {
+    applyPieceStyleSheet(pieceStyleSheet);
+  }, [pieceStyleSheet]);
+
+  useEffect(() => {
     saveAppSettings(settings);
   }, [settings]);
 
@@ -362,6 +377,7 @@ export default function App() {
 
   useEffect(() => {
     setIsLayoutDirectorySupported(supportsWorkspaceLayoutDirectory());
+    setIsPieceStyleDirectorySupported(supportsWorkspaceLayoutDirectory());
 
     const rememberedLayoutFiles = listKnownWorkspaceLayoutFiles();
     if (rememberedLayoutFiles.length) {
@@ -382,6 +398,12 @@ export default function App() {
     void getConnectedWorkspaceLayoutDirectoryName().then((directoryName) => {
       if (!cancelled) {
         setLayoutDirectoryName(directoryName);
+      }
+    });
+
+    void getConnectedPieceStylesDirectoryName().then((directoryName) => {
+      if (!cancelled) {
+        setPieceStyleDirectoryName(directoryName);
       }
     });
 
@@ -881,6 +903,92 @@ export default function App() {
     });
   };
 
+  const handleDeleteLayoutFile = () => {
+    void runLayoutFileAction("delete-layout-file", async () => {
+      const result = await deleteWorkspaceLayoutFileFromDirectory(layoutFileName);
+      setKnownLayoutFiles(result.knownFiles);
+      setLayoutDirectoryName(result.directoryName);
+      setLayoutFileName("match-workspace");
+      setWorkspaceLayout(resetWorkspaceLayoutState());
+      setLayoutFileNotice({
+        tone: "neutral",
+        text: `Removed ${result.layoutName} from ${result.relativePath} and restored the default layout.`
+      });
+    });
+  };
+
+  const runPieceStyleFileAction = async (actionName: string, action: () => Promise<void>) => {
+    setPieceStyleFileBusyAction(actionName);
+    setPieceStyleFileNotice(null);
+
+    try {
+      await action();
+    } catch (error) {
+      setPieceStyleFileNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Something went wrong while working with the piece style file."
+      });
+    } finally {
+      setPieceStyleFileBusyAction(null);
+    }
+  };
+
+  const handleConnectPieceStyleDirectory = () => {
+    void runPieceStyleFileAction("connect-piece-style-directory", async () => {
+      const result = await connectPieceStylesDirectory();
+      setPieceStyleDirectoryName(result.directoryName);
+      setPieceStyleFileNotice({
+        tone: "success",
+        text: `Connected piece styles to ${result.directoryName}.`
+      });
+    });
+  };
+
+  const handleSavePieceStyleSheetToDirectory = () => {
+    void runPieceStyleFileAction("save-piece-style-file", async () => {
+      const result = await savePieceStylesDraftToDirectory(pieceStyleSheet);
+      setPieceStyleDirectoryName(result.directoryName);
+      setPieceStyleFileNotice({
+        tone: "success",
+        text: `Saved piece styles to ${result.relativePath}.`
+      });
+    });
+  };
+
+  const handleLoadPieceStyleSheetFromDirectory = () => {
+    void runPieceStyleFileAction("load-piece-style-file", async () => {
+      const result = await loadPieceStylesFromDirectory();
+      if (!result) {
+        setPieceStyleFileNotice({
+          tone: "neutral",
+          text: "No saved piece-styles.local.css file was found in the connected folder."
+        });
+        return;
+      }
+
+      const nextSheet = savePieceStyleSheet(result.cssText);
+      setPieceStyleSheet(nextSheet);
+      setPieceStyleDirectoryName(result.directoryName);
+      setPieceStyleFileNotice({
+        tone: "success",
+        text: `Loaded ${result.relativePath} into the live app stylesheet.`
+      });
+    });
+  };
+
+  const handleResetPieceStyleSheet = () => {
+    const nextSheet = resetPieceStyleSheet();
+    setPieceStyleSheet(nextSheet);
+    setPieceStyleFileNotice({
+      tone: "neutral",
+      text: "Reset the piece stylesheet back to the bundled defaults."
+    });
+  };
+
+  const handlePieceStyleSheetChange = (value: string) => {
+    setPieceStyleSheet(savePieceStyleSheet(value));
+  };
+
   const renderPanelTools = (
     panelId: CollapsibleWorkspacePanelId,
     extraActions?: ReactNode
@@ -942,15 +1050,16 @@ export default function App() {
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              size="icon-sm"
               onClick={() => handleThemeChange(settings.theme === "dark" ? "light" : "dark")}
+              aria-label={settings.theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+              title={settings.theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
             >
               {settings.theme === "dark" ? (
-                <Sun data-icon="inline-start" />
+                <Sun />
               ) : (
-                <Moon data-icon="inline-start" />
+                <Moon />
               )}
-              {settings.theme === "dark" ? "Light theme" : "Dark theme"}
             </Button>
 
             <AppMenu
@@ -1009,11 +1118,11 @@ export default function App() {
             <p className="muted">
               {page === "cities"
                 ? "Review gathered city boards, switch between cities and districts, and save updates locally."
-                : page === "classics"
+              : page === "classics"
                 ? "Review classic games, historical notes, and the study score before loading a line onto the board."
                 : page === "roles"
                 ? "Edit individual piece-role records and feed those changes back into the local roster."
-                : "Review current chess product references, screenshots, and notes for competitive analysis."}
+                : "Review competition references, piece art assets, and editable style sheets in one research workspace."}
             </p>
           </div>
         )}
@@ -1046,7 +1155,18 @@ export default function App() {
           onSaveRoleCatalogToDirectory={handleSaveRoleCatalogFile}
         />
       ) : page === "research" ? (
-        <CompetitiveLandscapePage />
+        <ResearchPage
+          pieceStyleSheet={pieceStyleSheet}
+          pieceStyleDirectoryName={pieceStyleDirectoryName}
+          isPieceStyleDirectorySupported={isPieceStyleDirectorySupported}
+          pieceStyleFileBusyAction={pieceStyleFileBusyAction}
+          pieceStyleFileNotice={pieceStyleFileNotice}
+          onPieceStyleSheetChange={handlePieceStyleSheetChange}
+          onConnectPieceStyleDirectory={handleConnectPieceStyleDirectory}
+          onLoadPieceStyleSheetFromDirectory={handleLoadPieceStyleSheetFromDirectory}
+          onSavePieceStyleSheetToDirectory={handleSavePieceStyleSheetToDirectory}
+          onResetPieceStyleSheet={handleResetPieceStyleSheet}
+        />
       ) : (
         <div className={`workspace-layout-shell ${effectiveLayoutMode ? "workspace-layout-shell--editing" : ""}`}>
           {effectiveLayoutMode ? (
@@ -1070,6 +1190,7 @@ export default function App() {
                 onConnectLayoutDirectory={handleConnectLayoutDirectory}
                 onLoadLayoutFile={handleLoadLayoutFile}
                 onSaveLayoutFile={handleSaveLayoutFile}
+                onDeleteLayoutFile={handleDeleteLayoutFile}
                 onSelectKnownLayoutFile={setLayoutFileName}
                 onResetLayout={handleResetLayout}
               />

@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Board } from "./Board";
+import { ClearableSearchField } from "./ClearableSearchField";
 import { IndexedWorkspace } from "./IndexedWorkspace";
 import { WorkspaceIntroCard } from "./WorkspaceIntroCard";
 import { WorkspaceListItem } from "./WorkspaceListItem";
@@ -549,13 +550,13 @@ export function ClassicGamesLibraryPage({
               <CardTitle>Game list</CardTitle>
               <CardDescription>Search by player, opening, title, or teaching focus.</CardDescription>
             </div>
-            <Input
+            <ClearableSearchField
+              label="Search games"
               name="classic-game-search"
-              autoComplete="off"
               value={searchQuery}
-              onChange={(event) => setSearchQuery(event.currentTarget.value)}
+              onChange={setSearchQuery}
               placeholder="Search classic games"
-              aria-label="Search classic chess games"
+              ariaLabel="Search classic chess games"
             />
           </CardHeader>
           <CardContent className="page-card__content pt-0">

@@ -14,17 +14,19 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { getPieceGlyph, getPieceKindLabel } from "../chessPresentation";
 import {
+  listRoleCatalog,
   findRoleCatalogEntry,
   groupRoleCatalogByPieceKind,
   pieceKinds,
   type RoleCatalog
 } from "../roleCatalog";
 import { IndexedWorkspace } from "./IndexedWorkspace";
+import { ClearableSearchField } from "./ClearableSearchField";
+import { EditableTagList } from "./EditableTagList";
 import { WorkspaceIntroCard } from "./WorkspaceIntroCard";
 import { WorkspaceListItem } from "./WorkspaceListItem";
 
@@ -69,17 +71,13 @@ type RoleCatalogPageProps = {
 
 const contentStatusOptions = ["empty", "procedural", "authored"] as const;
 const reviewStatusOptions = ["empty", "needs review", "reviewed", "approved"] as const;
+const roleSortOptions = [
+  { value: "name", label: "Name" },
+  { value: "review-status", label: "Review status" },
+  { value: "recently-reviewed", label: "Recently reviewed" }
+] as const;
 
-function formatListValue(values: string[]) {
-  return values.join("\n");
-}
-
-function parseListValue(value: string) {
-  return value
-    .split(/\r?\n|,/g)
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-}
+type RoleSortMode = (typeof roleSortOptions)[number]["value"];
 
 function roleMatchesQuery(role: RoleCatalog[number], query: string) {
   if (!query) {
@@ -100,6 +98,31 @@ function roleMatchesQuery(role: RoleCatalog[number], query: string) {
   return haystack.includes(query.toLowerCase());
 }
 
+function compareRoleEntries(
+  left: RoleCatalog[number],
+  right: RoleCatalog[number],
+  sortMode: RoleSortMode
+) {
+  if (sortMode === "review-status") {
+    const reviewOrder = new Map(reviewStatusOptions.map((status, index) => [status, index] as const));
+    const reviewDelta =
+      (reviewOrder.get(left.reviewStatus) ?? 0) - (reviewOrder.get(right.reviewStatus) ?? 0);
+    if (reviewDelta !== 0) {
+      return reviewDelta;
+    }
+  }
+
+  if (sortMode === "recently-reviewed") {
+    const leftReviewed = left.lastReviewedAt ? Date.parse(left.lastReviewedAt) : Number.NEGATIVE_INFINITY;
+    const rightReviewed = right.lastReviewedAt ? Date.parse(right.lastReviewedAt) : Number.NEGATIVE_INFINITY;
+    if (leftReviewed !== rightReviewed) {
+      return rightReviewed - leftReviewed;
+    }
+  }
+
+  return left.name.localeCompare(right.name);
+}
+
 export function RoleCatalogPage({
   roleCatalog,
   roleCatalogDirectoryName,
@@ -116,6 +139,7 @@ export function RoleCatalogPage({
   onSaveRoleCatalogToDirectory
 }: RoleCatalogPageProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortMode, setSortMode] = useState<RoleSortMode>("name");
   const [selectedPieceKind, setSelectedPieceKind] = useState<PieceKind>(
     roleCatalog[0]?.pieceKind ?? "pawn"
   );
@@ -134,7 +158,13 @@ export function RoleCatalogPage({
       ),
     [groupedRoles, searchQuery]
   );
-  const selectedPieceRoles = filteredRoleGroups[selectedPieceKind] ?? [];
+  const selectedPieceRoles = useMemo(
+    () =>
+      [...(filteredRoleGroups[selectedPieceKind] ?? [])].sort((left, right) =>
+        compareRoleEntries(left, right, sortMode)
+      ),
+    [filteredRoleGroups, selectedPieceKind, sortMode]
+  );
   const selectedRole =
     selectedPieceRoles.find((role) => role.id === selectedRoleId) ??
     groupedRoles[selectedPieceKind].find((role) => role.id === selectedRoleId) ??
@@ -171,9 +201,34 @@ export function RoleCatalogPage({
     }
   }, [selectedPieceKind, selectedRole, selectedRoleId]);
 
+  const handleResetSelectedRole = () => {
+    if (!selectedRole) {
+      return;
+    }
+
+    const savedRole = listRoleCatalog().find((role) => role.id === selectedRole.id);
+    if (!savedRole) {
+      return;
+    }
+
+    onRoleCatalogChange(selectedRole.id, "pieceKind", savedRole.pieceKind);
+    onRoleCatalogChange(selectedRole.id, "name", savedRole.name);
+    onRoleCatalogChange(selectedRole.id, "summary", savedRole.summary);
+    onRoleCatalogChange(selectedRole.id, "traits", savedRole.traits);
+    onRoleCatalogChange(selectedRole.id, "verbs", savedRole.verbs);
+    onRoleCatalogChange(selectedRole.id, "notes", savedRole.notes);
+    onRoleCatalogChange(selectedRole.id, "contentStatus", savedRole.contentStatus);
+    onRoleCatalogChange(selectedRole.id, "reviewStatus", savedRole.reviewStatus);
+    onRoleCatalogChange(selectedRole.id, "reviewNotes", savedRole.reviewNotes);
+    onRoleCatalogChange(selectedRole.id, "lastReviewedAt", savedRole.lastReviewedAt);
+    setSelectedPieceKind(savedRole.pieceKind);
+    setSelectedRoleId(savedRole.id);
+  };
+
   return (
     <IndexedWorkspace
       className="role-catalog-workspace"
+      scrollMode="page"
       intro={
         <WorkspaceIntroCard
           badgeRow={
@@ -189,16 +244,7 @@ export function RoleCatalogPage({
           }
           title="Piece roles and job definitions"
           description="Start from the chess piece family, drill into a named role, and then edit the record in detail. Changes save locally and feed back into new match rosters immediately."
-          actions={
-            <>
-              <Button type="button" variant="outline" onClick={() => onRoleCatalogAdd(selectedPieceKind)}>
-                Add role
-              </Button>
-              <Button type="button" variant="outline" onClick={onRoleCatalogReset}>
-                Reset defaults
-              </Button>
-            </>
-          }
+          actions={<Button type="button" variant="outline" onClick={onRoleCatalogReset}>Reset defaults</Button>}
           status={roleCatalogFileNotice}
         >
           <div className="grid gap-3 rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
@@ -245,11 +291,16 @@ export function RoleCatalogPage({
       index={
         <Card className="page-card page-card--index">
           <CardHeader className="gap-3">
-            <div className="grid gap-2">
-              <CardTitle>Piece groups</CardTitle>
-              <CardDescription>
-                Choose the chess piece family first, then pick a role from the next column.
-              </CardDescription>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="grid gap-2">
+                <CardTitle>Piece groups</CardTitle>
+                <CardDescription>
+                  Choose the chess piece family first, then pick a role from the next column.
+                </CardDescription>
+              </div>
+              <Button type="button" variant="outline" onClick={() => onRoleCatalogAdd(selectedPieceKind)}>
+                Add role
+              </Button>
             </div>
           </CardHeader>
           <CardContent className="page-card__content pt-0">
@@ -281,7 +332,7 @@ export function RoleCatalogPage({
       secondaryIndex={
         <Card className="page-card page-card--index page-card--secondary-index">
           <CardHeader className="gap-4">
-            <div className="grid gap-2">
+            <div className="grid gap-3">
               <div className="flex flex-wrap items-center gap-2">
                 <CardTitle>{getPieceKindLabel(selectedPieceKind)} roles</CardTitle>
                 <Badge variant="outline">{selectedPieceRoles.length} visible</Badge>
@@ -289,39 +340,54 @@ export function RoleCatalogPage({
               <CardDescription>
                 Search within the catalog, then choose a specific role to edit.
               </CardDescription>
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_11rem]">
+                <ClearableSearchField
+                  label="Search roles"
+                  name="role-search"
+                  value={searchQuery}
+                  onChange={setSearchQuery}
+                  placeholder="Search by role, trait, verb, or summary"
+                  ariaLabel="Search piece roles"
+                />
+                <label className="grid gap-2">
+                  <span className="text-sm font-medium">Sort by</span>
+                  <select
+                    name="role-sort"
+                    className="field-select"
+                    value={sortMode}
+                    onChange={(event) => setSortMode(event.currentTarget.value as RoleSortMode)}
+                  >
+                    {roleSortOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
             </div>
-            <Input
-              name="role-search"
-              autoComplete="off"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.currentTarget.value)}
-              placeholder="Search by role, trait, verb, or summary"
-              aria-label="Search piece roles"
-            />
           </CardHeader>
           <CardContent className="page-card__content pt-0">
-            <ScrollArea className="page-card__scroll-area rounded-lg border">
-              <div className="grid gap-2 p-3">
-                {selectedPieceRoles.map((role) => (
-                  <WorkspaceListItem
-                    key={role.id}
-                    onClick={() => {
-                      setSelectedPieceKind(role.pieceKind);
-                      setSelectedRoleId(role.id);
-                    }}
-                    selected={role.id === selectedRole?.id}
-                    title={role.name}
-                    description={role.summary}
-                    meta={<Badge variant="outline">{role.reviewStatus}</Badge>}
-                  />
-                ))}
-                {!selectedPieceRoles.length ? (
-                  <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                    No {getPieceKindLabel(selectedPieceKind).toLowerCase()} roles matched that search.
-                  </div>
-                ) : null}
-              </div>
-            </ScrollArea>
+            <div className="grid gap-2">
+              {selectedPieceRoles.map((role) => (
+                <WorkspaceListItem
+                  key={role.id}
+                  onClick={() => {
+                    setSelectedPieceKind(role.pieceKind);
+                    setSelectedRoleId(role.id);
+                  }}
+                  selected={role.id === selectedRole?.id}
+                  title={role.name}
+                  description={role.summary}
+                  meta={<Badge variant="outline">{role.reviewStatus}</Badge>}
+                />
+              ))}
+              {!selectedPieceRoles.length ? (
+                <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                  No {getPieceKindLabel(selectedPieceKind).toLowerCase()} roles matched that search.
+                </div>
+              ) : null}
+            </div>
           </CardContent>
         </Card>
       }
@@ -337,7 +403,7 @@ export function RoleCatalogPage({
               character prompts.
             </CardDescription>
           </CardHeader>
-          <CardContent className="page-card__content page-card__content--scroll grid gap-4">
+          <CardContent className="page-card__content grid gap-4">
             {selectedRole ? (
               <>
                 <div className="flex flex-wrap gap-2">
@@ -356,7 +422,10 @@ export function RoleCatalogPage({
                     variant="outline"
                     onClick={() => onRoleCatalogRemove(selectedRole.id)}
                   >
-                    Delete role
+                    Remove role
+                  </Button>
+                  <Button type="button" variant="outline" onClick={handleResetSelectedRole}>
+                    Reset role
                   </Button>
                 </div>
 
@@ -410,38 +479,42 @@ export function RoleCatalogPage({
                 <Separator />
 
                 <div className="grid gap-4 lg:grid-cols-2">
-                  <label className="grid gap-2">
-                    <span className="text-sm font-medium">Traits</span>
-                    <Textarea
-                      name="role-traits"
-                      autoComplete="off"
-                      value={formatListValue(selectedRole.traits)}
-                      onChange={(event) =>
-                        onRoleCatalogChange(
-                          selectedRole.id,
-                          "traits",
-                          parseListValue(event.currentTarget.value)
-                        )
-                      }
-                      rows={5}
-                    />
-                  </label>
-                  <label className="grid gap-2">
-                    <span className="text-sm font-medium">Verbs</span>
-                    <Textarea
-                      name="role-verbs"
-                      autoComplete="off"
-                      value={formatListValue(selectedRole.verbs)}
-                      onChange={(event) =>
-                        onRoleCatalogChange(
-                          selectedRole.id,
-                          "verbs",
-                          parseListValue(event.currentTarget.value)
-                        )
-                      }
-                      rows={5}
-                    />
-                  </label>
+                  <EditableTagList
+                    title="Traits"
+                    description="Add or remove the descriptive tags that shape the role."
+                    items={selectedRole.traits}
+                    placeholder="Add a trait"
+                    addLabel="Add trait"
+                    emptyText="Add traits to shape this role."
+                    onAdd={(value) =>
+                      onRoleCatalogChange(selectedRole.id, "traits", [...selectedRole.traits, value])
+                    }
+                    onRemove={(value) =>
+                      onRoleCatalogChange(
+                        selectedRole.id,
+                        "traits",
+                        selectedRole.traits.filter((trait) => trait !== value)
+                      )
+                    }
+                  />
+                  <EditableTagList
+                    title="Verbs"
+                    description="Add or remove action verbs for match narration and role prompts."
+                    items={selectedRole.verbs}
+                    placeholder="Add a verb"
+                    addLabel="Add verb"
+                    emptyText="Add verbs to shape this role."
+                    onAdd={(value) =>
+                      onRoleCatalogChange(selectedRole.id, "verbs", [...selectedRole.verbs, value])
+                    }
+                    onRemove={(value) =>
+                      onRoleCatalogChange(
+                        selectedRole.id,
+                        "verbs",
+                        selectedRole.verbs.filter((verb) => verb !== value)
+                      )
+                    }
+                  />
                   <label className="grid gap-2 lg:col-span-2">
                     <span className="text-sm font-medium">Notes</span>
                     <Textarea
@@ -523,36 +596,6 @@ export function RoleCatalogPage({
                   </label>
                 </div>
 
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <div className="rounded-lg border bg-muted/20 p-4">
-                    <p className="text-sm font-medium">Trait preview</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {selectedRole.traits.length ? (
-                        selectedRole.traits.map((trait) => (
-                          <Badge key={trait} variant="secondary">
-                            {trait}
-                          </Badge>
-                        ))
-                      ) : (
-                        <p className="text-sm text-muted-foreground">Add traits to shape this role.</p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="rounded-lg border bg-muted/20 p-4">
-                    <p className="text-sm font-medium">Verb preview</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {selectedRole.verbs.length ? (
-                        selectedRole.verbs.map((verb) => (
-                          <Badge key={verb} variant="outline">
-                            {verb}
-                          </Badge>
-                        ))
-                      ) : (
-                        <p className="text-sm text-muted-foreground">Add verbs to shape this role.</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
               </>
             ) : (
               <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
