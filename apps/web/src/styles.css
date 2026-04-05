@@ -489,6 +489,11 @@ select {
   min-height: 5rem;
 }
 
+.workspace-list-item--overview {
+  border-color: color-mix(in srgb, var(--ring) 18%, var(--border) 82%);
+  background: color-mix(in srgb, var(--secondary) 58%, var(--background) 42%);
+}
+
 .layout-toolbar__notice--neutral,
 .layout-toolbar__notice--success {
   background: color-mix(in srgb, var(--muted) 72%, white 28%);
@@ -551,6 +556,74 @@ select {
 .menu-segment {
   display: grid;
   gap: 8px;
+}
+
+.clearable-search-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.clearable-search-field__input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.clearable-search-field__clear.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.editable-tag-list {
+  display: grid;
+  gap: 12px;
+  min-height: 15rem;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 0.15rem);
+  background: color-mix(in srgb, var(--muted) 24%, var(--background) 76%);
+}
+
+.editable-tag-list__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  min-height: 4rem;
+}
+
+.editable-tag-list__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--background);
+  color: var(--foreground);
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.editable-tag-list__chip:hover {
+  background: var(--muted);
+}
+
+.editable-tag-list__chip:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 30%, transparent 70%);
+}
+
+.editable-tag-list__chip-label {
+  min-width: 0;
+}
+
+.editable-tag-list__editor {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .workspace-grid {
@@ -1219,6 +1292,10 @@ select {
   font-size: 0.88rem;
 }
 
+.cities-workspace__detail-sticky {
+  min-width: 0;
+}
+
 @media (max-width: 1360px) {
   .layout-toolbar__controls,
   .hero__status {
@@ -1253,6 +1330,12 @@ select {
   .classic-games-page__preview {
     position: sticky;
     top: 24px;
+  }
+
+  .cities-workspace__detail-sticky {
+    position: sticky;
+    top: 24px;
+    align-self: start;
   }
 
   .indexed-workspace__index,
