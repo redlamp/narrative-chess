@@ -60,11 +60,12 @@ const panelLabels: Record<PageLayoutPanelId, string> = {
   detail: "Detail column"
 };
 
-function getPageGridStyle(layoutState: PageLayoutState): CSSProperties {
+function getPageGridStyle(layoutState: PageLayoutState, rowCount: number): CSSProperties {
   return {
     "--workspace-column-count": String(layoutState.columnCount),
     "--workspace-column-gap": `${layoutState.columnGap}px`,
-    "--workspace-row-height": `${layoutState.rowHeight}px`
+    "--workspace-row-height": `${layoutState.rowHeight}px`,
+    "--workspace-row-count": String(rowCount)
   } as CSSProperties;
 }
 
@@ -72,10 +73,14 @@ function getPagePanelStyle(layoutState: PageLayoutState, panelId: PageLayoutPane
   const panel = layoutState.panels[panelId];
   const area = panel.w * panel.h;
   const zIndex = 10000 - area * 100 - panel.w * 10 - panel.h;
+  const columnOffset = Math.max(0, panel.x - 1);
+  const rowOffset = Math.max(0, panel.y - 1);
 
   return {
-    gridColumn: `${panel.x} / span ${panel.w}`,
-    gridRow: `${panel.y} / span ${panel.h}`,
+    left: `calc(((100% - (var(--workspace-column-gap) * (var(--workspace-column-count) - 1))) / var(--workspace-column-count) * ${columnOffset}) + (var(--workspace-column-gap) * ${columnOffset}))`,
+    top: `calc((var(--workspace-row-height) * ${rowOffset}) + (var(--workspace-column-gap) * ${rowOffset}))`,
+    width: `calc(((100% - (var(--workspace-column-gap) * (var(--workspace-column-count) - 1))) / var(--workspace-column-count) * ${panel.w}) + (var(--workspace-column-gap) * ${Math.max(panel.w - 1, 0)}))`,
+    height: `calc((var(--workspace-row-height) * ${panel.h}) + (var(--workspace-column-gap) * ${Math.max(panel.h - 1, 0)}))`,
     zIndex
   };
 }
@@ -115,7 +120,6 @@ export function IndexedWorkspace({
   const [activeLayoutEdit, setActiveLayoutEdit] = useState<ActivePageLayoutEdit | null>(null);
   const layoutRef = useRef<HTMLDivElement | null>(null);
   const effectiveLayoutMode = layoutMode && !isCompactViewport;
-  const pageGridStyle = useMemo(() => getPageGridStyle(layoutState), [layoutState]);
   const rowCount = useMemo(
     () =>
       getPageLayoutRowCount({
@@ -123,6 +127,10 @@ export function IndexedWorkspace({
         panelIds: activePanelIds
       }),
     [activePanelIds, layoutState]
+  );
+  const pageGridStyle = useMemo(
+    () => getPageGridStyle(layoutState, rowCount),
+    [layoutState, rowCount]
   );
   const gridOverlayCells = useMemo(
     () => Array.from({ length: rowCount * layoutState.columnCount }, (_, index) => index),
@@ -453,7 +461,7 @@ export function IndexedWorkspace({
           className
         )}
       >
-        <div ref={layoutRef} className="workspace-grid" style={pageGridStyle}>
+        <div ref={layoutRef} className="workspace-grid workspace-grid--layout-mode" style={pageGridStyle}>
           <div
             className="workspace-grid__sizer"
             style={{

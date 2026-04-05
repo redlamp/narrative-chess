@@ -192,30 +192,49 @@ function getPageCaption(page: AppPage) {
   }
 }
 
-function getWorkspaceGridStyle(layoutState: WorkspaceLayoutState): CSSProperties {
+function getWorkspaceGridStyle(
+  layoutState: WorkspaceLayoutState,
+  rowCount: number
+): CSSProperties {
   return {
     "--workspace-column-count": String(layoutState.columnCount),
     "--workspace-column-gap": `${layoutState.columnGap}px`,
-    "--workspace-row-height": `${layoutState.rowHeight}px`
+    "--workspace-row-height": `${layoutState.rowHeight}px`,
+    "--workspace-row-count": String(rowCount)
   } as CSSProperties;
 }
 
 function getWorkspacePanelStyle(
   layoutState: WorkspaceLayoutState,
   panelId: WorkspacePanelId,
-  isCompactViewport: boolean
+  isCompactViewport: boolean,
+  freeformLayout: boolean
 ): CSSProperties | undefined {
   if (isCompactViewport) {
     return undefined;
   }
 
   const panel = layoutState.panels[panelId];
-  const area = panel.w * panel.h;
+  const renderHeight = getWorkspacePanelRenderHeight(layoutState, panelId);
+  const area = panel.w * renderHeight;
   const zIndex = 10000 - area * 100 - panel.w * 10 - panel.h;
+
+  if (freeformLayout) {
+    const columnOffset = Math.max(0, panel.x - 1);
+    const rowOffset = Math.max(0, panel.y - 1);
+
+    return {
+      left: `calc(((100% - (var(--workspace-column-gap) * (var(--workspace-column-count) - 1))) / var(--workspace-column-count) * ${columnOffset}) + (var(--workspace-column-gap) * ${columnOffset}))`,
+      top: `calc((var(--workspace-row-height) * ${rowOffset}) + (var(--workspace-column-gap) * ${rowOffset}))`,
+      width: `calc(((100% - (var(--workspace-column-gap) * (var(--workspace-column-count) - 1))) / var(--workspace-column-count) * ${panel.w}) + (var(--workspace-column-gap) * ${Math.max(panel.w - 1, 0)}))`,
+      height: `calc((var(--workspace-row-height) * ${renderHeight}) + (var(--workspace-column-gap) * ${Math.max(renderHeight - 1, 0)}))`,
+      zIndex
+    };
+  }
 
   return {
     gridColumn: `${panel.x} / span ${panel.w}`,
-    gridRow: `${panel.y} / span ${getWorkspacePanelRenderHeight(layoutState, panelId)}`,
+    gridRow: `${panel.y} / span ${renderHeight}`,
     zIndex
   };
 }
@@ -319,8 +338,8 @@ export default function App() {
     [workspaceLayout]
   );
   const workspaceGridStyle = useMemo(
-    () => getWorkspaceGridStyle(workspaceLayout),
-    [workspaceLayout]
+    () => getWorkspaceGridStyle(workspaceLayout, workspaceRowCount),
+    [workspaceLayout, workspaceRowCount]
   );
   const focusedSquareSummary = focusedSquare
     ? (() => {
@@ -1287,7 +1306,12 @@ export default function App() {
               ]
                 .filter(Boolean)
                 .join(" ")}
-              style={getWorkspacePanelStyle(workspaceLayout, "board", isCompactViewport)}
+              style={getWorkspacePanelStyle(
+                workspaceLayout,
+                "board",
+                isCompactViewport,
+                effectiveLayoutMode
+              )}
             >
               <Card className="board-panel" size="sm">
                 <CardHeader className="board-panel__header">
@@ -1330,7 +1354,12 @@ export default function App() {
               ]
                 .filter(Boolean)
                 .join(" ")}
-              style={getWorkspacePanelStyle(workspaceLayout, "moves", isCompactViewport)}
+              style={getWorkspacePanelStyle(
+                workspaceLayout,
+                "moves",
+                isCompactViewport,
+                effectiveLayoutMode
+              )}
             >
               <MatchHistoryPanel
                 moves={moveHistory}
@@ -1356,7 +1385,12 @@ export default function App() {
               ]
                 .filter(Boolean)
                 .join(" ")}
-              style={getWorkspacePanelStyle(workspaceLayout, "narrative", isCompactViewport)}
+              style={getWorkspacePanelStyle(
+                workspaceLayout,
+                "narrative",
+                isCompactViewport,
+                effectiveLayoutMode
+              )}
             >
               <StoryPanel
                 collapsed={workspaceLayout.collapsed.narrative}
@@ -1385,7 +1419,12 @@ export default function App() {
               ]
                 .filter(Boolean)
                 .join(" ")}
-              style={getWorkspacePanelStyle(workspaceLayout, "saved", isCompactViewport)}
+              style={getWorkspacePanelStyle(
+                workspaceLayout,
+                "saved",
+                isCompactViewport,
+                effectiveLayoutMode
+              )}
             >
               <Panel
                 title="Saved Matches"
@@ -1451,7 +1490,12 @@ export default function App() {
               ]
                 .filter(Boolean)
                 .join(" ")}
-              style={getWorkspacePanelStyle(workspaceLayout, "study", isCompactViewport)}
+              style={getWorkspacePanelStyle(
+                workspaceLayout,
+                "study",
+                isCompactViewport,
+                effectiveLayoutMode
+              )}
             >
               <Panel
                 title="Study Games"
