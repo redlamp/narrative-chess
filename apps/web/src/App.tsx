@@ -12,7 +12,9 @@ import { Moon, Sun } from "lucide-react";
 import { getPieceAtSquare } from "@narrative-chess/game-core";
 import { getCharacterEventHistory } from "@narrative-chess/narrative-engine";
 import type { PieceKind, Square } from "@narrative-chess/content-schema";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   applyAppTheme,
   listAppSettings,
@@ -102,8 +104,8 @@ type LayoutFileNotice = {
 
 const panelTitles: Record<WorkspacePanelId, string> = {
   board: "Board",
-  moves: "Move History",
-  narrative: "Narrative Log",
+  moves: "Match Ledger",
+  narrative: "Board Inspector",
   saved: "Saved Matches",
   study: "Study Games",
   status: "Match State"
@@ -276,6 +278,7 @@ export default function App() {
   const status = snapshot.status;
   const moveHistory = [...snapshot.moveHistory].reverse();
   const narrativeHistory = [...snapshot.eventHistory].reverse();
+  const latestNarrativeEvent = narrativeHistory[0] ?? null;
   const eventByMoveId = new Map(snapshot.eventHistory.map((event) => [event.moveId, event] as const));
   const moveById = new Map(snapshot.moveHistory.map((move) => [move.id, move] as const));
   const focusedSquare = hoveredSquare ?? inspectedSquare ?? selectedSquare ?? (lastMove?.to ?? null);
@@ -1072,46 +1075,45 @@ export default function App() {
               onBooleanSettingChange={handleBooleanSettingChange}
             />
 
-            <nav className="page-switcher-tabs" aria-label="Workspace sections">
-              <div className="page-switcher">
+            <Tabs
+              value={page}
+              onValueChange={(nextPage) => {
+                if (isAppPage(nextPage)) {
+                  setPage(nextPage);
+                }
+              }}
+              className="page-switcher-tabs"
+            >
+              <TabsList variant="line" aria-label="Workspace sections">
                 {pageOptions.map(({ value, label }) => (
-                  <Button
-                    key={value}
-                    type="button"
-                    variant={page === value ? "secondary" : "ghost"}
-                    size="sm"
-                    className="page-switcher__button"
-                    aria-current={page === value ? "page" : undefined}
-                    onClick={() => setPage(value)}
-                  >
+                  <TabsTrigger key={value} value={value} className="page-switcher__trigger">
                     {label}
-                  </Button>
+                  </TabsTrigger>
                 ))}
-              </div>
-            </nav>
+              </TabsList>
+            </Tabs>
           </div>
         </div>
 
         {page === "match" ? (
-          <div className="hero__status app-header__status">
-            <div className="status-card">
-              <span className="status-card__label">Turn</span>
-              <span className="status-card__value">{turnLabel(status.turn)}</span>
-            </div>
-            <div className="status-card">
-              <span className="status-card__label">State</span>
-              <span className="status-card__value">
+          <div className="app-header__status">
+            <div className="app-header__status-strip">
+              <Badge variant="secondary">{turnLabel(status.turn)}</Badge>
+              <Badge variant="outline">
                 {statusLabel(status.isCheck, status.isCheckmate, status.isStalemate)}
-              </span>
+              </Badge>
+              <Badge variant="outline">
+                {snapshot.moveHistory.length} {snapshot.moveHistory.length === 1 ? "move" : "moves"}
+              </Badge>
+              <Badge variant="outline">{toneLabel(tonePreset)}</Badge>
+              <Badge variant={isStudyMode ? "secondary" : "outline"}>
+                {isStudyMode ? "Study replay" : "Local play"}
+              </Badge>
             </div>
-            <div className="status-card">
-              <span className="status-card__label">Moves</span>
-              <span className="status-card__value">{snapshot.moveHistory.length}</span>
-            </div>
-            <div className="status-card">
-              <span className="status-card__label">Tone</span>
-              <span className="status-card__value">{toneLabel(tonePreset)}</span>
-            </div>
+            <p className="muted app-header__match-copy">
+              Keep the board central, use the ledger to connect moves and narrative beats, and pin a
+              square to inspect its district and character context.
+            </p>
           </div>
         ) : (
           <div className="app-header__context">
@@ -1130,15 +1132,15 @@ export default function App() {
 
       {page === "cities" ? (
         <EdinburghReviewPage />
-        ) : page === "classics" ? (
-          <ClassicGamesLibraryPage
-            referenceGames={referenceGamesLibrary}
-            selectedReferenceGameId={selectedReferenceGameId}
-            onSelectReferenceGame={setSelectedReferenceGameId}
-            onLoadReferenceGame={(game) => handleLoadReferenceGameFromLibrary(game.id)}
-            onReferenceGamesChange={setReferenceGamesLibrary}
-          />
-        ) : page === "roles" ? (
+      ) : page === "classics" ? (
+        <ClassicGamesLibraryPage
+          referenceGames={referenceGamesLibrary}
+          selectedReferenceGameId={selectedReferenceGameId}
+          onSelectReferenceGame={setSelectedReferenceGameId}
+          onLoadReferenceGame={(game) => handleLoadReferenceGameFromLibrary(game.id)}
+          onReferenceGamesChange={setReferenceGamesLibrary}
+        />
+      ) : page === "roles" ? (
         <RoleCatalogPage
           roleCatalog={roleCatalog}
           roleCatalogDirectoryName={roleCatalogDirectoryName}
@@ -1299,102 +1301,6 @@ export default function App() {
                 {lastMove ? <p>Last move: {lastMove.san}</p> : <p>No moves yet.</p>}
               </div>
 
-              <div className="hover-panel">
-                <div className="hover-card">
-                  <p className="field-label">City Tile</p>
-                  {focusedDistrict ? (
-                    <div className="detail-card">
-                      <div className="detail-card__title-row">
-                        <h3>{focusedDistrict.name}</h3>
-                        <span className="side-pill side-pill--white">{focusedDistrict.square}</span>
-                      </div>
-                      <p className="detail-card__description">
-                        {focusedDistrict.locality} | {focusedDistrict.dayProfile}
-                      </p>
-                      <div className="chip-row">
-                        {focusedDistrict.descriptors.map((descriptor) => (
-                          <span key={descriptor} className="chip">
-                            {descriptor}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="chip-row">
-                        {focusedDistrict.landmarks.map((landmark) => (
-                          <span key={landmark} className="chip chip--soft">
-                            {landmark}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="muted">Hover a square to inspect the mapped district.</p>
-                  )}
-                </div>
-
-                <div className="hover-card">
-                  <p className="field-label">Character on Tile</p>
-                  {focusedCharacter && focusedPiece ? (
-                    <div className="detail-card">
-                      <div className="piece-badge">
-                        <span className={`piece-badge__icon piece-badge__icon--${focusedPiece.side}`}>
-                          {getPieceGlyph({ side: focusedPiece.side, kind: focusedPiece.kind })}
-                        </span>
-                        <div>
-                          <p className="piece-badge__label">
-                            {getPieceDisplayName({ side: focusedPiece.side, kind: focusedPiece.kind })}
-                          </p>
-                          <p className="muted">{getPieceKindLabel(focusedPiece.kind)} piece</p>
-                        </div>
-                      </div>
-                      <h3>{focusedCharacter.fullName}</h3>
-                      <p className="detail-card__description">{focusedCharacter.oneLineDescription}</p>
-                      <dl className="detail-grid">
-                        <div>
-                          <dt>Role</dt>
-                          <dd>{focusedCharacter.role}</dd>
-                        </div>
-                        <div>
-                          <dt>Origin</dt>
-                          <dd>{focusedCharacter.districtOfOrigin}</dd>
-                        </div>
-                        <div>
-                          <dt>Faction</dt>
-                          <dd>{focusedCharacter.faction}</dd>
-                        </div>
-                        <div>
-                          <dt>Square</dt>
-                          <dd>{focusedSquare ?? "None"}</dd>
-                        </div>
-                      </dl>
-                      <div className="chip-row">
-                        {focusedCharacter.traits.map((trait) => (
-                          <span key={trait} className="chip">
-                            {trait}
-                          </span>
-                        ))}
-                      </div>
-                      {settings.showRecentCharacterActions && focusedCharacterMoments.length ? (
-                        <div className="memory-list">
-                          <p className="memory-list__label">Recent actions</p>
-                          {focusedCharacterMoments.map((event) => (
-                            <article key={event.id} className="memory-item">
-                              <span className="memory-item__meta">
-                                Move {event.moveNumber} | {event.eventType}
-                              </span>
-                              <p className="memory-item__headline">{event.headline}</p>
-                            </article>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : focusedSquare ? (
-                    <p className="muted">No active piece is standing on this tile right now.</p>
-                  ) : (
-                    <p className="muted">Hover a square to inspect the piece standing there.</p>
-                  )}
-                </div>
-              </div>
-
               {renderResizeHandle("board")}
             </section>
 
@@ -1409,13 +1315,13 @@ export default function App() {
               style={getWorkspacePanelStyle(workspaceLayout, "moves", isCompactViewport)}
             >
               <Panel
-                title="Move History"
-                eyebrow="Rules"
+                title="Match Ledger"
+                eyebrow="Board + story"
                 collapsed={workspaceLayout.collapsed.moves}
                 action={renderPanelTools("moves")}
                 onToggleCollapse={() => handleTogglePanelCollapse("moves")}
               >
-                <div className="timeline timeline--match-log">
+                <div className="timeline timeline--match-ledger">
                   {moveHistory.length ? (
                     moveHistory.map((move) => {
                       const linkedEvent = eventByMoveId.get(move.id) ?? null;
@@ -1434,7 +1340,13 @@ export default function App() {
                             {move.capturedPieceId ? " and a capture" : ""}
                           </p>
                           {linkedEvent ? (
-                            <p className="timeline__link">Story beat: {linkedEvent.headline}</p>
+                            <>
+                              <h3 className="timeline__headline">{linkedEvent.headline}</h3>
+                              <p className="timeline__text">{linkedEvent.detail}</p>
+                              <p className="timeline__link">
+                                Story beat: {linkedEvent.eventType} on {linkedEvent.location}
+                              </p>
+                            </>
                           ) : null}
                         </article>
                       );
@@ -1458,61 +1370,130 @@ export default function App() {
               style={getWorkspacePanelStyle(workspaceLayout, "narrative", isCompactViewport)}
             >
               <Panel
-                title="Narrative Log"
-                eyebrow="Story"
+                title="Board Inspector"
+                eyebrow="Context"
                 collapsed={workspaceLayout.collapsed.narrative}
-                action={renderPanelTools(
-                  "narrative",
-                  <div className="tone-switcher">
-                    <button
-                      type="button"
-                      className={`button button--ghost ${tonePreset === "grounded" ? "button--active" : ""}`}
-                      onClick={() => updateTonePreset("grounded")}
-                    >
-                      Grounded
-                    </button>
-                    <button
-                      type="button"
-                      className={`button button--ghost ${tonePreset === "civic-noir" ? "button--active" : ""}`}
-                      onClick={() => updateTonePreset("civic-noir")}
-                    >
-                      Civic noir
-                    </button>
-                    <button
-                      type="button"
-                      className={`button button--ghost ${tonePreset === "dark-comedy" ? "button--active" : ""}`}
-                      onClick={() => updateTonePreset("dark-comedy")}
-                    >
-                      Dark comedy
-                    </button>
-                  </div>
-                )}
+                action={renderPanelTools("narrative")}
                 onToggleCollapse={() => handleTogglePanelCollapse("narrative")}
               >
-                <div className="timeline timeline--narrative">
-                  {narrativeHistory.length ? (
-                    narrativeHistory.map((event) => {
-                      const linkedMove = moveById.get(event.moveId) ?? null;
+                <div className="board-inspector">
+                  <p className="muted">{focusedSquareSummary}</p>
 
-                      return (
-                        <article key={event.id} className="timeline__item timeline__item--narrative">
-                          <div className="timeline__meta">
-                            <span className="timeline__turn">Move {event.moveNumber}</span>
-                            <span className="timeline__san">{event.eventType}</span>
-                          </div>
-                          <h3 className="timeline__headline">{event.headline}</h3>
-                          <p className="timeline__text">{event.detail}</p>
-                          {linkedMove ? (
-                            <p className="timeline__link">
-                              Board action: {linkedMove.san} | {linkedMove.from} to {linkedMove.to}
+                  <div className="detail-card">
+                    <p className="field-label">City tile</p>
+                    {focusedDistrict ? (
+                      <>
+                        <div className="detail-card__title-row">
+                          <h3>{focusedDistrict.name}</h3>
+                          <span className="side-pill side-pill--white">{focusedDistrict.square}</span>
+                        </div>
+                        <p className="detail-card__description">
+                          {focusedDistrict.locality} | {focusedDistrict.dayProfile}
+                        </p>
+                        <div className="chip-row">
+                          {focusedDistrict.descriptors.map((descriptor) => (
+                            <span key={descriptor} className="chip">
+                              {descriptor}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="chip-row">
+                          {focusedDistrict.landmarks.map((landmark) => (
+                            <span key={landmark} className="chip chip--soft">
+                              {landmark}
+                            </span>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <p className="muted">Hover or focus a square to inspect the mapped district.</p>
+                    )}
+                  </div>
+
+                  <div className="detail-card">
+                    <p className="field-label">Character on tile</p>
+                    {focusedCharacter && focusedPiece ? (
+                      <>
+                        <div className="piece-badge">
+                          <span className={`piece-badge__icon piece-badge__icon--${focusedPiece.side}`}>
+                            {getPieceGlyph({ side: focusedPiece.side, kind: focusedPiece.kind })}
+                          </span>
+                          <div>
+                            <p className="piece-badge__label">
+                              {getPieceDisplayName({ side: focusedPiece.side, kind: focusedPiece.kind })}
                             </p>
-                          ) : null}
-                        </article>
-                      );
-                    })
-                  ) : (
-                    <p className="muted">Each move will add a lightweight narrative beat here.</p>
-                  )}
+                            <p className="muted">{getPieceKindLabel(focusedPiece.kind)} piece</p>
+                          </div>
+                        </div>
+                        <h3>{focusedCharacter.fullName}</h3>
+                        <p className="detail-card__description">
+                          {focusedCharacter.oneLineDescription}
+                        </p>
+                        <dl className="detail-grid">
+                          <div>
+                            <dt>Role</dt>
+                            <dd>{focusedCharacter.role}</dd>
+                          </div>
+                          <div>
+                            <dt>Origin</dt>
+                            <dd>{focusedCharacter.districtOfOrigin}</dd>
+                          </div>
+                          <div>
+                            <dt>Faction</dt>
+                            <dd>{focusedCharacter.faction}</dd>
+                          </div>
+                          <div>
+                            <dt>Square</dt>
+                            <dd>{focusedSquare ?? "None"}</dd>
+                          </div>
+                        </dl>
+                        <div className="chip-row">
+                          {focusedCharacter.traits.map((trait) => (
+                            <span key={trait} className="chip">
+                              {trait}
+                            </span>
+                          ))}
+                        </div>
+                        {settings.showRecentCharacterActions && focusedCharacterMoments.length ? (
+                          <div className="memory-list">
+                            <p className="memory-list__label">Recent actions</p>
+                            {focusedCharacterMoments.map((event) => (
+                              <article key={event.id} className="memory-item">
+                                <span className="memory-item__meta">
+                                  Move {event.moveNumber} | {event.eventType}
+                                </span>
+                                <p className="memory-item__headline">{event.headline}</p>
+                              </article>
+                            ))}
+                          </div>
+                        ) : null}
+                      </>
+                    ) : focusedSquare ? (
+                      <p className="muted">No active piece is standing on this tile right now.</p>
+                    ) : (
+                      <p className="muted">Hover a square to inspect the piece standing there.</p>
+                    )}
+                  </div>
+
+                  <div className="detail-card">
+                    <p className="field-label">Latest narrative beat</p>
+                    {latestNarrativeEvent ? (
+                      <>
+                        <div className="detail-card__title-row">
+                          <h3>{latestNarrativeEvent.headline}</h3>
+                          <span className="side-pill">Move {latestNarrativeEvent.moveNumber}</span>
+                        </div>
+                        <p className="detail-card__description">{latestNarrativeEvent.detail}</p>
+                        {moveById.get(latestNarrativeEvent.moveId) ? (
+                          <p className="timeline__link">
+                            Board action: {moveById.get(latestNarrativeEvent.moveId)?.san}
+                          </p>
+                        ) : null}
+                      </>
+                    ) : (
+                      <p className="muted">Each move will add a lightweight narrative beat here.</p>
+                    )}
+                  </div>
                 </div>
               </Panel>
               {renderResizeHandle("narrative")}
@@ -1642,30 +1623,59 @@ export default function App() {
                 action={renderPanelTools("status")}
                 onToggleCollapse={() => handleTogglePanelCollapse("status")}
               >
-                <div className="state-list">
-                  <div className="state-list__row">
-                    <span>Current turn</span>
-                    <strong>{turnLabel(status.turn)}</strong>
+                <div className="state-panel">
+                  <div className="state-list">
+                    <div className="state-list__row">
+                      <span>Current turn</span>
+                      <strong>{turnLabel(status.turn)}</strong>
+                    </div>
+                    <div className="state-list__row">
+                      <span>Mode</span>
+                      <strong>{isStudyMode ? "Study replay" : "Local play"}</strong>
+                    </div>
+                    <div className="state-list__row">
+                      <span>Board state</span>
+                      <strong>{statusLabel(status.isCheck, status.isCheckmate, status.isStalemate)}</strong>
+                    </div>
+                    <div className="state-list__row">
+                      <span>Focused square</span>
+                      <strong>{focusedSquare ?? "None"}</strong>
+                    </div>
+                    <div className="state-list__row">
+                      <span>Legal targets</span>
+                      <strong>{legalMoves.length}</strong>
+                    </div>
+                    <div className="state-list__row">
+                      <span>Hovered district</span>
+                      <strong>{focusedDistrict?.name ?? "None"}</strong>
+                    </div>
                   </div>
-                  <div className="state-list__row">
-                    <span>Mode</span>
-                    <strong>{isStudyMode ? "Study replay" : "Local play"}</strong>
-                  </div>
-                  <div className="state-list__row">
-                    <span>Board state</span>
-                    <strong>{statusLabel(status.isCheck, status.isCheckmate, status.isStalemate)}</strong>
-                  </div>
-                  <div className="state-list__row">
-                    <span>Focused square</span>
-                    <strong>{focusedSquare ?? "None"}</strong>
-                  </div>
-                  <div className="state-list__row">
-                    <span>Legal targets</span>
-                    <strong>{legalMoves.length}</strong>
-                  </div>
-                  <div className="state-list__row">
-                    <span>Hovered district</span>
-                    <strong>{focusedDistrict?.name ?? "None"}</strong>
+
+                  <div className="state-panel__section">
+                    <p className="field-label">Narrative tone</p>
+                    <div className="tone-switcher">
+                      <button
+                        type="button"
+                        className={`button button--ghost ${tonePreset === "grounded" ? "button--active" : ""}`}
+                        onClick={() => updateTonePreset("grounded")}
+                      >
+                        Grounded
+                      </button>
+                      <button
+                        type="button"
+                        className={`button button--ghost ${tonePreset === "civic-noir" ? "button--active" : ""}`}
+                        onClick={() => updateTonePreset("civic-noir")}
+                      >
+                        Civic noir
+                      </button>
+                      <button
+                        type="button"
+                        className={`button button--ghost ${tonePreset === "dark-comedy" ? "button--active" : ""}`}
+                        onClick={() => updateTonePreset("dark-comedy")}
+                      >
+                        Dark comedy
+                      </button>
+                    </div>
                   </div>
                 </div>
               </Panel>

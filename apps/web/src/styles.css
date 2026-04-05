@@ -101,9 +101,8 @@ select {
 
 .app-header {
   display: grid;
-  gap: 16px;
-  padding: 20px;
-  min-height: 11.5rem;
+  gap: 14px;
+  padding: 18px 20px;
   align-content: start;
 }
 
@@ -134,6 +133,7 @@ select {
 
 .app-header__actions {
   align-items: center;
+  justify-content: flex-end;
 }
 
 .app-header__brand h1 {
@@ -145,16 +145,26 @@ select {
 }
 
 .app-header__status {
-  max-width: 52rem;
-  min-height: 5.75rem;
-  align-content: start;
+  display: grid;
+  gap: 10px;
 }
 
 .app-header__context {
-  max-width: 42rem;
-  min-height: 2.75rem;
+  max-width: 48rem;
   display: flex;
   align-items: flex-start;
+}
+
+.app-header__status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.app-header__match-copy {
+  max-width: 48rem;
+  margin: 0;
 }
 
 .indexed-workspace {
@@ -231,12 +241,6 @@ select {
 .page-card-stack {
   display: grid;
   gap: 24px;
-}
-
-.hero__status {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
 }
 
 .status-card,
@@ -323,6 +327,13 @@ select {
 
 .page-switcher-tabs {
   display: flex;
+  align-items: flex-end;
+}
+
+.page-switcher-tabs [data-slot="tabs-list"] {
+  width: auto;
+  max-width: 100%;
+  flex-wrap: wrap;
   justify-content: flex-end;
 }
 
@@ -334,6 +345,10 @@ select {
 }
 
 .page-switcher__button {
+  min-width: 7.5rem;
+}
+
+.page-switcher__trigger {
   min-width: 7.5rem;
 }
 
@@ -393,7 +408,9 @@ select {
 .role-card,
 .saved-match-list,
 .app-menu__section,
-.app-menu__toggles {
+.app-menu__toggles,
+.board-inspector,
+.state-panel {
   display: grid;
   gap: 12px;
 }
@@ -1069,6 +1086,12 @@ select {
   padding: 14px;
 }
 
+.detail-card,
+.timeline__item {
+  display: grid;
+  gap: 10px;
+}
+
 .hover-card {
   min-height: 15rem;
   max-height: 15rem;
@@ -1253,6 +1276,17 @@ select {
   color: var(--muted-foreground);
 }
 
+.state-panel__section {
+  display: grid;
+  gap: 10px;
+}
+
+.board-inspector {
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+}
+
 .role-page__grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -1435,7 +1469,8 @@ select {
     width: 100%;
   }
 
-  .page-switcher__button {
+  .page-switcher__button,
+  .page-switcher__trigger {
     flex: 1 1 0;
   }
 

@@ -17,7 +17,7 @@ Shipped:
 Gaps that still matter:
 - the editor shell is much more consistent now, but multi-city authoring will need a broader review and expansion path as more cities are added
 - board keyboard support is underway, but layout editing and editor-page semantics still need an accessibility pass
-- the match shell still feels busier than a chess-first tool should
+- the match shell is calmer now, but broader typography and page-to-page hierarchy cleanup still needs another pass
 
 ## Active Queue
 
@@ -79,7 +79,7 @@ Progress:
 - board arrow-key navigation is now being committed with tests so the chess surface is no longer pointer-only
 
 ### 5. Design Cleanup
-Status: queued
+Status: in progress
 
 Goal:
 - make the product feel less like a dashboard and more like a chess-first tool
@@ -88,6 +88,9 @@ Deliverables:
 - strengthen board primacy on Match
 - reduce shell noise around navigation and utilities
 - tighten typography and spacing across editor pages
+
+Progress:
+- Match now uses shadcn tabs for top-level navigation, a compact status strip instead of oversized status cards, a combined ledger for moves plus story beats, and a dedicated board inspector in place of the duplicated hover/log split.
 
 ## Recovery Items Merged Into The Main Queue
 
