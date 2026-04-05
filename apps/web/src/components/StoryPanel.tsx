@@ -7,7 +7,7 @@ import {
   type PointerEvent,
   type ReactNode
 } from "react";
-import { Grip, LayoutDashboard } from "lucide-react";
+import { Grip } from "lucide-react";
 import type {
   CharacterSummary,
   DistrictCell,
@@ -44,7 +44,8 @@ type StoryPanelProps = {
   showRecentCharacterActions: boolean;
   layoutState: StoryPanelLayoutState;
   layoutMode: boolean;
-  onToggleLayoutMode: () => void;
+  parentColumnGap: number;
+  parentRowHeight: number;
   onLayoutRectChange: (panelId: StoryPanelSectionId, nextRect: StoryPanelSectionRect) => void;
   tonePreset: "grounded" | "civic-noir" | "dark-comedy";
   onToneChange: (tone: "grounded" | "civic-noir" | "dark-comedy") => void;
@@ -94,7 +95,8 @@ export function StoryPanel({
   showRecentCharacterActions,
   layoutState,
   layoutMode,
-  onToggleLayoutMode,
+  parentColumnGap,
+  parentRowHeight,
   onLayoutRectChange,
   tonePreset,
   onToneChange,
@@ -107,11 +109,11 @@ export function StoryPanel({
     () =>
       ({
         "--story-layout-column-count": String(layoutState.columnCount),
-        "--story-layout-gap": `${layoutState.columnGap}px`,
-        "--story-layout-row-height": `${layoutState.rowHeight}px`,
+        "--story-layout-gap": `${parentColumnGap}px`,
+        "--story-layout-row-height": `${parentRowHeight}px`,
         "--story-layout-row-count": String(rowCount)
       }) as CSSProperties,
-    [layoutState.columnCount, layoutState.columnGap, layoutState.rowHeight, rowCount]
+    [layoutState.columnCount, parentColumnGap, parentRowHeight, rowCount]
   );
 
   useEffect(() => {
@@ -130,12 +132,12 @@ export function StoryPanel({
         offsetX: event.clientX - rect.left,
         width: rect.width,
         columnCount: layoutState.columnCount,
-        columnGap: layoutState.columnGap
+        columnGap: parentColumnGap
       });
       const currentRow = getSnappedStoryPanelRow({
         offsetY: event.clientY - rect.top,
-        rowHeight: layoutState.rowHeight,
-        rowGap: layoutState.columnGap
+        rowHeight: parentRowHeight,
+        rowGap: parentColumnGap
       });
       const deltaColumns = currentColumn - activeEdit.originColumn;
       const deltaRows = currentRow - activeEdit.originRow;
@@ -167,7 +169,7 @@ export function StoryPanel({
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [activeEdit, layoutState.columnCount, layoutState.columnGap, layoutState.rowHeight, onLayoutRectChange]);
+  }, [activeEdit, layoutState.columnCount, onLayoutRectChange, parentColumnGap, parentRowHeight]);
 
   const beginEdit =
     (panelId: StoryPanelSectionId, mode: StoryLayoutEditMode) =>
@@ -184,12 +186,12 @@ export function StoryPanel({
         offsetX: event.clientX - rect.left,
         width: rect.width,
         columnCount: layoutState.columnCount,
-        columnGap: layoutState.columnGap
+        columnGap: parentColumnGap
       });
       const originRow = getSnappedStoryPanelRow({
         offsetY: event.clientY - rect.top,
-        rowHeight: layoutState.rowHeight,
-        rowGap: layoutState.columnGap
+        rowHeight: parentRowHeight,
+        rowGap: parentColumnGap
       });
 
       setActiveEdit({
@@ -369,18 +371,6 @@ export function StoryPanel({
     <Panel
       title="Story"
       collapsed={collapsed}
-      leadingAction={
-        <Button
-          type="button"
-          variant={layoutMode ? "secondary" : "ghost"}
-          size="icon-xs"
-          onClick={onToggleLayoutMode}
-          aria-label={layoutMode ? "Exit story layout edit mode" : "Edit story sublayout"}
-          title={layoutMode ? "Exit story layout edit mode" : "Edit story sublayout"}
-        >
-          <LayoutDashboard />
-        </Button>
-      }
       action={headerAction}
       onToggleCollapse={onToggleCollapse}
     >

@@ -1436,7 +1436,8 @@ export default function App() {
                 showRecentCharacterActions={settings.showRecentCharacterActions}
                 layoutState={storyPanelLayout}
                 layoutMode={effectiveLayoutMode}
-                onToggleLayoutMode={() => setIsLayoutMode((current) => !current)}
+                parentColumnGap={workspaceLayout.columnGap}
+                parentRowHeight={workspaceLayout.rowHeight}
                 onLayoutRectChange={handleStoryPanelRectChange}
                 tonePreset={tonePreset}
                 onToneChange={updateTonePreset}
