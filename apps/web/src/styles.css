@@ -708,6 +708,48 @@ select {
   background: color-mix(in srgb, hsl(var(--destructive)) 10%, var(--background) 90%);
 }
 
+.saved-match-shell {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
+  gap: 12px;
+}
+
+.saved-match-list {
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+  align-content: start;
+}
+
+.saved-match-list__item {
+  min-height: 0;
+}
+
+.saved-match__count {
+  color: var(--muted-foreground);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.saved-match-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 12px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.saved-match-actions > :first-child {
+  justify-self: start;
+}
+
+.saved-match-actions > :last-child {
+  justify-self: end;
+}
+
 .menu-toggle__description,
 .study-panel__summary-copy,
 .saved-match__meta,

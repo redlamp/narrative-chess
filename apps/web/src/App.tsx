@@ -17,6 +17,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from "@/components/ui/alert-dialog";
+import {
   applyAppTheme,
   listAppSettings,
   resetAppSettings,
@@ -86,6 +97,7 @@ import { ResearchPage } from "./components/ResearchPage";
 import { RoleCatalogPage } from "./components/RoleCatalogPage";
 import { StoryPanel } from "./components/StoryPanel";
 import { StudyPanel } from "./components/StudyPanel";
+import { WorkspaceListItem } from "./components/WorkspaceListItem";
 import { useChessMatch } from "./hooks/useChessMatch";
 import {
   addRoleCatalogEntry,
@@ -289,6 +301,7 @@ export default function App() {
   const [pieceStyleFileBusyAction, setPieceStyleFileBusyAction] = useState<string | null>(null);
   const [pieceStyleFileNotice, setPieceStyleFileNotice] = useState<LayoutFileNotice | null>(null);
   const [isPieceStyleDirectorySupported, setIsPieceStyleDirectorySupported] = useState(false);
+  const [selectedSavedMatchId, setSelectedSavedMatchId] = useState<string | null>(null);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
   const {
     snapshot,
@@ -329,6 +342,9 @@ export default function App() {
   const selectedMove = selectedPly > 0 ? historyMoves[selectedPly - 1] ?? null : null;
   const selectedEvent = selectedMove ? eventByMoveId.get(selectedMove.id) ?? null : null;
   const storyFocusedSquare = hoveredSquare ?? selectedMove?.to ?? lastMove?.to ?? selectedSquare ?? null;
+  const selectedSavedMatch = selectedSavedMatchId
+    ? savedMatches.find((savedMatch) => savedMatch.id === selectedSavedMatchId) ?? null
+    : null;
   const focusedDistrict = getDistrictForSquare(storyFocusedSquare);
   const focusedPiece = storyFocusedSquare ? getPieceAtSquare(snapshot, storyFocusedSquare) : null;
   const focusedCharacter = focusedPiece ? snapshot.characters[focusedPiece.pieceId] ?? null : null;
@@ -430,6 +446,12 @@ export default function App() {
   useEffect(() => {
     saveStoryPanelLayoutState(storyPanelLayout);
   }, [storyPanelLayout]);
+
+  useEffect(() => {
+    if (selectedSavedMatchId && !savedMatches.some((savedMatch) => savedMatch.id === selectedSavedMatchId)) {
+      setSelectedSavedMatchId(null);
+    }
+  }, [savedMatches, selectedSavedMatchId]);
 
   useEffect(() => {
     setIsLayoutDirectorySupported(supportsWorkspaceLayoutDirectory());
@@ -1043,6 +1065,23 @@ export default function App() {
     setPieceStyleSheet(savePieceStyleSheet(value));
   };
 
+  const handleLoadSelectedSavedMatch = () => {
+    if (!selectedSavedMatch) {
+      return;
+    }
+
+    loadSavedMatch(selectedSavedMatch.id);
+  };
+
+  const handleRemoveSelectedSavedMatch = () => {
+    if (!selectedSavedMatch) {
+      return;
+    }
+
+    removeSavedMatch(selectedSavedMatch.id);
+    setSelectedSavedMatchId(null);
+  };
+
   const handleStoryPanelRectChange = (
     panelId: StoryPanelSectionId,
     nextRect: StoryPanelSectionRect
@@ -1479,37 +1518,70 @@ export default function App() {
                 onToggleCollapse={() => handleTogglePanelCollapse("saved")}
               >
                 {savedMatches.length ? (
-                  <div className="saved-match-list">
-                    {savedMatches.map((savedMatch) => (
-                      <article key={savedMatch.id} className="saved-match">
-                        <Button
+                  <div className="saved-match-shell">
+                    <div className="saved-match-list" role="listbox" aria-label="Saved matches">
+                      {savedMatches.map((savedMatch) => (
+                        <WorkspaceListItem
+                          key={savedMatch.id}
                           type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          className="saved-match__icon-button saved-match__icon-button--destructive"
-                          onClick={() => removeSavedMatch(savedMatch.id)}
-                          aria-label={`Delete saved match ${savedMatch.name}`}
-                        >
-                          <Trash2 />
-                        </Button>
-                        <div className="saved-match__summary">
-                          <h3 className="saved-match__title">{savedMatch.name}</h3>
-                          <p className="saved-match__meta">
-                            {formatSavedAt(savedMatch.savedAt)} | {savedMatch.moveCount} moves
-                          </p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          className="saved-match__icon-button saved-match__icon-button--load"
-                          onClick={() => loadSavedMatch(savedMatch.id)}
-                          aria-label={`Load saved match ${savedMatch.name}`}
-                        >
-                          <FolderOpen />
-                        </Button>
-                      </article>
-                    ))}
+                          selected={savedMatch.id === selectedSavedMatchId}
+                          className="saved-match-list__item"
+                          onClick={() => setSelectedSavedMatchId(savedMatch.id)}
+                          title={savedMatch.name}
+                          description={formatSavedAt(savedMatch.savedAt)}
+                          meta={<span className="saved-match__count">{savedMatch.moveCount} moves</span>}
+                        />
+                      ))}
+                    </div>
+                    <div className="saved-match-actions">
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon-sm"
+                            disabled={!selectedSavedMatch}
+                            aria-label={
+                              selectedSavedMatch
+                                ? `Delete saved match ${selectedSavedMatch.name}`
+                                : "Delete selected saved match"
+                            }
+                          >
+                            <Trash2 />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete saved match?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {selectedSavedMatch
+                                ? `This will permanently remove ${selectedSavedMatch.name} from local saved matches.`
+                                : "This will permanently remove the selected local saved match."}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction variant="destructive" onClick={handleRemoveSelectedSavedMatch}>
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        disabled={!selectedSavedMatch}
+                        onClick={handleLoadSelectedSavedMatch}
+                        aria-label={
+                          selectedSavedMatch
+                            ? `Load saved match ${selectedSavedMatch.name}`
+                            : "Load selected saved match"
+                        }
+                      >
+                        <FolderOpen />
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <p className="muted">
