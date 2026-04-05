@@ -47,7 +47,6 @@ export function StoryPanel({
   return (
     <Panel
       title="Story"
-      eyebrow="Narrative"
       collapsed={collapsed}
       action={headerAction}
       onToggleCollapse={onToggleCollapse}

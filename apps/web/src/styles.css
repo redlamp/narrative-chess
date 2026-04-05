@@ -786,6 +786,7 @@ select {
 .workspace-item > .panel,
 .workspace-item > .board-panel {
   height: 100%;
+  min-height: 0;
   border-radius: inherit;
   overflow: hidden;
 }
@@ -864,6 +865,8 @@ select {
 
 .panel {
   min-height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .panel--collapsed {
@@ -915,6 +918,7 @@ select {
   gap: 14px;
   min-height: 0;
   flex: 1 1 auto;
+  overflow: hidden;
 }
 
 .classic-games-page__links {
@@ -1008,23 +1012,50 @@ select {
   color: var(--muted-foreground);
 }
 
+.match-history {
+  height: 100%;
+  min-height: 0;
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
 .match-history__nav,
-.match-history__summary {
+.match-history__playhead {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.match-history__summary {
-  justify-content: space-between;
+.match-history__playhead {
+  justify-content: flex-start;
+}
+
+.match-history__header-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: end;
+  padding-right: 4px;
+}
+
+.match-history__header-cell {
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.match-history__header-cell--number,
+.match-history__move-number {
+  width: 2.25rem;
 }
 
 .match-history__score {
   min-height: 0;
-  max-height: 100%;
   overflow: auto;
   padding-right: 4px;
+  align-content: start;
 }
 
 .match-history__row {
@@ -1035,24 +1066,27 @@ select {
 }
 
 .match-history__move-number {
-  padding-top: 10px;
+  padding-top: 7px;
   color: var(--muted-foreground);
   font-weight: 600;
+  font-size: 0.85rem;
 }
 
 .match-history__move-button,
 .match-history__move-empty {
   border: 1px solid var(--border);
   border-radius: calc(var(--radius) + 0.05rem);
-  padding: 10px 12px;
+  min-height: 2.2rem;
+  padding: 7px 10px;
 }
 
 .match-history__move-button {
   display: grid;
-  gap: 4px;
   align-content: start;
   background: var(--background);
   text-align: left;
+  font-size: 0.9rem;
+  line-height: 1.25;
   transition:
     border-color 120ms ease,
     background-color 120ms ease,
@@ -1070,14 +1104,6 @@ select {
 .match-history__move-button--active {
   background: color-mix(in srgb, var(--secondary) 82%, var(--background) 18%);
   border-color: color-mix(in srgb, var(--ring) 32%, var(--border) 68%);
-}
-
-.match-history__move-side {
-  color: var(--muted-foreground);
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .match-history__move-empty {
@@ -1509,6 +1535,14 @@ select {
 }
 
 .story-panel {
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+  align-content: start;
+}
+
+.saved-match-list,
+.study-panel {
   min-height: 0;
   overflow: auto;
   padding-right: 4px;

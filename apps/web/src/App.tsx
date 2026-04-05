@@ -1386,7 +1386,6 @@ export default function App() {
             >
               <Panel
                 title="Saved Matches"
-                eyebrow="Local"
                 collapsed={workspaceLayout.collapsed.saved}
                 action={renderPanelTools(
                   <button
@@ -1453,7 +1452,6 @@ export default function App() {
             >
               <Panel
                 title="Study Games"
-                eyebrow="Reference"
                 collapsed={workspaceLayout.collapsed.study}
                 action={renderPanelTools()}
                 onToggleCollapse={() => handleTogglePanelCollapse("study")}
