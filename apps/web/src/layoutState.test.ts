@@ -11,9 +11,9 @@ import {
 describe("layoutState", () => {
   it("normalizes incomplete layout payloads to safe defaults", () => {
     const layoutState = normalizeWorkspaceLayoutState({
-      columnCount: 20,
+      columnCount: 30,
       columnGap: 4,
-      rowHeight: 200,
+      rowHeight: 300,
       panels: {
         moves: {
           x: 20,
@@ -24,10 +24,10 @@ describe("layoutState", () => {
       }
     });
 
-    expect(layoutState.columnCount).toBe(16);
-    expect(layoutState.columnGap).toBe(8);
-    expect(layoutState.rowHeight).toBe(80);
-    expect(layoutState.panels.moves.x).toBeLessThanOrEqual(15);
+    expect(layoutState.columnCount).toBe(24);
+    expect(layoutState.columnGap).toBe(4);
+    expect(layoutState.rowHeight).toBe(256);
+    expect(layoutState.panels.moves.x).toBeLessThanOrEqual(23);
     expect(layoutState.panels.moves.h).toBeGreaterThanOrEqual(5);
   });
 

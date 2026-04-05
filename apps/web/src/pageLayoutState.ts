@@ -27,11 +27,13 @@ type PanelPlacementRect = {
 };
 
 const pageLayoutDefaultColumnCount = 12;
-const pageLayoutMinimumColumns = 6;
-const pageLayoutMaximumColumns = 16;
+const pageLayoutMinimumColumns = 1;
+const pageLayoutMaximumColumns = 24;
 const pageLayoutDefaultColumnGap = 16;
-const pageLayoutMinimumColumnGap = 8;
-const pageLayoutMaximumColumnGap = 32;
+const pageLayoutMinimumColumnGap = 0;
+const pageLayoutMaximumColumnGap = 64;
+const pageLayoutMinimumRowHeight = 8;
+const pageLayoutMaximumRowHeight = 256;
 const pageLayoutMinimumRows = 18;
 
 const minimumPanelWidth: Record<PageLayoutPanelId, number> = {
@@ -282,7 +284,11 @@ export function normalizePageLayoutState(input: {
     version: 1,
     columnCount,
     columnGap: normalizeColumnGap(candidate.columnGap),
-    rowHeight: clamp(numberOrFallback(candidate.rowHeight, 44), 30, 80),
+    rowHeight: clamp(
+      numberOrFallback(candidate.rowHeight, 44),
+      pageLayoutMinimumRowHeight,
+      pageLayoutMaximumRowHeight
+    ),
     panels: reflowPageLayoutPanels({
       variant: input.variant,
       panelIds: input.panelIds,
@@ -459,7 +465,7 @@ export function updatePageLayoutRowHeight(input: {
 }) {
   return {
     ...input.layoutState,
-    rowHeight: clamp(Math.round(input.value), 30, 80)
+    rowHeight: clamp(Math.round(input.value), pageLayoutMinimumRowHeight, pageLayoutMaximumRowHeight)
   };
 }
 

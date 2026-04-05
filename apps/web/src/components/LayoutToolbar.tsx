@@ -92,24 +92,24 @@ export function LayoutToolbar({
               <NumberStepperField
                 label="Column count"
                 value={columnCount}
-                min={6}
-                max={16}
+                min={1}
+                max={24}
                 step={1}
                 onChange={onColumnCountChange}
               />
               <NumberStepperField
                 label="Column gap (px)"
                 value={columnGap}
-                min={8}
-                max={32}
+                min={0}
+                max={64}
                 step={2}
                 onChange={onColumnGapChange}
               />
               <NumberStepperField
                 label="Row height (px)"
                 value={rowHeight}
-                min={30}
-                max={80}
+                min={8}
+                max={256}
                 step={2}
                 onChange={onRowHeightChange}
               />

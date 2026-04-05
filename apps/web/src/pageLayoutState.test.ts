@@ -11,17 +11,17 @@ describe("pageLayoutState", () => {
   it("clamps invalid sizing values", () => {
     const layoutState = normalizePageLayoutState({
       value: {
-        columnCount: 20,
+        columnCount: 30,
         columnGap: 4,
-        rowHeight: 120
+        rowHeight: 300
       },
       variant: "three-pane",
       panelIds: ["intro", "index", "secondary", "detail"]
     });
 
-    expect(layoutState.columnCount).toBe(16);
-    expect(layoutState.columnGap).toBe(8);
-    expect(layoutState.rowHeight).toBe(80);
+    expect(layoutState.columnCount).toBe(24);
+    expect(layoutState.columnGap).toBe(4);
+    expect(layoutState.rowHeight).toBe(256);
   });
 
   it("prevents overlapping panels", () => {

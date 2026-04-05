@@ -43,11 +43,13 @@ type PanelPlacementRect = {
 
 const storageKey = "narrative-chess:workspace-layout:v1";
 const workspaceDefaultColumnCount = 12;
-const workspaceMinimumColumns = 6;
-const workspaceMaximumColumns = 16;
+const workspaceMinimumColumns = 1;
+const workspaceMaximumColumns = 24;
 const workspaceDefaultColumnGap = 16;
-const workspaceMinimumColumnGap = 8;
-const workspaceMaximumColumnGap = 32;
+const workspaceMinimumColumnGap = 0;
+const workspaceMaximumColumnGap = 64;
+const workspaceMinimumRowHeight = 8;
+const workspaceMaximumRowHeight = 256;
 const workspaceMinimumRows = 18;
 const collapsedPanelHeight = 2;
 
@@ -281,7 +283,11 @@ export function normalizeWorkspaceLayoutState(value: unknown): WorkspaceLayoutSt
     version: 2,
     columnCount,
     columnGap: normalizeColumnGap(candidate.columnGap),
-    rowHeight: clamp(numberOrFallback(candidate.rowHeight, defaultLayoutState.rowHeight), 30, 80),
+    rowHeight: clamp(
+      numberOrFallback(candidate.rowHeight, defaultLayoutState.rowHeight),
+      workspaceMinimumRowHeight,
+      workspaceMaximumRowHeight
+    ),
     panels: reflowWorkspacePanels(normalizedPanels, columnCount, columnCount),
     collapsed: collapsibleWorkspacePanelIds.reduce((nextCollapsed, panelId) => {
       nextCollapsed[panelId] =
@@ -452,7 +458,7 @@ export function updateWorkspaceRowHeight(input: {
 }) {
   return {
     ...input.layoutState,
-    rowHeight: clamp(Math.round(input.value), 30, 80)
+    rowHeight: clamp(Math.round(input.value), workspaceMinimumRowHeight, workspaceMaximumRowHeight)
   };
 }
 

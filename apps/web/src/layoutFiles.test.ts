@@ -33,7 +33,7 @@ describe("layoutFiles", () => {
     });
 
     expect(layoutFile.name).toBe("Review layout");
-    expect(normalizedFile?.layoutState.rowHeight).toBe(80);
+    expect(normalizedFile?.layoutState.rowHeight).toBe(256);
   });
 
   it("remembers the latest named layout file without duplicates", () => {
