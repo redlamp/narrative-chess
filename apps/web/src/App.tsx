@@ -24,7 +24,7 @@ import {
   type AppSettings
 } from "./appSettings";
 import { edinburghDistrictsBySquare, getDistrictForSquare } from "./edinburghBoard";
-import { getPieceDisplayName, getPieceGlyph, getPieceKindLabel } from "./chessPresentation";
+import { getPieceDisplayName } from "./chessPresentation";
 import {
   getSnappedWorkspaceColumn,
   getSnappedWorkspaceRow,
@@ -72,8 +72,10 @@ import { AppMenu } from "./components/AppMenu";
 import { ClassicGamesLibraryPage } from "./components/ClassicGamesLibraryPage";
 import { EdinburghReviewPage } from "./components/EdinburghReviewPage";
 import { LayoutToolbar } from "./components/LayoutToolbar";
+import { MatchHistoryPanel } from "./components/MatchHistoryPanel";
 import { ResearchPage } from "./components/ResearchPage";
 import { RoleCatalogPage } from "./components/RoleCatalogPage";
+import { StoryPanel } from "./components/StoryPanel";
 import { StudyPanel } from "./components/StudyPanel";
 import { useChessMatch } from "./hooks/useChessMatch";
 import {
@@ -105,10 +107,9 @@ type LayoutFileNotice = {
 const panelTitles: Record<WorkspacePanelId, string> = {
   board: "Board",
   moves: "Match History (PGN)",
-  narrative: "Board Inspector",
+  narrative: "Story",
   saved: "Saved Matches",
-  study: "Study Games",
-  status: "Match State"
+  study: "Study Games"
 };
 
 const pageOptions: Array<{ value: AppPage; label: string }> = [
@@ -254,6 +255,10 @@ export default function App() {
   const workspaceRef = useRef<HTMLDivElement | null>(null);
   const {
     snapshot,
+    historyMoves,
+    historyEvents,
+    selectedPly,
+    totalPlies,
     boardSquares,
     selectedSquare,
     savedMatches,
@@ -269,6 +274,7 @@ export default function App() {
     lastMove,
     handleSquareClick,
     handleUndo,
+    goToPly,
     loadReferenceGame,
     loadPgnStudy,
     exitStudyMode,
@@ -285,12 +291,12 @@ export default function App() {
   });
 
   const status = snapshot.status;
-  const moveHistory = [...snapshot.moveHistory].reverse();
-  const narrativeHistory = [...snapshot.eventHistory].reverse();
-  const latestNarrativeEvent = narrativeHistory[0] ?? null;
-  const eventByMoveId = new Map(snapshot.eventHistory.map((event) => [event.moveId, event] as const));
-  const moveById = new Map(snapshot.moveHistory.map((move) => [move.id, move] as const));
-  const focusedSquare = hoveredSquare ?? inspectedSquare ?? selectedSquare ?? (lastMove?.to ?? null);
+  const moveHistory = historyMoves;
+  const eventByMoveId = new Map(historyEvents.map((event) => [event.moveId, event] as const));
+  const selectedMove = selectedPly > 0 ? historyMoves[selectedPly - 1] ?? null : null;
+  const selectedEvent = selectedMove ? eventByMoveId.get(selectedMove.id) ?? null : null;
+  const focusedSquare =
+    hoveredSquare ?? inspectedSquare ?? selectedSquare ?? (selectedMove?.to ?? lastMove?.to ?? null);
   const focusedDistrict = getDistrictForSquare(focusedSquare);
   const focusedPiece = focusedSquare ? getPieceAtSquare(snapshot, focusedSquare) : null;
   const focusedCharacter = focusedPiece ? snapshot.characters[focusedPiece.pieceId] ?? null : null;
@@ -305,7 +311,7 @@ export default function App() {
     referenceGamesLibrary.find((game) => game.id === selectedReferenceGameId) ??
     referenceGamesLibrary[0] ??
     null;
-  const hasActiveGame = isStudyMode || snapshot.moveHistory.length > 0;
+  const hasActiveGame = isStudyMode || totalPlies > 0;
   const effectiveLayoutMode = isLayoutMode && !isCompactViewport;
   const workspaceRowCount = useMemo(
     () => getWorkspaceLayoutRowCount(workspaceLayout),
@@ -1134,7 +1140,7 @@ export default function App() {
                 <div className="app-header__status-card">
                   <span className="app-header__status-label">Moves</span>
                   <strong className="app-header__status-value">
-                    {snapshot.moveHistory.length}
+                    {totalPlies}
                   </strong>
                 </div>
                 <div className="app-header__status-card">
@@ -1321,57 +1327,20 @@ export default function App() {
                 .join(" ")}
               style={getWorkspacePanelStyle(workspaceLayout, "moves", isCompactViewport)}
             >
-              <Panel
-                title="Match History (PGN)"
-                eyebrow="Moves + story"
+              <MatchHistoryPanel
+                moves={moveHistory}
+                selectedPly={selectedPly}
+                totalPlies={totalPlies}
+                canUndo={canUndo}
                 collapsed={workspaceLayout.collapsed.moves}
-                action={renderPanelTools(
-                  <button
-                    type="button"
-                    className="button button--ghost"
-                    onClick={handleUndo}
-                    disabled={!canUndo}
-                  >
-                    Undo
-                  </button>
-                )}
                 onToggleCollapse={() => handleTogglePanelCollapse("moves")}
-              >
-                <div className="timeline timeline--match-ledger">
-                  {moveHistory.length ? (
-                    moveHistory.map((move) => {
-                      const linkedEvent = eventByMoveId.get(move.id) ?? null;
-
-                      return (
-                        <article key={move.id} className="timeline__item timeline__item--move">
-                          <div className="timeline__meta">
-                            <span className="timeline__turn">
-                              {move.moveNumber}. {move.side}
-                            </span>
-                            <span className="timeline__san">{move.san}</span>
-                          </div>
-                          <p className="timeline__text">
-                            {move.from} to {move.to}
-                            {move.isCheckmate ? " with checkmate" : move.isCheck ? " with check" : ""}
-                            {move.capturedPieceId ? " and a capture" : ""}
-                          </p>
-                          {linkedEvent ? (
-                            <>
-                              <h3 className="timeline__headline">{linkedEvent.headline}</h3>
-                              <p className="timeline__text">{linkedEvent.detail}</p>
-                              <p className="timeline__link">
-                                Story beat: {linkedEvent.eventType} on {linkedEvent.location}
-                              </p>
-                            </>
-                          ) : null}
-                        </article>
-                      );
-                    })
-                  ) : (
-                    <p className="muted">The game log will appear here as soon as the first move lands.</p>
-                  )}
-                </div>
-              </Panel>
+                onJumpToStart={jumpToStart}
+                onStepBackward={stepBackward}
+                onStepForward={stepForward}
+                onJumpToEnd={jumpToEnd}
+                onSelectPly={goToPly}
+                onUndo={handleUndo}
+              />
               {renderMoveSurface("moves")}
               {renderResizeHandle("moves")}
             </div>
@@ -1386,133 +1355,21 @@ export default function App() {
                 .join(" ")}
               style={getWorkspacePanelStyle(workspaceLayout, "narrative", isCompactViewport)}
             >
-              <Panel
-                title="Board Inspector"
-                eyebrow="Context"
+              <StoryPanel
                 collapsed={workspaceLayout.collapsed.narrative}
-                action={renderPanelTools()}
                 onToggleCollapse={() => handleTogglePanelCollapse("narrative")}
-              >
-                <div className="board-inspector">
-                  <p className="muted">{focusedSquareSummary}</p>
-
-                  <div className="detail-card">
-                    <p className="field-label">City tile</p>
-                    {focusedDistrict ? (
-                      <>
-                        <div className="detail-card__title-row">
-                          <h3>{focusedDistrict.name}</h3>
-                          <span className="side-pill side-pill--white">{focusedDistrict.square}</span>
-                        </div>
-                        <p className="detail-card__description">
-                          {focusedDistrict.locality} | {focusedDistrict.dayProfile}
-                        </p>
-                        <div className="chip-row">
-                          {focusedDistrict.descriptors.map((descriptor) => (
-                            <span key={descriptor} className="chip">
-                              {descriptor}
-                            </span>
-                          ))}
-                        </div>
-                        <div className="chip-row">
-                          {focusedDistrict.landmarks.map((landmark) => (
-                            <span key={landmark} className="chip chip--soft">
-                              {landmark}
-                            </span>
-                          ))}
-                        </div>
-                      </>
-                    ) : (
-                      <p className="muted">Hover or focus a square to inspect the mapped district.</p>
-                    )}
-                  </div>
-
-                  <div className="detail-card">
-                    <p className="field-label">Character on tile</p>
-                    {focusedCharacter && focusedPiece ? (
-                      <>
-                        <div className="piece-badge">
-                          <span className={`piece-badge__icon piece-badge__icon--${focusedPiece.side}`}>
-                            {getPieceGlyph({ side: focusedPiece.side, kind: focusedPiece.kind })}
-                          </span>
-                          <div>
-                            <p className="piece-badge__label">
-                              {getPieceDisplayName({ side: focusedPiece.side, kind: focusedPiece.kind })}
-                            </p>
-                            <p className="muted">{getPieceKindLabel(focusedPiece.kind)} piece</p>
-                          </div>
-                        </div>
-                        <h3>{focusedCharacter.fullName}</h3>
-                        <p className="detail-card__description">
-                          {focusedCharacter.oneLineDescription}
-                        </p>
-                        <dl className="detail-grid">
-                          <div>
-                            <dt>Role</dt>
-                            <dd>{focusedCharacter.role}</dd>
-                          </div>
-                          <div>
-                            <dt>Origin</dt>
-                            <dd>{focusedCharacter.districtOfOrigin}</dd>
-                          </div>
-                          <div>
-                            <dt>Faction</dt>
-                            <dd>{focusedCharacter.faction}</dd>
-                          </div>
-                          <div>
-                            <dt>Square</dt>
-                            <dd>{focusedSquare ?? "None"}</dd>
-                          </div>
-                        </dl>
-                        <div className="chip-row">
-                          {focusedCharacter.traits.map((trait) => (
-                            <span key={trait} className="chip">
-                              {trait}
-                            </span>
-                          ))}
-                        </div>
-                        {settings.showRecentCharacterActions && focusedCharacterMoments.length ? (
-                          <div className="memory-list">
-                            <p className="memory-list__label">Recent actions</p>
-                            {focusedCharacterMoments.map((event) => (
-                              <article key={event.id} className="memory-item">
-                                <span className="memory-item__meta">
-                                  Move {event.moveNumber} | {event.eventType}
-                                </span>
-                                <p className="memory-item__headline">{event.headline}</p>
-                              </article>
-                            ))}
-                          </div>
-                        ) : null}
-                      </>
-                    ) : focusedSquare ? (
-                      <p className="muted">No active piece is standing on this tile right now.</p>
-                    ) : (
-                      <p className="muted">Hover a square to inspect the piece standing there.</p>
-                    )}
-                  </div>
-
-                  <div className="detail-card">
-                    <p className="field-label">Latest narrative beat</p>
-                    {latestNarrativeEvent ? (
-                      <>
-                        <div className="detail-card__title-row">
-                          <h3>{latestNarrativeEvent.headline}</h3>
-                          <span className="side-pill">Move {latestNarrativeEvent.moveNumber}</span>
-                        </div>
-                        <p className="detail-card__description">{latestNarrativeEvent.detail}</p>
-                        {moveById.get(latestNarrativeEvent.moveId) ? (
-                          <p className="timeline__link">
-                            Board action: {moveById.get(latestNarrativeEvent.moveId)?.san}
-                          </p>
-                        ) : null}
-                      </>
-                    ) : (
-                      <p className="muted">Each move will add a lightweight narrative beat here.</p>
-                    )}
-                  </div>
-                </div>
-              </Panel>
+                selectedMove={selectedMove}
+                selectedEvent={selectedEvent}
+                focusedSquare={focusedSquare}
+                focusedSquareSummary={focusedSquareSummary}
+                focusedDistrict={focusedDistrict}
+                focusedPiece={focusedPiece}
+                focusedCharacter={focusedCharacter}
+                focusedCharacterMoments={focusedCharacterMoments}
+                showRecentCharacterActions={settings.showRecentCharacterActions}
+                tonePreset={tonePreset}
+                onToneChange={updateTonePreset}
+              />
               {renderMoveSurface("narrative")}
               {renderResizeHandle("narrative")}
             </div>
@@ -1625,82 +1482,6 @@ export default function App() {
               {renderResizeHandle("study")}
             </div>
 
-            <div
-              className={[
-                "workspace-item",
-                "workspace-item--status",
-                activeLayoutEdit?.panelId === "status" ? "is-editing" : ""
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              style={getWorkspacePanelStyle(workspaceLayout, "status", isCompactViewport)}
-            >
-              <Panel
-                title="Match State"
-                eyebrow="Status"
-                collapsed={workspaceLayout.collapsed.status}
-                action={renderPanelTools()}
-                onToggleCollapse={() => handleTogglePanelCollapse("status")}
-              >
-                <div className="state-panel">
-                  <div className="state-list">
-                    <div className="state-list__row">
-                      <span>Current turn</span>
-                      <strong>{turnLabel(status.turn)}</strong>
-                    </div>
-                    <div className="state-list__row">
-                      <span>Mode</span>
-                      <strong>{isStudyMode ? "Study replay" : "Local play"}</strong>
-                    </div>
-                    <div className="state-list__row">
-                      <span>Board state</span>
-                      <strong>{statusLabel(status.isCheck, status.isCheckmate, status.isStalemate)}</strong>
-                    </div>
-                    <div className="state-list__row">
-                      <span>Focused square</span>
-                      <strong>{focusedSquare ?? "None"}</strong>
-                    </div>
-                    <div className="state-list__row">
-                      <span>Legal targets</span>
-                      <strong>{legalMoves.length}</strong>
-                    </div>
-                    <div className="state-list__row">
-                      <span>Hovered district</span>
-                      <strong>{focusedDistrict?.name ?? "None"}</strong>
-                    </div>
-                  </div>
-
-                  <div className="state-panel__section">
-                    <p className="field-label">Narrative tone</p>
-                    <div className="tone-switcher">
-                      <button
-                        type="button"
-                        className={`button button--ghost ${tonePreset === "grounded" ? "button--active" : ""}`}
-                        onClick={() => updateTonePreset("grounded")}
-                      >
-                        Grounded
-                      </button>
-                      <button
-                        type="button"
-                        className={`button button--ghost ${tonePreset === "civic-noir" ? "button--active" : ""}`}
-                        onClick={() => updateTonePreset("civic-noir")}
-                      >
-                        Civic noir
-                      </button>
-                      <button
-                        type="button"
-                        className={`button button--ghost ${tonePreset === "dark-comedy" ? "button--active" : ""}`}
-                        onClick={() => updateTonePreset("dark-comedy")}
-                      >
-                        Dark comedy
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </Panel>
-              {renderMoveSurface("status")}
-              {renderResizeHandle("status")}
-            </div>
           </main>
         </div>
       )}

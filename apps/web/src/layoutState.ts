@@ -3,16 +3,14 @@ export const workspacePanelIds = [
   "moves",
   "narrative",
   "saved",
-  "study",
-  "status"
+  "study"
 ] as const;
 
 export const collapsibleWorkspacePanelIds = [
   "moves",
   "narrative",
   "saved",
-  "study",
-  "status"
+  "study"
 ] as const;
 
 export type WorkspacePanelId = (typeof workspacePanelIds)[number];
@@ -58,8 +56,7 @@ const minimumPanelWidth: Record<WorkspacePanelId, number> = {
   moves: 2,
   narrative: 2,
   saved: 2,
-  study: 2,
-  status: 2
+  study: 2
 };
 
 const minimumPanelHeight: Record<WorkspacePanelId, number> = {
@@ -67,8 +64,7 @@ const minimumPanelHeight: Record<WorkspacePanelId, number> = {
   moves: 1,
   narrative: 1,
   saved: 1,
-  study: 1,
-  status: 1
+  study: 1
 };
 
 const defaultLayoutState: WorkspaceLayoutState = {
@@ -78,18 +74,16 @@ const defaultLayoutState: WorkspaceLayoutState = {
   rowHeight: 44,
   panels: {
     board: { x: 1, y: 1, w: 6, h: 16 },
-    moves: { x: 7, y: 1, w: 3, h: 8 },
-    narrative: { x: 10, y: 1, w: 3, h: 8 },
-    saved: { x: 7, y: 9, w: 3, h: 6 },
-    study: { x: 10, y: 9, w: 3, h: 6 },
-    status: { x: 7, y: 15, w: 6, h: 4 }
+    moves: { x: 7, y: 1, w: 3, h: 10 },
+    narrative: { x: 10, y: 1, w: 3, h: 10 },
+    saved: { x: 7, y: 11, w: 3, h: 6 },
+    study: { x: 10, y: 11, w: 3, h: 6 }
   },
   collapsed: {
     moves: false,
     narrative: false,
     saved: false,
-    study: false,
-    status: false
+    study: false
   }
 };
 

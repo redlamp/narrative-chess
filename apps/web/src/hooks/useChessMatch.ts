@@ -1,7 +1,8 @@
-import { startTransition, useEffect, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import {
   applyMove,
   createInitialGameSnapshot,
+  createSnapshotFromFen,
   createReplayFromPgn,
   getBoardSquares,
   getPieceAtSquare,
@@ -94,17 +95,45 @@ function withNarrativeHistory(input: {
   );
 }
 
+function buildLocalTimelineSnapshots(snapshot: GameSnapshot) {
+  const timeline: GameSnapshot[] = [createInitialGameSnapshot(snapshot.characters)];
+
+  snapshot.moveHistory.forEach((move, index) => {
+    timeline.push(
+      createSnapshotFromFen(
+        move.fenAfter,
+        snapshot.characters,
+        snapshot.moveHistory.slice(0, index + 1),
+        snapshot.eventHistory.slice(0, index + 1)
+      )
+    );
+  });
+
+  return timeline;
+}
+
 export function useChessMatch({ roleCatalog }: UseChessMatchOptions) {
   const [localSnapshot, setLocalSnapshot] = useState<GameSnapshot>(() => createSnapshot(roleCatalog));
   const [studyReplay, setStudyReplay] = useState<StudyReplay | null>(null);
-  const [studyIndex, setStudyIndex] = useState(0);
+  const [localPly, setLocalPly] = useState(0);
+  const [studyPly, setStudyPly] = useState(0);
   const [importError, setImportError] = useState<string | null>(null);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [tonePreset, setTonePreset] = useState<NarrativeTonePreset>("grounded");
   const [savedMatches, setSavedMatches] = useState<SavedMatchRecord[]>(() => listSavedMatches());
 
-  const snapshot = studyReplay ? studyReplay.snapshots[studyIndex] : localSnapshot;
   const isStudyMode = studyReplay !== null;
+  const localTimelineSnapshots = useMemo(
+    () => buildLocalTimelineSnapshots(localSnapshot),
+    [localSnapshot]
+  );
+  const historySnapshots = isStudyMode ? studyReplay.snapshots : localTimelineSnapshots;
+  const selectedPly = isStudyMode ? studyPly : localPly;
+  const totalPlies = Math.max(0, historySnapshots.length - 1);
+  const snapshot = historySnapshots[selectedPly] ?? historySnapshots.at(-1) ?? localSnapshot;
+  const historyMoves = historySnapshots.at(-1)?.moveHistory ?? [];
+  const historyEvents = historySnapshots.at(-1)?.eventHistory ?? [];
+  const isViewingLatestPosition = selectedPly === totalPlies;
   const selectedPiece = selectedSquare ? getPieceAtSquare(snapshot, selectedSquare) : null;
   const selectedCharacter = selectedPiece ? snapshot.characters[selectedPiece.pieceId] ?? null : null;
   const selectedCharacterMoments = selectedCharacter
@@ -116,11 +145,10 @@ export function useChessMatch({ roleCatalog }: UseChessMatchOptions) {
     : [];
   const legalMoves = selectedSquare ? listLegalMoves(snapshot, selectedSquare) : [];
   const boardSquares = getBoardSquares(snapshot);
-  const canUndo = !isStudyMode && snapshot.moveHistory.length > 0;
+  const canUndo = !isStudyMode && localSnapshot.moveHistory.length > 0;
   const canSave = !isStudyMode;
-  const canStepBackward = isStudyMode && studyIndex > 0;
-  const canStepForward =
-    isStudyMode && studyReplay !== null && studyIndex < studyReplay.snapshots.length - 1;
+  const canStepBackward = selectedPly > 0;
+  const canStepForward = selectedPly < totalPlies;
   const lastMove = snapshot.moveHistory.at(-1) ?? null;
 
   useEffect(() => {
@@ -169,7 +197,7 @@ export function useChessMatch({ roleCatalog }: UseChessMatchOptions) {
           snapshots,
           pgn: input.pgn
         });
-        setStudyIndex(0);
+        setStudyPly(0);
         setSelectedSquare(null);
         setImportError(null);
       });
@@ -205,12 +233,13 @@ export function useChessMatch({ roleCatalog }: UseChessMatchOptions) {
         tonePreset
       })
     );
+    setLocalPly(appliedMove.nextState.moveHistory.length);
     setSelectedSquare(null);
     return true;
   };
 
   const handleSquareClick = (square: Square) => {
-    if (selectedSquare && !isStudyMode) {
+    if (selectedSquare && !isStudyMode && isViewingLatestPosition) {
       const legalTarget = legalMoves.includes(square);
       if (legalTarget) {
         commitMove(selectedSquare, square);
@@ -249,6 +278,7 @@ export function useChessMatch({ roleCatalog }: UseChessMatchOptions) {
         tonePreset
       })
     );
+    setLocalPly(previous.moveHistory.length);
     setSelectedSquare(null);
   };
 
@@ -274,44 +304,54 @@ export function useChessMatch({ roleCatalog }: UseChessMatchOptions) {
 
   const exitStudyMode = () => {
     setStudyReplay(null);
-    setStudyIndex(0);
+    setStudyPly(0);
     setSelectedSquare(null);
     setImportError(null);
   };
 
   const jumpToStart = () => {
-    if (!studyReplay) {
-      return;
+    if (isStudyMode) {
+      setStudyPly(0);
+    } else {
+      setLocalPly(0);
     }
-
-    setStudyIndex(0);
     setSelectedSquare(null);
   };
 
   const stepBackward = () => {
-    if (!studyReplay) {
-      return;
+    if (isStudyMode) {
+      setStudyPly((current) => Math.max(0, current - 1));
+    } else {
+      setLocalPly((current) => Math.max(0, current - 1));
     }
-
-    setStudyIndex((current) => Math.max(0, current - 1));
     setSelectedSquare(null);
   };
 
   const stepForward = () => {
-    if (!studyReplay) {
-      return;
+    if (isStudyMode) {
+      setStudyPly((current) => Math.min(totalPlies, current + 1));
+    } else {
+      setLocalPly((current) => Math.min(totalPlies, current + 1));
     }
-
-    setStudyIndex((current) => Math.min(studyReplay.snapshots.length - 1, current + 1));
     setSelectedSquare(null);
   };
 
   const jumpToEnd = () => {
-    if (!studyReplay) {
-      return;
+    if (isStudyMode) {
+      setStudyPly(totalPlies);
+    } else {
+      setLocalPly(totalPlies);
     }
+    setSelectedSquare(null);
+  };
 
-    setStudyIndex(studyReplay.snapshots.length - 1);
+  const goToPly = (nextPly: number) => {
+    const clampedPly = Math.max(0, Math.min(totalPlies, nextPly));
+    if (isStudyMode) {
+      setStudyPly(clampedPly);
+    } else {
+      setLocalPly(clampedPly);
+    }
     setSelectedSquare(null);
   };
 
@@ -340,7 +380,7 @@ export function useChessMatch({ roleCatalog }: UseChessMatchOptions) {
 
     startTransition(() => {
       setStudyReplay(null);
-      setStudyIndex(0);
+      setStudyPly(0);
       setImportError(null);
       setSelectedSquare(null);
       setLocalSnapshot(
@@ -350,6 +390,7 @@ export function useChessMatch({ roleCatalog }: UseChessMatchOptions) {
           tonePreset
         })
       );
+      setLocalPly(savedMatch.snapshot.moveHistory.length);
       setSavedMatches(listSavedMatches());
     });
 
@@ -362,6 +403,11 @@ export function useChessMatch({ roleCatalog }: UseChessMatchOptions) {
 
   return {
     snapshot,
+    historyMoves,
+    historyEvents,
+    selectedPly,
+    totalPlies,
+    isViewingLatestPosition,
     boardSquares,
     selectedSquare,
     selectedPiece,
@@ -379,8 +425,8 @@ export function useChessMatch({ roleCatalog }: UseChessMatchOptions) {
           subtitle: studyReplay.subtitle,
           summary: studyReplay.summary,
           sourceUrl: studyReplay.sourceUrl,
-          currentPly: studyIndex,
-          totalPlies: Math.max(0, studyReplay.snapshots.length - 1)
+          currentPly: studyPly,
+          totalPlies
         }
       : null,
     canStepBackward,
@@ -389,6 +435,7 @@ export function useChessMatch({ roleCatalog }: UseChessMatchOptions) {
     lastMove,
     handleSquareClick,
     handleUndo,
+    goToPly,
     loadReferenceGame,
     loadPgnStudy,
     exitStudyMode,

@@ -461,6 +461,9 @@ select {
 .detail-grid,
 .memory-list,
 .timeline,
+.match-history,
+.match-history__score,
+.story-panel,
 .state-list,
 .role-page,
 .role-page__grid,
@@ -1005,6 +1008,85 @@ select {
   color: var(--muted-foreground);
 }
 
+.match-history__nav,
+.match-history__summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.match-history__summary {
+  justify-content: space-between;
+}
+
+.match-history__score {
+  min-height: 0;
+  max-height: 100%;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.match-history__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+
+.match-history__move-number {
+  padding-top: 10px;
+  color: var(--muted-foreground);
+  font-weight: 600;
+}
+
+.match-history__move-button,
+.match-history__move-empty {
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 0.05rem);
+  padding: 10px 12px;
+}
+
+.match-history__move-button {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  background: var(--background);
+  text-align: left;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.match-history__move-button:hover,
+.match-history__move-button:focus-visible {
+  background: var(--muted);
+  border-color: color-mix(in srgb, var(--ring) 26%, var(--border) 74%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ring) 22%, transparent 78%);
+  outline: 0;
+}
+
+.match-history__move-button--active {
+  background: color-mix(in srgb, var(--secondary) 82%, var(--background) 18%);
+  border-color: color-mix(in srgb, var(--ring) 32%, var(--border) 68%);
+}
+
+.match-history__move-side {
+  color: var(--muted-foreground);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.match-history__move-empty {
+  display: grid;
+  place-items: center;
+  color: var(--muted-foreground);
+  background: color-mix(in srgb, var(--muted) 48%, var(--background) 52%);
+}
+
 .board-panel {
   min-height: 100%;
 }
@@ -1426,6 +1508,13 @@ select {
   padding-right: 4px;
 }
 
+.story-panel {
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+  align-content: start;
+}
+
 .role-page__grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -1599,6 +1688,7 @@ select {
   .workspace-grid,
   .role-page__grid,
   .detail-grid,
+  .match-history__row,
   .classic-games-page__analysis-grid,
   .classic-games-page__score-row,
   .classic-games-page__preview-footer,
