@@ -117,7 +117,6 @@ export function useChessMatch({ roleCatalog }: UseChessMatchOptions) {
   const [studyReplay, setStudyReplay] = useState<StudyReplay | null>(null);
   const [localPly, setLocalPly] = useState(0);
   const [studyPly, setStudyPly] = useState(0);
-  const [importError, setImportError] = useState<string | null>(null);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [tonePreset, setTonePreset] = useState<NarrativeTonePreset>("grounded");
   const [savedMatches, setSavedMatches] = useState<SavedMatchRecord[]>(() => listSavedMatches());
@@ -199,13 +198,11 @@ export function useChessMatch({ roleCatalog }: UseChessMatchOptions) {
         });
         setStudyPly(0);
         setSelectedSquare(null);
-        setImportError(null);
       });
 
       return true;
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to import PGN.";
-      setImportError(message);
+      console.error(error);
       return false;
     }
   };
@@ -292,21 +289,10 @@ export function useChessMatch({ roleCatalog }: UseChessMatchOptions) {
     });
   };
 
-  const loadPgnStudy = (pgn: string) => {
-    return loadStudyReplay({
-      pgn,
-      title: "Imported PGN",
-      subtitle: "Custom study line",
-      summary: "Imported from pasted PGN for step-through review.",
-      sourceUrl: null
-    });
-  };
-
   const exitStudyMode = () => {
     setStudyReplay(null);
     setStudyPly(0);
     setSelectedSquare(null);
-    setImportError(null);
   };
 
   const jumpToStart = () => {
@@ -381,7 +367,6 @@ export function useChessMatch({ roleCatalog }: UseChessMatchOptions) {
     startTransition(() => {
       setStudyReplay(null);
       setStudyPly(0);
-      setImportError(null);
       setSelectedSquare(null);
       setLocalSnapshot(
         rebuildSnapshot({
@@ -431,13 +416,11 @@ export function useChessMatch({ roleCatalog }: UseChessMatchOptions) {
       : null,
     canStepBackward,
     canStepForward,
-    importError,
     lastMove,
     handleSquareClick,
     handleUndo,
     goToPly,
     loadReferenceGame,
-    loadPgnStudy,
     exitStudyMode,
     jumpToStart,
     stepBackward,

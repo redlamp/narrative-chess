@@ -252,7 +252,6 @@ export default function App() {
   const [selectedReferenceGameId, setSelectedReferenceGameId] = useState(
     () => listReferenceGames()[0]?.id ?? ""
   );
-  const [pastedPgn, setPastedPgn] = useState("");
   const [settings, setSettings] = useState<AppSettings>(() => listAppSettings());
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLayoutMode, setIsLayoutMode] = useState(false);
@@ -296,12 +295,10 @@ export default function App() {
     studySession,
     canStepBackward,
     canStepForward,
-    importError,
     lastMove,
     handleSquareClick,
     goToPly,
     loadReferenceGame,
-    loadPgnStudy,
     exitStudyMode,
     jumpToStart,
     stepBackward,
@@ -671,14 +668,6 @@ export default function App() {
   const handleLoadReferenceGameFromLibrary = (referenceGameId: string) => {
     loadChosenReferenceGame(referenceGameId);
     setPage("match");
-  };
-
-  const handleImportPgn = () => {
-    if (!pastedPgn.trim()) {
-      return;
-    }
-
-    loadPgnStudy(pastedPgn);
   };
 
   const handleRoleCatalogChange = (
@@ -1530,10 +1519,6 @@ export default function App() {
                     selectedReferenceGameId={selectedReferenceGameId}
                     onSelectReferenceGame={setSelectedReferenceGameId}
                     onLoadReferenceGame={handleLoadReferenceGame}
-                  pastedPgn={pastedPgn}
-                  onPgnChange={setPastedPgn}
-                  onImportPgn={handleImportPgn}
-                  importError={importError}
                   studySession={studySession}
                   canStepBackward={canStepBackward}
                   canStepForward={canStepForward}

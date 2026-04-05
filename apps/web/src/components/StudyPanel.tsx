@@ -1,9 +1,6 @@
-import { useState, type ChangeEvent } from "react";
+import type { ChangeEvent } from "react";
 import type { ReferenceGame } from "@narrative-chess/content-schema";
-import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Textarea } from "@/components/ui/textarea";
 import { Panel } from "./Panel";
 
 type StudySession = {
@@ -20,10 +17,6 @@ type StudyPanelProps = {
   selectedReferenceGameId: string;
   onSelectReferenceGame: (value: string) => void;
   onLoadReferenceGame: () => void;
-  pastedPgn: string;
-  onPgnChange: (value: string) => void;
-  onImportPgn: () => void;
-  importError: string | null;
   studySession: StudySession | null;
   canStepBackward: boolean;
   canStepForward: boolean;
@@ -40,10 +33,6 @@ export function StudyPanel({
   selectedReferenceGameId,
   onSelectReferenceGame,
   onLoadReferenceGame,
-  pastedPgn,
-  onPgnChange,
-  onImportPgn,
-  importError,
   studySession,
   canStepBackward,
   canStepForward,
@@ -54,24 +43,13 @@ export function StudyPanel({
   onExitStudy,
   embedded = false
 }: StudyPanelProps) {
-  const [isImportOpen, setIsImportOpen] = useState(false);
-  const shouldShowImport = isImportOpen || Boolean(importError);
-  const pgnErrorId = importError ? "pgn-import-error" : undefined;
-
   const handleSelectChange = (event: ChangeEvent<HTMLSelectElement>) => {
     onSelectReferenceGame(event.currentTarget.value);
-  };
-
-  const handlePgnChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
-    onPgnChange(event.currentTarget.value);
   };
 
   const content = (
     <div className="study-panel">
       <div className="study-panel__block">
-        <label className="field-label" htmlFor="reference-game-select">
-          Built-in reference game
-        </label>
         <div className="study-panel__row">
           <select
             id="reference-game-select"
@@ -90,55 +68,6 @@ export function StudyPanel({
           </Button>
         </div>
       </div>
-
-      <Collapsible
-        className="study-panel__block study-panel__disclosure"
-        open={shouldShowImport}
-        onOpenChange={setIsImportOpen}
-      >
-        <CollapsibleTrigger asChild>
-          <button type="button" className="study-panel__summary-toggle">
-            <span>PGN Import</span>
-            <span className="study-panel__summary-copy">
-              {shouldShowImport ? "Hide import" : "Paste a line or full game"}
-            </span>
-            <ChevronDown
-              className={`study-panel__summary-icon ${shouldShowImport ? "is-open" : ""}`}
-              aria-hidden="true"
-            />
-          </button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="study-panel__disclosure-body">
-          {shouldShowImport ? (
-            <>
-            <label className="field-label" htmlFor="pgn-input">
-              Paste PGN
-            </label>
-            <Textarea
-              id="pgn-input"
-              name="pgn-input"
-              autoComplete="off"
-              value={pastedPgn}
-              onChange={handlePgnChange}
-              placeholder="Paste a PGN here to load a classic game or opening line."
-              aria-invalid={Boolean(importError)}
-              aria-describedby={pgnErrorId}
-              rows={8}
-            />
-            <div className="study-panel__actions">
-              <Button type="button" variant="outline" size="sm" onClick={onImportPgn}>
-                Import PGN
-              </Button>
-            </div>
-            {importError ? (
-              <p id={pgnErrorId} className="field-error" role="alert">
-                {importError}
-              </p>
-            ) : null}
-            </>
-          ) : null}
-        </CollapsibleContent>
-      </Collapsible>
 
       {studySession ? (
         <div className="study-panel__block study-panel__block--session">
@@ -187,7 +116,7 @@ export function StudyPanel({
   }
 
   return (
-    <Panel title="Study Games" eyebrow="Reference">
+    <Panel title="Study Games">
       {content}
     </Panel>
   );
