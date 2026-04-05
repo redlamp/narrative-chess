@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode
 } from "react";
@@ -12,7 +13,6 @@ import { getPieceAtSquare } from "@narrative-chess/game-core";
 import { getCharacterEventHistory } from "@narrative-chess/narrative-engine";
 import type { PieceKind, Square } from "@narrative-chess/content-schema";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   applyAppTheme,
   listAppSettings,
@@ -102,6 +102,14 @@ const panelTitles: Record<WorkspacePanelId, string> = {
   study: "Study Games",
   status: "Match State"
 };
+
+const pageOptions: Array<{ value: AppPage; label: string }> = [
+  { value: "match", label: "Match" },
+  { value: "classics", label: "Classics" },
+  { value: "cities", label: "Cities" },
+  { value: "roles", label: "Role Catalog" },
+  { value: "research", label: "Research" }
+];
 
 function isAppPage(value: string | null): value is AppPage {
   return (
@@ -205,6 +213,7 @@ export default function App() {
   const [isLayoutMode, setIsLayoutMode] = useState(false);
   const [isCompactViewport, setIsCompactViewport] = useState(false);
   const [hoveredSquare, setHoveredSquare] = useState<Square | null>(null);
+  const [inspectedSquare, setInspectedSquare] = useState<Square | null>(null);
   const [roleCatalog, setRoleCatalog] = useState(() => listRoleCatalog());
   const [roleCatalogDirectoryName, setRoleCatalogDirectoryName] = useState<string | null>(null);
   const [roleCatalogFileBusyAction, setRoleCatalogFileBusyAction] = useState<string | null>(null);
@@ -258,7 +267,7 @@ export default function App() {
   const narrativeHistory = [...snapshot.eventHistory].reverse();
   const eventByMoveId = new Map(snapshot.eventHistory.map((event) => [event.moveId, event] as const));
   const moveById = new Map(snapshot.moveHistory.map((move) => [move.id, move] as const));
-  const focusedSquare = hoveredSquare ?? selectedSquare ?? (lastMove?.to ?? null);
+  const focusedSquare = hoveredSquare ?? inspectedSquare ?? selectedSquare ?? (lastMove?.to ?? null);
   const focusedDistrict = getDistrictForSquare(focusedSquare);
   const focusedPiece = focusedSquare ? getPieceAtSquare(snapshot, focusedSquare) : null;
   const focusedCharacter = focusedPiece ? snapshot.characters[focusedPiece.pieceId] ?? null : null;
@@ -282,6 +291,20 @@ export default function App() {
     () => getWorkspaceGridStyle(workspaceLayout),
     [workspaceLayout]
   );
+  const focusedSquareSummary = focusedSquare
+    ? (() => {
+        const squareParts = [`Inspecting ${focusedSquare}`];
+        if (focusedPiece) {
+          squareParts.push(getPieceDisplayName(focusedPiece));
+        } else {
+          squareParts.push("empty square");
+        }
+        if (focusedDistrict) {
+          squareParts.push(`mapped to ${focusedDistrict.name}`);
+        }
+        return `${squareParts.join(", ")}.`;
+      })()
+    : "Hover or focus a square to inspect it. The last inspected square stays pinned until you pick another square.";
   const gridOverlayCells = useMemo(
     () => Array.from({ length: workspaceRowCount * 12 }, (_, index) => index),
     [workspaceRowCount]
@@ -447,6 +470,24 @@ export default function App() {
     window.history.replaceState({}, "", nextUrl);
   }, [page]);
 
+  useEffect(() => {
+    if (hoveredSquare) {
+      setInspectedSquare(hoveredSquare);
+    }
+  }, [hoveredSquare]);
+
+  useEffect(() => {
+    if (selectedSquare) {
+      setInspectedSquare(selectedSquare);
+    }
+  }, [selectedSquare]);
+
+  useEffect(() => {
+    if (lastMove?.to) {
+      setInspectedSquare(lastMove.to);
+    }
+  }, [lastMove?.to]);
+
   const beginPanelEdit =
     (panelId: WorkspacePanelId, mode: LayoutEditMode) =>
     (event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -474,6 +515,69 @@ export default function App() {
         originRow,
         initialRect: workspaceLayout.panels[panelId]
       });
+    };
+
+  const adjustPanelLayout = (
+    panelId: WorkspacePanelId,
+    mode: LayoutEditMode,
+    deltaX: number,
+    deltaY: number
+  ) => {
+    if (!effectiveLayoutMode) {
+      return;
+    }
+
+    setWorkspaceLayout((currentLayout) => {
+      const currentRect = currentLayout.panels[panelId];
+      const nextRect =
+        mode === "move"
+          ? {
+              ...currentRect,
+              x: currentRect.x + deltaX,
+              y: currentRect.y + deltaY
+            }
+          : {
+              ...currentRect,
+              w: currentRect.w + deltaX,
+              h: currentRect.h + deltaY
+            };
+
+      return updateWorkspacePanelRect({
+        layoutState: currentLayout,
+        panelId,
+        nextRect
+      });
+    });
+  };
+
+  const handlePanelEditKeyDown =
+    (panelId: WorkspacePanelId, mode: LayoutEditMode) =>
+    (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+      if (!effectiveLayoutMode) {
+        return;
+      }
+
+      const step = event.shiftKey ? 2 : 1;
+      switch (event.key) {
+        case "ArrowUp":
+          event.preventDefault();
+          adjustPanelLayout(panelId, mode, 0, mode === "move" ? -step : -step);
+          break;
+        case "ArrowDown":
+          event.preventDefault();
+          adjustPanelLayout(panelId, mode, 0, step);
+          break;
+        case "ArrowLeft":
+          event.preventDefault();
+          adjustPanelLayout(panelId, mode, mode === "move" ? -step : -step, 0);
+          break;
+        case "ArrowRight":
+          event.preventDefault();
+          adjustPanelLayout(panelId, mode, step, 0);
+          break;
+        default:
+          break;
+      }
     };
 
   const loadChosenReferenceGame = (referenceGameId?: string) => {
@@ -793,7 +897,8 @@ export default function App() {
             type="button"
             className="button button--ghost button--icon"
             onPointerDown={beginPanelEdit(panelId, "move")}
-            aria-label={`Move ${panelTitles[panelId]} panel`}
+            onKeyDown={handlePanelEditKeyDown(panelId, "move")}
+            aria-label={`Move ${panelTitles[panelId]} panel with pointer or arrow keys`}
           >
             Move
           </button>
@@ -808,7 +913,8 @@ export default function App() {
         type="button"
         className="workspace-item__resize-handle"
         onPointerDown={beginPanelEdit(panelId, "resize")}
-        aria-label={`Resize ${panelTitles[panelId]} panel`}
+        onKeyDown={handlePanelEditKeyDown(panelId, "resize")}
+        aria-label={`Resize ${panelTitles[panelId]} panel with pointer or arrow keys`}
       >
         <span />
       </button>
@@ -857,19 +963,23 @@ export default function App() {
               onBooleanSettingChange={handleBooleanSettingChange}
             />
 
-            <Tabs
-              value={page}
-              onValueChange={(value) => setPage(value as AppPage)}
-              className="page-switcher-tabs"
-            >
-              <TabsList className="page-switcher">
-                <TabsTrigger value="match">Match</TabsTrigger>
-                <TabsTrigger value="classics">Classics</TabsTrigger>
-                <TabsTrigger value="cities">Cities</TabsTrigger>
-                <TabsTrigger value="roles">Role Catalog</TabsTrigger>
-                <TabsTrigger value="research">Research</TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <nav className="page-switcher-tabs" aria-label="Workspace sections">
+              <div className="page-switcher">
+                {pageOptions.map(({ value, label }) => (
+                  <Button
+                    key={value}
+                    type="button"
+                    variant={page === value ? "secondary" : "ghost"}
+                    size="sm"
+                    className="page-switcher__button"
+                    aria-current={page === value ? "page" : undefined}
+                    onClick={() => setPage(value)}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </nav>
           </div>
         </div>
 
@@ -1038,6 +1148,8 @@ export default function App() {
                       type="button"
                       className="button button--ghost button--icon"
                       onPointerDown={beginPanelEdit("board", "move")}
+                      onKeyDown={handlePanelEditKeyDown("board", "move")}
+                      aria-label="Move board panel with pointer or arrow keys"
                     >
                       Move
                     </button>
@@ -1050,6 +1162,7 @@ export default function App() {
                 cells={boardSquares}
                 selectedSquare={selectedSquare}
                 hoveredSquare={hoveredSquare}
+                inspectedSquare={inspectedSquare}
                 legalMoves={legalMoves}
                 viewMode={viewMode}
                 districtsBySquare={edinburghDistrictsBySquare}
@@ -1060,12 +1173,8 @@ export default function App() {
                 onSquareLeave={() => setHoveredSquare(null)}
               />
 
-              <div className="board-panel__footer" role="status" aria-live="polite">
-                <p>
-                  {focusedSquare
-                    ? `Focused ${focusedSquare}`
-                    : "Hover any square for city and character context, or click a piece to move."}
-                </p>
+              <div className="board-panel__footer" role="status" aria-live="polite" aria-atomic="true">
+                <p>{focusedSquareSummary}</p>
                 {lastMove ? <p>Last move: {lastMove.san}</p> : <p>No moves yet.</p>}
               </div>
 

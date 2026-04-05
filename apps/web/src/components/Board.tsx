@@ -6,7 +6,7 @@ import type {
   PieceState,
   Square
 } from "@narrative-chess/content-schema";
-import { getPieceGlyph } from "../chessPresentation";
+import { getPieceDisplayName, getPieceGlyph } from "../chessPresentation";
 import {
   boardFiles as files,
   boardRanks as ranks,
@@ -25,6 +25,7 @@ type BoardProps = {
   cells: BoardCell[];
   selectedSquare: Square | null;
   hoveredSquare: Square | null;
+  inspectedSquare?: Square | null;
   legalMoves: Square[];
   viewMode: "board" | "map";
   districtsBySquare: Map<Square, DistrictCell>;
@@ -69,6 +70,7 @@ export function Board({
   cells,
   selectedSquare,
   hoveredSquare,
+  inspectedSquare = null,
   legalMoves,
   viewMode,
   districtsBySquare,
@@ -143,6 +145,7 @@ export function Board({
             const district = districtsBySquare.get(square) ?? null;
             const isSelected = selectedSquare === square;
             const isHovered = hoveredSquare === square;
+            const isInspected = inspectedSquare === square;
             const isLegalTarget = legalMoves.includes(square);
 
             return (
@@ -155,6 +158,7 @@ export function Board({
                   viewMode === "map" ? "board-square--map" : "",
                   isSelected ? "board-square--selected" : "",
                   isHovered ? "board-square--hovered" : "",
+                  isInspected ? "board-square--inspected" : "",
                   isLegalTarget ? "board-square--target" : ""
                 ]
                   .filter(Boolean)
@@ -162,7 +166,7 @@ export function Board({
                 data-square={square}
                 aria-pressed={isSelected}
                 aria-colindex={files.indexOf(file) + 1}
-                aria-label={`${square}${piece ? `, ${piece.side} ${piece.kind}` : ""}${district ? `, ${district.name}` : ""}`}
+                aria-label={`${square}${piece ? `, ${getPieceDisplayName(piece)}` : ""}${district ? `, ${district.name}` : ""}`}
                 aria-rowindex={ranks.indexOf(rank) + 1}
                 tabIndex={activeSquare === square ? 0 : -1}
                 onClick={handleClick}

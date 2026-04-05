@@ -1,10 +1,7 @@
-import { Settings2 } from "lucide-react";
+import { useEffect, useId, useRef } from "react";
+import { Settings2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import type { AppSettings } from "../appSettings";
 
@@ -61,95 +58,158 @@ export function AppMenu({
   onDefaultViewModeChange,
   onBooleanSettingChange
 }: AppMenuProps) {
+  const panelId = useId();
+  const titleId = useId();
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (menuRef.current?.contains(target)) {
+        return;
+      }
+
+      onOpenChange(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onOpenChange(false);
+      }
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onOpenChange]);
+
   return (
-    <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon-sm" aria-expanded={isOpen} aria-label="Open settings">
-          <Settings2 />
-        </Button>
-      </DropdownMenuTrigger>
+    <div className="app-menu" ref={menuRef}>
+      <Button
+        variant="outline"
+        size="icon-sm"
+        aria-expanded={isOpen}
+        aria-controls={panelId}
+        aria-haspopup="dialog"
+        aria-label="Open settings"
+        onClick={() => onOpenChange(!isOpen)}
+      >
+        <Settings2 />
+      </Button>
 
-      <DropdownMenuContent align="end" className="app-menu__content">
-        <div className="app-menu__section">
-          <div className="app-menu__section-header">
-            <p className="panel__eyebrow">Settings</p>
-            <p className="muted">First-pass display and interaction preferences.</p>
-          </div>
-
-          <div className="menu-segment">
-            <span className="menu-segment__label">Theme</span>
-            <div className="menu-segment__actions">
-              <Button
-                variant={settings.theme === "light" ? "secondary" : "outline"}
-                size="sm"
-                onClick={() => onThemeChange("light")}
-              >
-                Light
-              </Button>
-              <Button
-                variant={settings.theme === "dark" ? "secondary" : "outline"}
-                size="sm"
-                onClick={() => onThemeChange("dark")}
-              >
-                Dark
-              </Button>
+      {isOpen ? (
+        <Card
+          id={panelId}
+          className="app-menu__content"
+          size="sm"
+          role="dialog"
+          aria-modal="false"
+          aria-labelledby={titleId}
+        >
+          <CardHeader className="app-menu__section-header">
+            <div className="grid gap-1">
+              <p className="panel__eyebrow">Settings</p>
+              <CardTitle id={titleId}>Workspace settings</CardTitle>
+              <p className="muted">Display and interaction preferences for the current prototype.</p>
             </div>
-          </div>
-
-          <div className="menu-segment">
-            <span className="menu-segment__label">Default board view</span>
-            <div className="menu-segment__actions">
-              <Button
-                variant={settings.defaultViewMode === "board" ? "secondary" : "outline"}
-                size="sm"
-                onClick={() => onDefaultViewModeChange("board")}
-              >
-                Board
-              </Button>
-              <Button
-                variant={settings.defaultViewMode === "map" ? "secondary" : "outline"}
-                size="sm"
-                onClick={() => onDefaultViewModeChange("map")}
-              >
-                Map
-              </Button>
-            </div>
-          </div>
-
-          <div className="app-menu__toggles">
-            <SettingsToggleRow
-              label="Board coordinates"
-              description="Keep file and rank markers visible on the board."
-              checked={settings.showBoardCoordinates}
-              onChange={(checked) => onBooleanSettingChange("showBoardCoordinates", checked)}
-            />
-            <SettingsToggleRow
-              label="Map labels"
-              description="Show district names directly on the tiles in map view."
-              checked={settings.showDistrictLabels}
-              onChange={(checked) => onBooleanSettingChange("showDistrictLabels", checked)}
-            />
-            <SettingsToggleRow
-              label="Recent actions"
-              description="Show recent character moments inside the hover panel."
-              checked={settings.showRecentCharacterActions}
-              onChange={(checked) => onBooleanSettingChange("showRecentCharacterActions", checked)}
-            />
-            <SettingsToggleRow
-              label="Layout grid"
-              description="Show the snap grid while layout mode is active."
-              checked={settings.showLayoutGrid}
-              onChange={(checked) => onBooleanSettingChange("showLayoutGrid", checked)}
-            />
-          </div>
-
-          <div className="app-menu__actions">
-            <Button variant="outline" size="sm" onClick={onResetSettings}>
-              Reset settings
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              aria-label="Close settings"
+              onClick={() => onOpenChange(false)}
+            >
+              <X />
             </Button>
-          </div>
-        </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          </CardHeader>
+          <CardContent className="app-menu__section">
+            <div className="menu-segment">
+              <span className="menu-segment__label">Theme</span>
+              <div className="menu-segment__actions">
+                <Button
+                  variant={settings.theme === "light" ? "secondary" : "outline"}
+                  size="sm"
+                  onClick={() => onThemeChange("light")}
+                >
+                  Light
+                </Button>
+                <Button
+                  variant={settings.theme === "dark" ? "secondary" : "outline"}
+                  size="sm"
+                  onClick={() => onThemeChange("dark")}
+                >
+                  Dark
+                </Button>
+              </div>
+            </div>
+
+            <div className="menu-segment">
+              <span className="menu-segment__label">Default board view</span>
+              <div className="menu-segment__actions">
+                <Button
+                  variant={settings.defaultViewMode === "board" ? "secondary" : "outline"}
+                  size="sm"
+                  onClick={() => onDefaultViewModeChange("board")}
+                >
+                  Board
+                </Button>
+                <Button
+                  variant={settings.defaultViewMode === "map" ? "secondary" : "outline"}
+                  size="sm"
+                  onClick={() => onDefaultViewModeChange("map")}
+                >
+                  Map
+                </Button>
+              </div>
+            </div>
+
+            <div className="app-menu__toggles">
+              <SettingsToggleRow
+                label="Board coordinates"
+                description="Keep file and rank markers visible on the board."
+                checked={settings.showBoardCoordinates}
+                onChange={(checked) => onBooleanSettingChange("showBoardCoordinates", checked)}
+              />
+              <SettingsToggleRow
+                label="Map labels"
+                description="Show district names directly on the tiles in map view."
+                checked={settings.showDistrictLabels}
+                onChange={(checked) => onBooleanSettingChange("showDistrictLabels", checked)}
+              />
+              <SettingsToggleRow
+                label="Recent actions"
+                description="Show recent character moments inside the hover panel."
+                checked={settings.showRecentCharacterActions}
+                onChange={(checked) => onBooleanSettingChange("showRecentCharacterActions", checked)}
+              />
+              <SettingsToggleRow
+                label="Layout grid"
+                description="Show the snap grid while layout mode is active."
+                checked={settings.showLayoutGrid}
+                onChange={(checked) => onBooleanSettingChange("showLayoutGrid", checked)}
+              />
+            </div>
+
+            <div className="app-menu__actions">
+              <Button variant="outline" size="sm" onClick={onResetSettings}>
+                Reset settings
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+    </div>
   );
 }
