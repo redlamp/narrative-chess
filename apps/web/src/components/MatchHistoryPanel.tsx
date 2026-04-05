@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 import { ChevronFirst, ChevronLast, ChevronLeft, ChevronRight } from "lucide-react";
-import type { MoveRecord } from "@narrative-chess/content-schema";
+import type { CharacterSummary, MoveRecord } from "@narrative-chess/content-schema";
 import { Button } from "@/components/ui/button";
+import { getPieceKindLabel } from "../chessPresentation";
 import { Panel } from "./Panel";
 import { PieceArt } from "./PieceArt";
 
 type MatchHistoryPanelProps = {
   moves: MoveRecord[];
+  characters: Record<string, CharacterSummary>;
   selectedPly: number;
   totalPlies: number;
   collapsed: boolean;
@@ -46,6 +48,7 @@ function buildMovePairs(moves: MoveRecord[]): MovePair[] {
 
 export function MatchHistoryPanel({
   moves,
+  characters,
   selectedPly,
   totalPlies,
   collapsed,
@@ -145,7 +148,14 @@ export function MatchHistoryPanel({
                         className="board-piece-art board-piece-art--history"
                       />
                     </span>
-                    <span>{movePair.white.san}</span>
+                    <span className="match-history__move-san">{movePair.white.san}</span>
+                    {movePair.white.capturedPieceId ? (
+                      <span className="match-history__capture-kind">
+                        {getPieceKindLabel(
+                          characters[movePair.white.capturedPieceId]?.pieceKind ?? "pawn"
+                        )}
+                      </span>
+                    ) : null}
                   </button>
                   {movePair.black ? (
                     <button
@@ -170,10 +180,17 @@ export function MatchHistoryPanel({
                         <PieceArt
                           side={movePair.black.side}
                           kind={movePair.black.pieceKind}
-                          className="board-piece-art board-piece-art--history"
-                        />
-                      </span>
-                      <span>{movePair.black.san}</span>
+                        className="board-piece-art board-piece-art--history"
+                      />
+                    </span>
+                      <span className="match-history__move-san">{movePair.black.san}</span>
+                      {movePair.black.capturedPieceId ? (
+                        <span className="match-history__capture-kind">
+                          {getPieceKindLabel(
+                            characters[movePair.black.capturedPieceId]?.pieceKind ?? "pawn"
+                          )}
+                        </span>
+                      ) : null}
                     </button>
                   ) : (
                     <span className="match-history__move-empty">...</span>

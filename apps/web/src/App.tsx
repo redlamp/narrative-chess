@@ -1392,6 +1392,7 @@ export default function App() {
             >
               <MatchHistoryPanel
                 moves={moveHistory}
+                characters={snapshot.characters}
                 selectedPly={selectedPly}
                 totalPlies={totalPlies}
                 collapsed={workspaceLayout.collapsed.moves}
