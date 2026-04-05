@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CityBoard, DistrictCell } from "@narrative-chess/content-schema";
-import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +26,9 @@ import {
   saveEdinburghDraftToDirectory,
   supportsLocalContentDirectory
 } from "../fileSystemAccess";
+import { WorkspaceIntroCard } from "./WorkspaceIntroCard";
+import { WorkspaceListItem } from "./WorkspaceListItem";
+import { WorkspaceNoticeCard } from "./WorkspaceNoticeCard";
 
 type SaveNotice = {
   tone: "neutral" | "success" | "error";
@@ -227,9 +229,9 @@ export function EdinburghReviewPage() {
 
   return (
     <main className="indexed-workspace indexed-workspace--page-scroll cities-workspace">
-      <Card className="page-card page-card--intro">
-        <CardHeader className="gap-3">
-          <div className="flex flex-wrap items-center gap-2">
+      <WorkspaceIntroCard
+        badgeRow={
+          <>
             <Badge variant="secondary">Cities</Badge>
             <Badge variant="outline">{trackedCities.length} tracked city</Badge>
             <Badge variant="outline">64 mapped districts</Badge>
@@ -237,41 +239,12 @@ export function EdinburghReviewPage() {
               {validation.isValid ? "Schema valid" : `${validation.issues.length} validation issues`}
             </Badge>
             {directoryName ? <Badge variant="outline">Connected: {directoryName}</Badge> : null}
-          </div>
-          <CardTitle className="text-3xl tracking-tight">City and district workspace</CardTitle>
-          <CardDescription className="max-w-4xl text-sm leading-6">
-            Review gathered city boards, move from city selection into district detail, and write a
-            repo-local draft file when you want the changes available to future passes. The current
-            workspace is seeded with Edinburgh and structured so more cities can slot into the same
-            pattern over time.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-6">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-lg border bg-muted/30 p-4">
-              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Tracked cities</p>
-              <p className="mt-2 text-2xl font-semibold">{trackedCities.length}</p>
-            </div>
-            <div className="rounded-lg border bg-muted/30 p-4">
-              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Reviewed</p>
-              <p className="mt-2 text-2xl font-semibold">{reviewedDistrictCount}</p>
-            </div>
-            <div className="rounded-lg border bg-muted/30 p-4">
-              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Landmarks</p>
-              <p className="mt-2 text-2xl font-semibold">{uniqueLandmarkCount}</p>
-            </div>
-            <div className="rounded-lg border bg-muted/30 p-4">
-              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Review status</p>
-              <p className="mt-2 text-sm text-muted-foreground">{draft.reviewStatus}</p>
-            </div>
-          </div>
-
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_auto_auto_auto_auto] xl:items-start">
-            <div className="rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
-              Browser edits autosave immediately. To create a file I can inspect in the repo later,
-              connect the repo root or the `content` folder and save the draft to
-              `content/cities/edinburgh-board.local.json`.
-            </div>
+          </>
+        }
+        title="City and district workspace"
+        description="Review gathered city boards, move from city selection into district detail, and write a repo-local draft file when you want the changes available to future passes. The current workspace is seeded with Edinburgh and structured so more cities can slot into the same pattern over time."
+        actions={
+          <>
             <Button
               variant="outline"
               onClick={() =>
@@ -342,6 +315,36 @@ export function EdinburghReviewPage() {
             >
               Download JSON
             </Button>
+          </>
+        }
+        status={saveNotice}
+      >
+        <div className="grid gap-4 rounded-lg border bg-muted/20 p-4">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                Tracked cities
+              </p>
+              <p className="mt-2 text-2xl font-semibold">{trackedCities.length}</p>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                Reviewed
+              </p>
+              <p className="mt-2 text-2xl font-semibold">{reviewedDistrictCount}</p>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                Landmarks
+              </p>
+              <p className="mt-2 text-2xl font-semibold">{uniqueLandmarkCount}</p>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                Review status
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">{draft.reviewStatus}</p>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -374,35 +377,19 @@ export function EdinburghReviewPage() {
             </Button>
           </div>
 
-          {saveNotice ? (
-            <div
-              aria-live="polite"
-              role="status"
-              className={cn(
-                "rounded-lg border p-3 text-sm",
-                saveNotice.tone === "error"
-                  ? "border-destructive/30 bg-destructive/10 text-destructive"
-                  : "bg-muted/30 text-muted-foreground"
-              )}
-            >
-              {saveNotice.text}
-            </div>
-          ) : null}
-
           {!validation.isValid ? (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-              <p className="text-sm font-medium text-foreground">Validation notes</p>
-              <ul className="mt-3 grid gap-2 text-sm text-muted-foreground">
+            <WorkspaceNoticeCard tone="error" title="Validation notes">
+              <ul className="grid gap-2 text-sm text-muted-foreground">
                 {validation.issues.slice(0, 8).map((issue) => (
                   <li key={issue} className="rounded-md border bg-background px-3 py-2">
                     {issue}
                   </li>
                 ))}
               </ul>
-            </div>
+            </WorkspaceNoticeCard>
           ) : null}
-        </CardContent>
-      </Card>
+        </div>
+      </WorkspaceIntroCard>
 
       <div className="indexed-workspace__columns indexed-workspace__columns--three-pane">
         <Card className="page-card page-card--index page-card--secondary-index">
@@ -417,28 +404,18 @@ export function EdinburghReviewPage() {
           <CardContent className="page-card__content pt-0">
             <div className="cities-page__list">
               {trackedCities.map((city) => (
-                <button
+                <WorkspaceListItem
                   key={city.id}
                   type="button"
                   onClick={() => {
                     setSelectedCityId(city.id);
                     setSelectedRecordId(cityOverviewId);
                   }}
-                  className={cn(
-                    "grid gap-2 rounded-lg border px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    city.id === selectedCity?.id
-                      ? "border-foreground/15 bg-muted"
-                      : "bg-background hover:bg-muted/50"
-                  )}
-                  aria-pressed={city.id === selectedCity?.id}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="font-medium">{city.name}</span>
-                    <Badge variant="outline">{city.districtCount}</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{city.country}</p>
-                  <p className="text-sm text-muted-foreground">{city.summary}</p>
-                </button>
+                  selected={city.id === selectedCity?.id}
+                  title={city.name}
+                  description={`${city.country} · ${city.summary}`}
+                  meta={<Badge variant="outline">{city.districtCount}</Badge>}
+                />
               ))}
             </div>
           </CardContent>
@@ -473,45 +450,29 @@ export function EdinburghReviewPage() {
           </CardHeader>
           <CardContent className="page-card__content pt-0">
             <div className="cities-page__list rounded-lg border p-3">
-                <button
-                  type="button"
-                  onClick={() => setSelectedRecordId(cityOverviewId)}
-                  className={cn(
-                    "grid gap-2 rounded-lg border px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    selectedRecordId === cityOverviewId
-                      ? "border-foreground/15 bg-muted"
-                      : "bg-background hover:bg-muted/50"
-                  )}
-                  aria-pressed={selectedRecordId === cityOverviewId}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="font-medium">{draft.name}</span>
-                    <Badge variant="secondary">City overview</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{draft.summary}</p>
-                </button>
+              <WorkspaceListItem
+                type="button"
+                onClick={() => setSelectedRecordId(cityOverviewId)}
+                selected={selectedRecordId === cityOverviewId}
+                title={draft.name}
+                description={draft.summary}
+                meta={<Badge variant="secondary">City overview</Badge>}
+              />
                 {filteredDistricts.map((district) => (
-                  <button
+                  <WorkspaceListItem
                     key={district.id}
                     type="button"
                     onClick={() => setSelectedRecordId(district.id)}
-                    className={cn(
-                      "grid gap-2 rounded-lg border px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      district.id === selectedDistrict?.id
-                        ? "border-foreground/15 bg-muted"
-                        : "bg-background hover:bg-muted/50"
-                    )}
-                    aria-pressed={district.id === selectedDistrict?.id}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="font-medium">{district.name}</span>
-                      <Badge variant="outline">{district.square}</Badge>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Badge variant="secondary">{district.locality}</Badge>
-                      <Badge variant="outline">{district.reviewStatus}</Badge>
-                    </div>
-                  </button>
+                    selected={district.id === selectedDistrict?.id}
+                    title={district.name}
+                    description={district.locality}
+                    meta={
+                      <>
+                        <Badge variant="outline">{district.square}</Badge>
+                        <Badge variant="secondary">{district.reviewStatus}</Badge>
+                      </>
+                    }
+                  />
                 ))}
                 {!filteredDistricts.length ? (
                   <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
