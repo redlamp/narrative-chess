@@ -488,20 +488,26 @@ export function getSnappedWorkspaceColumn(input: {
   offsetX: number;
   width: number;
   columnCount: number;
+  columnGap: number;
 }) {
   const safeWidth = Math.max(input.width, 1);
+  const totalGapWidth = Math.max(0, input.columnCount - 1) * Math.max(0, input.columnGap);
+  const availableColumnWidth = Math.max(1, safeWidth - totalGapWidth);
+  const columnWidth = availableColumnWidth / Math.max(1, input.columnCount);
+  const stride = columnWidth + Math.max(0, input.columnGap);
   const clampedOffset = clamp(input.offsetX, 0, safeWidth);
-  const ratio = clampedOffset / safeWidth;
 
-  return clamp(Math.floor(ratio * input.columnCount) + 1, 1, input.columnCount);
+  return clamp(Math.floor(clampedOffset / Math.max(stride, 1)) + 1, 1, input.columnCount);
 }
 
 export function getSnappedWorkspaceRow(input: {
   offsetY: number;
   rowHeight: number;
+  rowGap: number;
 }) {
   const safeRowHeight = Math.max(input.rowHeight, 1);
-  return Math.max(1, Math.floor(Math.max(input.offsetY, 0) / safeRowHeight) + 1);
+  const stride = safeRowHeight + Math.max(0, input.rowGap);
+  return Math.max(1, Math.floor(Math.max(input.offsetY, 0) / Math.max(stride, 1)) + 1);
 }
 
 export function getWorkspaceLayoutRowCount(layoutState: WorkspaceLayoutState) {

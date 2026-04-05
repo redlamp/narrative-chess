@@ -444,11 +444,13 @@ export default function App() {
       const nextColumn = getSnappedWorkspaceColumn({
         offsetX: event.clientX - rect.left,
         width: rect.width,
-        columnCount: workspaceLayout.columnCount
+        columnCount: workspaceLayout.columnCount,
+        columnGap: workspaceLayout.columnGap
       });
       const nextRow = getSnappedWorkspaceRow({
         offsetY: event.clientY - rect.top,
-        rowHeight: workspaceLayout.rowHeight
+        rowHeight: workspaceLayout.rowHeight,
+        rowGap: workspaceLayout.columnGap
       });
 
       setWorkspaceLayout((currentLayout) => {
@@ -540,11 +542,13 @@ export default function App() {
       const originColumn = getSnappedWorkspaceColumn({
         offsetX: event.clientX - rect.left,
         width: rect.width,
-        columnCount: workspaceLayout.columnCount
+        columnCount: workspaceLayout.columnCount,
+        columnGap: workspaceLayout.columnGap
       });
       const originRow = getSnappedWorkspaceRow({
         offsetY: event.clientY - rect.top,
-        rowHeight: workspaceLayout.rowHeight
+        rowHeight: workspaceLayout.rowHeight,
+        rowGap: workspaceLayout.columnGap
       });
 
       setActiveLayoutEdit({
