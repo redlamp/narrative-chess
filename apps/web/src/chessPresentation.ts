@@ -38,6 +38,31 @@ export function getPieceGlyph(input: {
   return pieceGlyphs[input.side][input.kind];
 }
 
+function getPieceFileCode(input: {
+  side: PieceSide;
+  kind: PieceKind;
+}) {
+  const sideCode = input.side === "white" ? "w" : "b";
+  const kindCodeMap: Record<PieceKind, string> = {
+    pawn: "p",
+    rook: "r",
+    knight: "n",
+    bishop: "b",
+    queen: "q",
+    king: "k"
+  };
+
+  return `${sideCode}${kindCodeMap[input.kind]}`;
+}
+
+export function getPieceAssetPath(input: {
+  side: PieceSide;
+  kind: PieceKind;
+}) {
+  const sideFolder = input.side === "white" ? "white" : "black";
+  return `/pieces/custom/${sideFolder}/${getPieceFileCode(input)}.png`;
+}
+
 export function getPieceKindLabel(kind: PieceKind) {
   return pieceKindLabels[kind];
 }

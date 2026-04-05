@@ -9,8 +9,9 @@ import type {
   Square
 } from "@narrative-chess/content-schema";
 import { Button } from "@/components/ui/button";
-import { getPieceDisplayName, getPieceGlyph, getPieceKindLabel } from "../chessPresentation";
+import { getPieceDisplayName, getPieceKindLabel } from "../chessPresentation";
 import { Panel } from "./Panel";
+import { PieceArt } from "./PieceArt";
 
 type StoryPanelProps = {
   collapsed: boolean;
@@ -174,7 +175,11 @@ export function StoryPanel({
             <>
               <div className="piece-badge">
                 <span className={`piece-badge__icon piece-badge__icon--${focusedPiece.side}`}>
-                  {getPieceGlyph({ side: focusedPiece.side, kind: focusedPiece.kind })}
+                  <PieceArt
+                    side={focusedPiece.side}
+                    kind={focusedPiece.kind}
+                    className="board-piece-art board-piece-art--badge"
+                  />
                 </span>
                 <div>
                   <p className="piece-badge__label">{getPieceDisplayName(focusedPiece)}</p>

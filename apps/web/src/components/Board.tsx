@@ -6,7 +6,8 @@ import type {
   PieceState,
   Square
 } from "@narrative-chess/content-schema";
-import { getPieceDisplayName, getPieceGlyph } from "../chessPresentation";
+import { getPieceDisplayName } from "../chessPresentation";
+import { PieceArt } from "./PieceArt";
 import {
   boardFiles as files,
   boardRanks as ranks,
@@ -35,17 +36,6 @@ type BoardProps = {
   onSquareHover: (square: Square) => void;
   onSquareLeave: () => void;
 };
-
-function getGlyph(piece: PieceState | null) {
-  if (!piece) {
-    return "";
-  }
-
-  return getPieceGlyph({
-    side: piece.side,
-    kind: piece.kind
-  });
-}
 
 function formatDistrictLabel(name: string, viewMode: "board" | "map") {
   if (viewMode === "map" || name.length <= 10) {
@@ -241,7 +231,13 @@ export function Board({
                   </span>
                 ) : null}
                 <span className={`board-square__piece ${piece ? `is-${piece.side}` : "is-empty"} ${viewMode === "map" ? "is-map" : ""}`}>
-                  {getGlyph(piece)}
+                  {piece ? (
+                    <PieceArt
+                      side={piece.side}
+                      kind={piece.kind}
+                      className="board-piece-art board-piece-art--board"
+                    />
+                  ) : null}
                 </span>
                 {isLegalTarget ? <span className="board-square__target-dot" /> : null}
               </button>

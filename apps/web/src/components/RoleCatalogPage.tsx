@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { getPieceGlyph, getPieceKindLabel } from "../chessPresentation";
+import { getPieceKindLabel } from "../chessPresentation";
 import {
   listRoleCatalog,
   findRoleCatalogEntry,
@@ -27,6 +27,7 @@ import {
 import { IndexedWorkspace } from "./IndexedWorkspace";
 import { ClearableSearchField } from "./ClearableSearchField";
 import { EditableTagList } from "./EditableTagList";
+import { PieceArt } from "./PieceArt";
 import { WorkspaceIntroCard } from "./WorkspaceIntroCard";
 import { WorkspaceListItem } from "./WorkspaceListItem";
 
@@ -328,7 +329,13 @@ export function RoleCatalogPage({
                     key={pieceKind}
                     onClick={() => setSelectedPieceKind(pieceKind)}
                     selected={pieceKind === selectedPieceKind}
-                    leading={getPieceGlyph({ side: "white", kind: pieceKind })}
+                    leading={
+                      <PieceArt
+                        side="white"
+                        kind={pieceKind}
+                        className="board-piece-art board-piece-art--list"
+                      />
+                    }
                     title={getPieceKindLabel(pieceKind)}
                     description={
                       searchQuery

@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import { ChevronFirst, ChevronLast, ChevronLeft, ChevronRight } from "lucide-react";
 import type { MoveRecord } from "@narrative-chess/content-schema";
 import { Button } from "@/components/ui/button";
-import { getPieceGlyph } from "../chessPresentation";
 import { Panel } from "./Panel";
+import { PieceArt } from "./PieceArt";
 
 type MatchHistoryPanelProps = {
   moves: MoveRecord[];
@@ -139,7 +139,11 @@ export function MatchHistoryPanel({
                       className={`match-history__piece-icon match-history__piece-icon--${movePair.white.side}`}
                       aria-hidden="true"
                     >
-                      {getPieceGlyph({ side: movePair.white.side, kind: movePair.white.pieceKind })}
+                      <PieceArt
+                        side={movePair.white.side}
+                        kind={movePair.white.pieceKind}
+                        className="board-piece-art board-piece-art--history"
+                      />
                     </span>
                     <span>{movePair.white.san}</span>
                   </button>
@@ -163,7 +167,11 @@ export function MatchHistoryPanel({
                         className={`match-history__piece-icon match-history__piece-icon--${movePair.black.side}`}
                         aria-hidden="true"
                       >
-                        {getPieceGlyph({ side: movePair.black.side, kind: movePair.black.pieceKind })}
+                        <PieceArt
+                          side={movePair.black.side}
+                          kind={movePair.black.pieceKind}
+                          className="board-piece-art board-piece-art--history"
+                        />
                       </span>
                       <span>{movePair.black.san}</span>
                     </button>

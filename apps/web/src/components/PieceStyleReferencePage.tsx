@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { getPieceGlyph } from "../chessPresentation";
 import { defaultPieceStyleSheet } from "../pieceStyles";
+import { PieceArt } from "./PieceArt";
 
 type FileNotice = {
   tone: "neutral" | "success" | "error";
@@ -187,14 +187,14 @@ export function PieceStyleReferencePage({
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-lg border bg-muted/20 p-5 text-center">
                   <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">White queen</p>
-                  <div className="piece-badge__icon mt-4 text-6xl">
-                    {getPieceGlyph({ side: "white", kind: "queen" })}
+                  <div className="piece-badge__icon mt-4">
+                    <PieceArt side="white" kind="queen" className="board-piece-art board-piece-art--badge" decorative={false} />
                   </div>
                 </div>
                 <div className="rounded-lg border bg-muted/20 p-5 text-center">
                   <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Black knight</p>
-                  <div className="piece-badge__icon mt-4 text-6xl">
-                    {getPieceGlyph({ side: "black", kind: "knight" })}
+                  <div className="piece-badge__icon mt-4">
+                    <PieceArt side="black" kind="knight" className="board-piece-art board-piece-art--badge" decorative={false} />
                   </div>
                 </div>
               </div>

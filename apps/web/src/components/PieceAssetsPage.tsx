@@ -1,7 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { getPieceGlyph, getPieceKindLabel, pieceKindLabels } from "../chessPresentation";
+import { getPieceKindLabel, pieceKindLabels } from "../chessPresentation";
+import { PieceArt } from "./PieceArt";
 
 const pieceKinds = Object.keys(pieceKindLabels) as Array<keyof typeof pieceKindLabels>;
 
@@ -34,14 +35,14 @@ export function PieceAssetsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-lg border bg-muted/20 p-4 text-center">
                   <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">White</p>
-                  <div className="piece-badge__icon mt-3 text-5xl">
-                    {getPieceGlyph({ side: "white", kind })}
+                  <div className="piece-badge__icon mt-3">
+                    <PieceArt side="white" kind={kind} className="board-piece-art board-piece-art--badge" decorative={false} />
                   </div>
                 </div>
                 <div className="rounded-lg border bg-muted/20 p-4 text-center">
                   <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Black</p>
-                  <div className="piece-badge__icon mt-3 text-5xl">
-                    {getPieceGlyph({ side: "black", kind })}
+                  <div className="piece-badge__icon mt-3">
+                    <PieceArt side="black" kind={kind} className="board-piece-art board-piece-art--badge" decorative={false} />
                   </div>
                 </div>
               </div>
