@@ -82,6 +82,7 @@ const canonicalRoleCatalogFileName = "role-catalog.json";
 const directoryDbName = "narrative-chess-local-content";
 const directoryStoreName = "handles";
 const edinburghDirectoryHandleKey = "edinburgh-review-directory";
+const cityReviewDirectoryHandleKey = "city-review-directory";
 const classicGamesDirectoryHandleKey = "classic-games-directory";
 const roleCatalogDirectoryHandleKey = "role-catalog-directory";
 const workspaceLayoutDirectoryHandleKey = "workspace-layout-directory";
@@ -285,6 +286,110 @@ async function resolveEdinburghBoardTarget(
     displayPath: localDraftFileName,
     fileExists: Boolean(directFile)
   };
+}
+
+function createCityFileStem(cityId: string) {
+  return normalizeWorkspaceLayoutName(cityId)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "city";
+}
+
+function createCityDraftFileName(cityId: string) {
+  return `${createCityFileStem(cityId)}-board.local.json`;
+}
+
+function createCityCanonicalFileName(cityId: string) {
+  return `${createCityFileStem(cityId)}-board.json`;
+}
+
+async function resolveCityBoardTarget(
+  rootDirectoryHandle: LocalDirectoryHandle,
+  cityId: string
+): Promise<LocalSaveTarget> {
+  const fileName = createCityDraftFileName(cityId);
+
+  const contentDirectory = await getOptionalDirectoryHandle(rootDirectoryHandle, "content");
+  if (contentDirectory) {
+    const citiesDirectory = await getOptionalDirectoryHandle(contentDirectory, "cities");
+    if (citiesDirectory) {
+      const existingFile = await getOptionalFileHandle(citiesDirectory, fileName);
+      return {
+        directoryHandle: citiesDirectory,
+        fileName,
+        displayPath: `content/cities/${fileName}`,
+        fileExists: Boolean(existingFile)
+      };
+    }
+  }
+
+  const directCitiesDirectory = await getOptionalDirectoryHandle(rootDirectoryHandle, "cities");
+  if (directCitiesDirectory) {
+    const existingFile = await getOptionalFileHandle(directCitiesDirectory, fileName);
+    return {
+      directoryHandle: directCitiesDirectory,
+      fileName,
+      displayPath: `cities/${fileName}`,
+      fileExists: Boolean(existingFile)
+    };
+  }
+
+  const directFile = await getOptionalFileHandle(rootDirectoryHandle, fileName);
+  return {
+    directoryHandle: rootDirectoryHandle,
+    fileName,
+    displayPath: fileName,
+    fileExists: Boolean(directFile)
+  };
+}
+
+async function resolveCityBoardSearchTargets(
+  rootDirectoryHandle: LocalDirectoryHandle,
+  cityId: string
+) {
+  const fileName = createCityDraftFileName(cityId);
+  const targets: LocalSaveTarget[] = [];
+
+  const contentDirectory = await getOptionalDirectoryHandle(rootDirectoryHandle, "content");
+  if (contentDirectory) {
+    const citiesDirectory = await getOptionalDirectoryHandle(contentDirectory, "cities");
+    if (citiesDirectory) {
+      const existingFile = await getOptionalFileHandle(citiesDirectory, fileName);
+      if (existingFile) {
+        targets.push({
+          directoryHandle: citiesDirectory,
+          fileName,
+          displayPath: `content/cities/${fileName}`,
+          fileExists: true
+        });
+      }
+    }
+  }
+
+  const directCitiesDirectory = await getOptionalDirectoryHandle(rootDirectoryHandle, "cities");
+  if (directCitiesDirectory) {
+    const existingFile = await getOptionalFileHandle(directCitiesDirectory, fileName);
+    if (existingFile) {
+      targets.push({
+        directoryHandle: directCitiesDirectory,
+        fileName,
+        displayPath: `cities/${fileName}`,
+        fileExists: true
+      });
+    }
+  }
+
+  const directFile = await getOptionalFileHandle(rootDirectoryHandle, fileName);
+  if (directFile) {
+    targets.push({
+      directoryHandle: rootDirectoryHandle,
+      fileName,
+      displayPath: fileName,
+      fileExists: true
+    });
+  }
+
+  return targets;
 }
 
 async function resolveClassicGamesTarget(
@@ -1033,6 +1138,102 @@ export async function loadEdinburghDraftFromDirectory(
         target.displayPath === localDraftFileName
           ? canonicalBoardFileName
           : target.displayPath.replace(localDraftFileName, canonicalBoardFileName),
+      sourceKind: "canonical"
+    };
+  }
+
+  return null;
+}
+
+async function requireCityReviewDirectoryHandle() {
+  const handle = await readStoredDirectoryHandle(cityReviewDirectoryHandleKey);
+
+  if (!handle) {
+    throw new Error("Connect a repo root or content folder before saving city boards to disk.");
+  }
+
+  return handle;
+}
+
+export async function connectCityReviewDirectory() {
+  const handle = await pickLocalDirectory();
+  await writeStoredDirectoryHandle(cityReviewDirectoryHandleKey, handle);
+
+  return {
+    directoryName: handle.name
+  };
+}
+
+export async function getConnectedCityReviewDirectoryName() {
+  const handle = await readStoredDirectoryHandle(cityReviewDirectoryHandleKey);
+  return handle?.name ?? null;
+}
+
+export async function saveCityBoardToDirectory(
+  rootDirectoryHandle: LocalDirectoryHandle,
+  board: CityBoard
+) {
+  const parsedBoard = cityBoardSchema.parse(board);
+  await ensureReadWritePermission(rootDirectoryHandle);
+
+  const target = await resolveCityBoardTarget(rootDirectoryHandle, parsedBoard.id);
+  await ensureReadWritePermission(target.directoryHandle);
+
+  const fileHandle = await target.directoryHandle.getFileHandle(target.fileName, {
+    create: true
+  });
+  const writable = await fileHandle.createWritable();
+
+  await writable.write(`${JSON.stringify(parsedBoard, null, 2)}\n`);
+  await writable.close();
+
+  return {
+    displayPath: target.displayPath,
+    mode: target.fileExists ? "updated" : "created"
+  } as const;
+}
+
+export async function saveCityDraftToDirectory(board: CityBoard) {
+  const handle = await requireCityReviewDirectoryHandle();
+  const result = await saveCityBoardToDirectory(handle, board);
+
+  return {
+    directoryName: handle.name,
+    displayPath: result.displayPath,
+    relativePath: result.displayPath,
+    mode: result.mode
+  };
+}
+
+export async function loadCityDraftFromDirectory(
+  fallback: CityBoard
+): Promise<LoadedDirectoryDraft | null> {
+  const rootDirectoryHandle = await readStoredDirectoryHandle(cityReviewDirectoryHandleKey);
+
+  if (!rootDirectoryHandle) {
+    return null;
+  }
+
+  await ensureReadWritePermission(rootDirectoryHandle);
+
+  const targets = await resolveCityBoardSearchTargets(rootDirectoryHandle, fallback.id);
+  for (const target of targets) {
+    const rawDraft = await readJsonFile(target.directoryHandle, target.fileName);
+    if (rawDraft) {
+      return {
+        board: hydrateEdinburghBoardDraft(rawDraft, fallback),
+        relativePath: target.displayPath,
+        sourceKind: "draft"
+      };
+    }
+  }
+
+  const canonicalFileName = createCityCanonicalFileName(fallback.id);
+  const canonicalFile = await readJsonFile(rootDirectoryHandle, canonicalFileName);
+  if (canonicalFile) {
+    return {
+      board: hydrateEdinburghBoardDraft(canonicalFile, fallback),
+      relativePath: canonicalFileName,
       sourceKind: "canonical"
     };
   }

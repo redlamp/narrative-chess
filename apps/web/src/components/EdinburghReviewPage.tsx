@@ -12,18 +12,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { edinburghBoard } from "../edinburghBoard";
+import { cityBoardDefinitions, getCityBoardDefinition } from "../cityBoards";
 import {
-  buildEdinburghBoardValidation,
-  listEdinburghBoardDraft,
-  resetEdinburghBoardDraft,
-  saveEdinburghBoardDraft
-} from "../edinburghReviewState";
+  buildCityBoardValidation,
+  listCityBoardDraft,
+  resetCityBoardDraft,
+  saveCityBoardDraft
+} from "../cityReviewState";
 import {
-  connectEdinburghReviewDirectory,
-  getConnectedEdinburghReviewDirectoryName,
-  loadEdinburghDraftFromDirectory,
-  saveEdinburghDraftToDirectory,
+  connectCityReviewDirectory,
+  getConnectedCityReviewDirectoryName,
+  loadCityDraftFromDirectory,
+  saveCityDraftToDirectory,
   supportsLocalContentDirectory
 } from "../fileSystemAccess";
 import { WorkspaceIntroCard } from "./WorkspaceIntroCard";
@@ -42,6 +42,8 @@ type TrackedCity = {
   country: string;
   summary: string;
   districtCount: number;
+  contentStatus: CityBoard["contentStatus"];
+  reviewStatus: CityBoard["reviewStatus"];
 };
 
 const cityOverviewId = "city-overview";
@@ -56,6 +58,19 @@ const districtSortOptions = [
 ] as const;
 
 type DistrictSortMode = (typeof districtSortOptions)[number]["value"];
+
+const initialCityDefinition = cityBoardDefinitions[0] ?? null;
+const initialCityId = initialCityDefinition?.id ?? "edinburgh";
+
+function createInitialCityDraft() {
+  const fallbackDefinition = initialCityDefinition ?? cityBoardDefinitions[0] ?? null;
+
+  if (!fallbackDefinition) {
+    throw new Error("At least one city board definition is required.");
+  }
+
+  return listCityBoardDraft(fallbackDefinition.id, fallbackDefinition.board);
+}
 
 function formatListValue(values: string[]) {
   return values.join("\n");
@@ -75,7 +90,7 @@ function downloadDraft(board: CityBoard) {
   const objectUrl = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = objectUrl;
-  anchor.download = "edinburgh-board.local.json";
+  anchor.download = `${board.id}-board.local.json`;
   anchor.click();
   URL.revokeObjectURL(objectUrl);
 }
@@ -156,8 +171,8 @@ function compareDistricts(left: DistrictCell, right: DistrictCell, sortMode: Dis
 }
 
 export function EdinburghReviewPage() {
-  const [draft, setDraft] = useState<CityBoard>(() => listEdinburghBoardDraft());
-  const [selectedCityId, setSelectedCityId] = useState(() => edinburghBoard.id);
+  const [selectedCityId, setSelectedCityId] = useState(initialCityId);
+  const [draft, setDraft] = useState<CityBoard>(() => createInitialCityDraft());
   const [selectedRecordId, setSelectedRecordId] = useState(cityOverviewId);
   const [searchQuery, setSearchQuery] = useState("");
   const [districtSortMode, setDistrictSortMode] = useState<DistrictSortMode>("name");
@@ -165,28 +180,34 @@ export function EdinburghReviewPage() {
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState<SaveNotice | null>(null);
   const [isDirectorySupported, setIsDirectorySupported] = useState(false);
-  const validation = useMemo(() => buildEdinburghBoardValidation(draft), [draft]);
+  const selectedCityDefinition =
+    getCityBoardDefinition(selectedCityId) ?? initialCityDefinition ?? cityBoardDefinitions[0] ?? null;
+  const validation = useMemo(() => buildCityBoardValidation(draft), [draft]);
   const trackedCities = useMemo<TrackedCity[]>(
-    () => [
-      {
-        id: draft.id,
-        name: draft.name,
-        country: draft.country,
-        summary: draft.summary,
-        districtCount: draft.districts.length
-      }
-    ],
+    () =>
+      cityBoardDefinitions.map((definition) => {
+        const board = definition.id === draft.id ? draft : listCityBoardDraft(definition.id, definition.board);
+
+        return {
+          id: board.id,
+          name: board.name,
+          country: board.country,
+          summary: board.summary,
+          districtCount: board.districts.length,
+          contentStatus: board.contentStatus,
+          reviewStatus: board.reviewStatus
+        };
+      }),
     [draft]
   );
-  const selectedCity =
-    trackedCities.find((city) => city.id === selectedCityId) ?? trackedCities[0] ?? null;
+  const selectedCity = trackedCities.find((city) => city.id === selectedCityId) ?? trackedCities[0] ?? null;
 
   useEffect(() => {
     setIsDirectorySupported(supportsLocalContentDirectory());
 
     let cancelled = false;
 
-    void getConnectedEdinburghReviewDirectoryName().then((name) => {
+    void getConnectedCityReviewDirectoryName().then((name) => {
       if (!cancelled) {
         setDirectoryName(name);
       }
@@ -199,17 +220,18 @@ export function EdinburghReviewPage() {
 
   useEffect(() => {
     if (validation.isValid) {
-      saveEdinburghBoardDraft(draft);
+      saveCityBoardDraft(draft);
     }
   }, [draft, validation.isValid]);
 
   useEffect(() => {
-    if (!selectedCity || selectedCity.id === selectedCityId) {
+    if (!selectedCityDefinition) {
       return;
     }
 
-    setSelectedCityId(selectedCity.id);
-  }, [selectedCity, selectedCityId]);
+    setDraft(listCityBoardDraft(selectedCityDefinition.id, selectedCityDefinition.board));
+    setSelectedRecordId(cityOverviewId);
+  }, [selectedCityDefinition]);
 
   useEffect(() => {
     if (
@@ -278,7 +300,7 @@ export function EdinburghReviewPage() {
         badgeRow={
           <>
             <Badge variant="secondary">Cities</Badge>
-            <Badge variant="outline">{trackedCities.length} tracked city</Badge>
+            <Badge variant="outline">{trackedCities.length} tracked cities</Badge>
             <Badge variant="outline">64 mapped districts</Badge>
             <Badge variant={validation.isValid ? "outline" : "destructive"}>
               {validation.isValid ? "Schema valid" : `${validation.issues.length} validation issues`}
@@ -287,14 +309,14 @@ export function EdinburghReviewPage() {
           </>
         }
         title="City and district workspace"
-        description="Review gathered city boards, move from city selection into district detail, and write a repo-local draft file when you want the changes available to future passes. The current workspace is seeded with Edinburgh and structured so more cities can slot into the same pattern over time."
+        description="Review gathered city boards, move from city selection into district detail, and write a repo-local draft file when you want the changes available to future passes. The current workspace is seeded with Edinburgh and London and structured so more cities can slot into the same pattern over time."
         actions={
           <>
             <Button
               variant="outline"
               onClick={() =>
                 runDirectoryAction("connect-directory", async () => {
-                  const result = await connectEdinburghReviewDirectory();
+                  const result = await connectCityReviewDirectory();
                   setDirectoryName(result.directoryName);
                   setSaveNotice({
                     tone: "success",
@@ -310,16 +332,17 @@ export function EdinburghReviewPage() {
               variant="outline"
               onClick={() =>
                 runDirectoryAction("load-directory-draft", async () => {
-                  const result = await loadEdinburghDraftFromDirectory(edinburghBoard);
+                  const fallback = selectedCityDefinition?.board ?? createInitialCityDraft();
+                  const result = await loadCityDraftFromDirectory(fallback);
                   if (!result) {
                     setSaveNotice({
                       tone: "neutral",
-                      text: "No local Edinburgh draft or canonical board file was found in the connected directory."
+                      text: "No local city draft or canonical board file was found in the connected directory."
                     });
                     return;
                   }
 
-                  setDraft(saveEdinburghBoardDraft(result.board));
+                  setDraft(saveCityBoardDraft(result.board));
                   setSelectedCityId(result.board.id);
                   setSelectedRecordId(cityOverviewId);
                   setSaveNotice({
@@ -336,7 +359,7 @@ export function EdinburghReviewPage() {
               variant="outline"
               onClick={() =>
                 runDirectoryAction("save-directory-draft", async () => {
-                  const result = await saveEdinburghDraftToDirectory(draft);
+                  const result = await saveCityDraftToDirectory(draft);
                   setSaveNotice({
                     tone: "success",
                     text: `Saved the current draft to ${result.relativePath} inside ${result.directoryName}.`
@@ -353,7 +376,7 @@ export function EdinburghReviewPage() {
                 downloadDraft(draft);
                 setSaveNotice({
                   tone: "neutral",
-                  text: "Downloaded edinburgh-board.local.json."
+                  text: `Downloaded ${draft.id}-board.local.json.`
                 });
               }}
               disabled={busyAction !== null}
@@ -396,22 +419,23 @@ export function EdinburghReviewPage() {
             <Button
               variant="outline"
               onClick={() => {
-                const nextDraft = resetEdinburghBoardDraft();
+                const fallback = selectedCityDefinition?.board ?? createInitialCityDraft();
+                const nextDraft = resetCityBoardDraft(selectedCityId, fallback);
                 setDraft(nextDraft);
                 setSelectedCityId(nextDraft.id);
                 setSelectedRecordId(cityOverviewId);
                 setSaveNotice({
                   tone: "neutral",
-                  text: "Reset the working draft back to the bundled Edinburgh board."
+                  text: `Reset the working draft back to the bundled ${nextDraft.name} board.`
                 });
               }}
             >
-              Reset browser draft
+              Reset current city draft
             </Button>
             <Button
               variant="outline"
               onClick={() => {
-                setDraft(saveEdinburghBoardDraft(draft));
+                setDraft(saveCityBoardDraft(draft));
                 setSaveNotice({
                   tone: "success",
                   text: "Re-saved the current browser draft."
@@ -453,12 +477,32 @@ export function EdinburghReviewPage() {
                   key={city.id}
                   type="button"
                   onClick={() => {
+                    const nextCityDefinition = getCityBoardDefinition(city.id);
+                    if (nextCityDefinition) {
+                      setDraft(listCityBoardDraft(nextCityDefinition.id, nextCityDefinition.board));
+                    }
                     setSelectedCityId(city.id);
                     setSelectedRecordId(cityOverviewId);
                   }}
                   selected={city.id === selectedCity?.id}
                   title={city.name}
-                  meta={<Badge variant="outline">{city.districtCount} districts</Badge>}
+                  meta={
+                    <>
+                      <Badge variant="outline">{city.districtCount} districts</Badge>
+                      <Badge
+                        variant={
+                          city.contentStatus === "authored" ? "secondary" : "outline"
+                        }
+                      >
+                        {city.contentStatus}
+                      </Badge>
+                      <Badge
+                        variant={city.reviewStatus === "approved" || city.reviewStatus === "reviewed" ? "secondary" : "outline"}
+                      >
+                        {city.reviewStatus}
+                      </Badge>
+                    </>
+                  }
                 />
               ))}
             </div>
@@ -473,7 +517,7 @@ export function EdinburghReviewPage() {
                 {selectedCity ? <Badge variant="outline">{selectedCity.name}</Badge> : null}
               </div>
               <CardDescription>
-                Select the city overview or drill into a district record like Edinburgh {">"} Broughton.
+                Select the city overview or drill into a district record like Edinburgh {">"} Broughton or London {">"} Camden Town.
               </CardDescription>
             </div>
             <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_11rem]">
@@ -483,7 +527,7 @@ export function EdinburghReviewPage() {
                 value={searchQuery}
                 onChange={setSearchQuery}
                 placeholder="Search by square, name, locality, or descriptor"
-                ariaLabel="Search Edinburgh districts"
+                ariaLabel="Search city districts"
               />
               <label className="grid gap-2">
                 <span className="text-sm font-medium">Sort by</span>
@@ -518,7 +562,6 @@ export function EdinburghReviewPage() {
                 className="workspace-list-item--overview"
                 leading={<Badge variant="secondary">Overview</Badge>}
                 title={draft.name}
-                description={draft.summary}
                 meta={<Badge variant="secondary">City overview</Badge>}
               />
               {filteredDistricts.map((district) => (
