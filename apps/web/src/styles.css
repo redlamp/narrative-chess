@@ -846,6 +846,8 @@ select {
   gap: var(--workspace-column-gap);
   align-items: start;
   --workspace-cell-radius: var(--workspace-card-radius);
+  isolation: isolate;
+  overflow: clip;
 }
 
 .workspace-grid--freeform {
@@ -904,7 +906,7 @@ select {
 
 .workspace-item {
   position: relative;
-  z-index: 1;
+  z-index: 10;
   min-width: 0;
   min-height: 0;
   border-radius: var(--workspace-cell-radius);

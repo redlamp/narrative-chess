@@ -72,7 +72,7 @@ function getPageGridStyle(layoutState: PageLayoutState, rowCount: number): CSSPr
 function getPagePanelStyle(layoutState: PageLayoutState, panelId: PageLayoutPanelId): CSSProperties {
   const panel = layoutState.panels[panelId];
   const area = panel.w * panel.h;
-  const zIndex = 10000 - area * 100 - panel.w * 10 - panel.h;
+  const zIndex = Math.max(100, 6000 - area * 10 - panel.w - panel.h);
   const columnOffset = Math.max(0, panel.x - 1);
   const rowOffset = Math.max(0, panel.y - 1);
 

@@ -242,7 +242,7 @@ function getWorkspacePanelStyle(
   const panel = layoutState.panels[panelId];
   const renderHeight = getWorkspacePanelRenderHeight(layoutState, panelId);
   const area = panel.w * renderHeight;
-  const zIndex = 10000 - area * 100 - panel.w * 10 - panel.h;
+  const zIndex = Math.max(100, 6000 - area * 10 - panel.w - renderHeight);
 
   if (freeformLayout) {
     const columnOffset = Math.max(0, panel.x - 1);
