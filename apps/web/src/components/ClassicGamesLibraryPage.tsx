@@ -16,9 +16,6 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Board } from "./Board";
 import { IndexedWorkspace } from "./IndexedWorkspace";
-import { WorkspaceIntroCard } from "./WorkspaceIntroCard";
-import { WorkspaceListItem } from "./WorkspaceListItem";
-import { WorkspaceNoticeCard } from "./WorkspaceNoticeCard";
 import {
   connectClassicGamesDirectory,
   getConnectedClassicGamesDirectoryName,
@@ -444,76 +441,67 @@ export function ClassicGamesLibraryPage({
       className="classic-games-workspace"
       scrollMode="page"
       intro={
-        <WorkspaceIntroCard
-          badgeRow={
-            <>
+        <Card className="page-card page-card--intro">
+          <CardHeader className="gap-4">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary">Classic Games</Badge>
               <Badge variant="outline">{games.length} editable games</Badge>
               <Badge variant="outline">Browser saved</Badge>
               <Badge variant="outline">
                 {directoryName ? `Folder: ${directoryName}` : "Folder not connected"}
               </Badge>
-            </>
-          }
-          title="Historic reference game library"
-          description="Review, edit, and extend a growing set of classic and modern reference games. The browser copy saves automatically, and you can connect a repo folder when you want a named file on disk."
-          actions={
-            <>
-              <Button type="button" variant="outline" onClick={handleAddGame}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add game
+            </div>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div className="grid gap-2">
+                <CardTitle className="text-3xl tracking-tight">Historic reference game library</CardTitle>
+                <CardDescription className="max-w-4xl text-sm leading-6">
+                  Review, edit, and extend a growing set of classic and modern reference games. The
+                  browser copy saves automatically, and you can connect a repo folder when you want a
+                  named file on disk.
+                </CardDescription>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" onClick={handleAddGame}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add game
+                </Button>
+                <Button type="button" variant="outline" onClick={handleDuplicateGame} disabled={!selectedGame}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Duplicate
+                </Button>
+                <Button type="button" variant="outline" onClick={handleResetLibrary}>
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Reset defaults
+                </Button>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleConnectFolder}
+                disabled={!isDirectorySupported || busyAction === "connect-folder"}
+              >
+                <FolderOpen className="mr-2 h-4 w-4" />
+                Connect folder
               </Button>
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleDuplicateGame}
-                disabled={!selectedGame}
+                onClick={handleLoadFromFolder}
+                disabled={!isDirectorySupported || busyAction === "load-folder"}
               >
-                <Copy className="mr-2 h-4 w-4" />
-                Duplicate
+                Load from folder
               </Button>
-              <Button type="button" variant="outline" onClick={handleResetLibrary}>
-                <RotateCcw className="mr-2 h-4 w-4" />
-                Reset defaults
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleSaveToFolder}
+                disabled={!isDirectorySupported || busyAction === "save-folder"}
+              >
+                <Save className="mr-2 h-4 w-4" />
+                Save to folder
               </Button>
-            </>
-          }
-          status={fileNotice}
-        >
-          <div className="grid gap-4 rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <p>
-                {directoryName
-                  ? `Connected to ${directoryName}. Use the folder buttons to load or save a repo-local classic-games.local.json file.`
-                  : "Connect a repo folder when you want a named file on disk instead of browser-only storage."}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleConnectFolder}
-                  disabled={!isDirectorySupported || busyAction === "connect-folder"}
-                >
-                  <FolderOpen className="mr-2 h-4 w-4" />
-                  Connect folder
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleLoadFromFolder}
-                  disabled={!isDirectorySupported || busyAction === "load-folder"}
-                >
-                  Load from folder
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleSaveToFolder}
-                  disabled={!isDirectorySupported || busyAction === "save-folder"}
-                >
-                  <Save className="mr-2 h-4 w-4" />
-                  Save to folder
-                </Button>
                 <Button
                   type="button"
                   variant="outline"
@@ -527,20 +515,27 @@ export function ClassicGamesLibraryPage({
                   Load on study board
                 </Button>
               </div>
-            </div>
-            {!validation.isValid ? (
-              <WorkspaceNoticeCard tone="error" title="Library validation">
-                <p>{validation.issues[0]}</p>
-                {validation.issues.length > 1 ? (
-                  <p className="text-sm text-muted-foreground">
-                    {validation.issues.length - 1} more issue
-                    {validation.issues.length - 1 === 1 ? "" : "s"} need attention.
-                  </p>
-                ) : null}
-              </WorkspaceNoticeCard>
+              {!validation.isValid ? (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                  {validation.issues[0]}
+                </div>
+              ) : null}
+              {fileNotice ? (
+                <p
+                className={[
+                  "rounded-md border px-3 py-2 text-sm",
+                  fileNotice.tone === "error"
+                    ? "border-destructive/30 bg-destructive/5 text-destructive"
+                    : fileNotice.tone === "success"
+                      ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400"
+                      : "border-border bg-muted/40 text-muted-foreground"
+                ].join(" ")}
+              >
+                {fileNotice.text}
+              </p>
             ) : null}
-          </div>
-        </WorkspaceIntroCard>
+          </CardHeader>
+        </Card>
       }
       index={
         <Card className="page-card page-card--index classic-games-page__index">
@@ -561,21 +556,30 @@ export function ClassicGamesLibraryPage({
           <CardContent className="page-card__content pt-0">
             <div className="grid gap-2">
               {filteredGames.map((game) => (
-                <WorkspaceListItem
+                <button
                   key={game.id}
                   type="button"
                   onClick={() => selectGame(game.id)}
-                  selected={game.id === selectedGame?.id}
-                  title={game.title}
-                  description={`${game.white} vs ${game.black}`}
-                  leading={<span className="text-base font-semibold">{game.year}</span>}
-                  meta={
-                    <>
-                      <Badge variant="secondary">{game.opening}</Badge>
-                      <Badge variant="outline">{game.result}</Badge>
-                    </>
-                  }
-                />
+                  className={[
+                    "grid gap-2 rounded-lg border px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    game.id === selectedGame?.id
+                      ? "border-foreground/15 bg-muted"
+                      : "bg-background hover:bg-muted/50"
+                  ].join(" ")}
+                  aria-pressed={game.id === selectedGame?.id}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-medium">{game.title}</span>
+                    <Badge variant="outline">{game.year}</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {game.white} vs {game.black}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary">{game.opening}</Badge>
+                    <Badge variant="outline">{game.result}</Badge>
+                  </div>
+                </button>
               ))}
               {!filteredGames.length ? (
                 <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">

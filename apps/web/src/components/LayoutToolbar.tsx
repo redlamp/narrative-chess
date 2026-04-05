@@ -74,10 +74,6 @@ export function LayoutToolbar({
             Reset layout
           </Button>
         </div>
-        <p className="muted layout-toolbar__keyboard-note" role="note">
-          Keyboard fallback: focus a Move or Resize control and use the arrow keys to nudge the panel. Hold
-          Shift for a larger step.
-        </p>
       </CardHeader>
 
       <CardContent className="layout-toolbar__body">

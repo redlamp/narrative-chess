@@ -4,6 +4,7 @@ import type {
   PieceKind,
   ReviewStatus
 } from "@narrative-chess/content-schema";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,8 +26,6 @@ import {
   type RoleCatalog
 } from "../roleCatalog";
 import { IndexedWorkspace } from "./IndexedWorkspace";
-import { WorkspaceIntroCard } from "./WorkspaceIntroCard";
-import { WorkspaceListItem } from "./WorkspaceListItem";
 
 type RoleCatalogPageProps = {
   roleCatalog: RoleCatalog;
@@ -175,72 +174,95 @@ export function RoleCatalogPage({
     <IndexedWorkspace
       className="role-catalog-workspace"
       intro={
-        <WorkspaceIntroCard
-          badgeRow={
-            <>
+        <Card className="page-card page-card--intro">
+          <CardHeader className="gap-4">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary">Role Catalog</Badge>
               <Badge variant="outline">{roleCatalog.length} editable roles</Badge>
+            </div>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div className="grid gap-2">
+                <CardTitle className="text-3xl tracking-tight">Piece roles and job definitions</CardTitle>
+                <CardDescription className="max-w-4xl text-sm leading-6">
+                  Start from the chess piece family, drill into a named role, and then edit the
+                  record in detail. Changes save locally and feed back into new match rosters
+                  immediately.
+                </CardDescription>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" onClick={() => onRoleCatalogAdd(selectedPieceKind)}>
+                  Add role
+                </Button>
+                <Button type="button" variant="outline" onClick={onRoleCatalogReset}>
+                  Reset defaults
+                </Button>
+              </div>
+            </div>
+            <div className="grid gap-3 rounded-lg border bg-muted/20 p-4">
+              <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+                <div className="grid gap-1">
+                  <p className="text-sm font-medium">Repo file save</p>
+                  <p className="text-sm text-muted-foreground">
+                    {roleCatalogDirectoryName
+                      ? `Connected to ${roleCatalogDirectoryName}.`
+                      : "Local browser storage remains the fallback until you connect a folder."}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onConnectRoleCatalogDirectory}
+                    disabled={!isRoleCatalogDirectorySupported || roleCatalogFileBusyAction !== null}
+                  >
+                    Connect folder
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onLoadRoleCatalogFromDirectory}
+                    disabled={!roleCatalogDirectoryName || roleCatalogFileBusyAction !== null}
+                  >
+                    Load from disk
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onSaveRoleCatalogToDirectory}
+                    disabled={!roleCatalogDirectoryName || roleCatalogFileBusyAction !== null}
+                  >
+                    Save to disk
+                  </Button>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                The repo-local file is saved as `content/roles/role-catalog.local.json` when you
+                connect a repo root or content folder.
+              </p>
+              {roleCatalogFileNotice ? (
+                <p
+                  className={cn(
+                    "text-sm",
+                    roleCatalogFileNotice.tone === "error"
+                      ? "text-destructive"
+                      : roleCatalogFileNotice.tone === "success"
+                        ? "text-emerald-700"
+                        : "text-muted-foreground"
+                  )}
+                >
+                  {roleCatalogFileNotice.text}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap gap-2">
               {pieceKinds.map((pieceKind) => (
                 <Badge key={pieceKind} variant="outline">
                   {getPieceKindLabel(pieceKind)}: {groupedRoles[pieceKind].length}
                 </Badge>
               ))}
-            </>
-          }
-          title="Piece roles and job definitions"
-          description="Start from the chess piece family, drill into a named role, and then edit the record in detail. Changes save locally and feed back into new match rosters immediately."
-          actions={
-            <>
-              <Button type="button" variant="outline" onClick={() => onRoleCatalogAdd(selectedPieceKind)}>
-                Add role
-              </Button>
-              <Button type="button" variant="outline" onClick={onRoleCatalogReset}>
-                Reset defaults
-              </Button>
-            </>
-          }
-          status={roleCatalogFileNotice}
-        >
-          <div className="grid gap-3 rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
-            <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
-              <p>
-                {roleCatalogDirectoryName
-                  ? `Connected to ${roleCatalogDirectoryName}.`
-                  : "Local browser storage remains the fallback until you connect a folder."}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onConnectRoleCatalogDirectory}
-                  disabled={!isRoleCatalogDirectorySupported || roleCatalogFileBusyAction !== null}
-                >
-                  Connect folder
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onLoadRoleCatalogFromDirectory}
-                  disabled={!roleCatalogDirectoryName || roleCatalogFileBusyAction !== null}
-                >
-                  Load from disk
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onSaveRoleCatalogToDirectory}
-                  disabled={!roleCatalogDirectoryName || roleCatalogFileBusyAction !== null}
-                >
-                  Save to disk
-                </Button>
-              </div>
             </div>
-            <p>
-              The repo-local file is saved as `content/roles/role-catalog.local.json` when you
-              connect a repo root or content folder.
-            </p>
-          </div>
-        </WorkspaceIntroCard>
+          </CardHeader>
+        </Card>
       }
       index={
         <Card className="page-card page-card--index">
@@ -259,19 +281,33 @@ export function RoleCatalogPage({
                 const visibleCount = filteredRoleGroups[pieceKind].length;
 
                 return (
-                  <WorkspaceListItem
+                  <button
                     key={pieceKind}
+                    type="button"
                     onClick={() => setSelectedPieceKind(pieceKind)}
-                    selected={pieceKind === selectedPieceKind}
-                    leading={getPieceGlyph({ side: "white", kind: pieceKind })}
-                    title={getPieceKindLabel(pieceKind)}
-                    description={
-                      searchQuery
+                    className={cn(
+                      "grid gap-2 rounded-lg border px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      pieceKind === selectedPieceKind
+                        ? "border-foreground/15 bg-muted"
+                        : "bg-background hover:bg-muted/50"
+                    )}
+                    aria-pressed={pieceKind === selectedPieceKind}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <span aria-hidden="true" className="text-lg leading-none">
+                          {getPieceGlyph({ side: "white", kind: pieceKind })}
+                        </span>
+                        <span className="font-medium">{getPieceKindLabel(pieceKind)}</span>
+                      </div>
+                      <Badge variant="outline">{totalCount}</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {searchQuery
                         ? `${visibleCount} matching roles`
-                        : `${totalCount} roles available for this piece family.`
-                    }
-                    meta={<Badge variant="outline">{totalCount}</Badge>}
-                  />
+                        : `${totalCount} roles available for this piece family.`}
+                    </p>
+                  </button>
                 );
               })}
             </div>
@@ -303,17 +339,27 @@ export function RoleCatalogPage({
             <ScrollArea className="page-card__scroll-area rounded-lg border">
               <div className="grid gap-2 p-3">
                 {selectedPieceRoles.map((role) => (
-                  <WorkspaceListItem
+                  <button
                     key={role.id}
+                    type="button"
                     onClick={() => {
                       setSelectedPieceKind(role.pieceKind);
                       setSelectedRoleId(role.id);
                     }}
-                    selected={role.id === selectedRole?.id}
-                    title={role.name}
-                    description={role.summary}
-                    meta={<Badge variant="outline">{role.reviewStatus}</Badge>}
-                  />
+                    className={cn(
+                      "grid gap-2 rounded-lg border px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      role.id === selectedRole?.id
+                        ? "border-foreground/15 bg-muted"
+                        : "bg-background hover:bg-muted/50"
+                    )}
+                    aria-pressed={role.id === selectedRole?.id}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-medium">{role.name}</span>
+                      <Badge variant="outline">{role.reviewStatus}</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{role.summary}</p>
+                  </button>
                 ))}
                 {!selectedPieceRoles.length ? (
                   <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
