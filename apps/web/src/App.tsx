@@ -103,7 +103,7 @@ type LayoutFileNotice = {
 
 const panelTitles: Record<WorkspacePanelId, string> = {
   board: "Board",
-  moves: "Match Ledger",
+  moves: "Match History (PGN)",
   narrative: "Board Inspector",
   saved: "Saved Matches",
   study: "Study Games",
@@ -1281,17 +1281,10 @@ export default function App() {
               <div className="board-panel__header">
                 <div>
                   <p className="section-eyebrow">Board</p>
-                  <h2>{isStudyMode ? "Study replay board" : "Edinburgh play surface"}</h2>
+                  <h2>{isStudyMode ? "Study replay board" : "Board"}</h2>
                 </div>
-                <div className="board-panel__actions">
-                  <button
-                    type="button"
-                    className="button button--ghost"
-                    onClick={handleUndo}
-                    disabled={!canUndo}
-                  >
-                    {isStudyMode ? "Undo disabled" : "Undo"}
-                  </button>
+                <div className="board-panel__meta">
+                  <span className="side-pill">Edinburgh</span>
                 </div>
               </div>
 
@@ -1326,10 +1319,19 @@ export default function App() {
               style={getWorkspacePanelStyle(workspaceLayout, "moves", isCompactViewport)}
             >
               <Panel
-                title="Match Ledger"
-                eyebrow="Board + story"
+                title="Match History (PGN)"
+                eyebrow="Moves + story"
                 collapsed={workspaceLayout.collapsed.moves}
-                action={renderPanelTools()}
+                action={renderPanelTools(
+                  <button
+                    type="button"
+                    className="button button--ghost"
+                    onClick={handleUndo}
+                    disabled={!canUndo}
+                  >
+                    Undo
+                  </button>
+                )}
                 onToggleCollapse={() => handleTogglePanelCollapse("moves")}
               >
                 <div className="timeline timeline--match-ledger">

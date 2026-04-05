@@ -114,7 +114,7 @@ select {
 .app-header__aside,
 .panel-toolbar,
 .board-panel__header,
-.board-panel__actions,
+.board-panel__meta,
 .study-panel__row,
 .study-panel__actions,
 .study-panel__session-header,
@@ -901,6 +901,11 @@ select {
 .board-panel__header h2 {
   font-size: 1.1rem;
   line-height: 1.3;
+}
+
+.board-panel__meta {
+  justify-content: flex-end;
+  align-items: flex-start;
 }
 
 .panel__body {
