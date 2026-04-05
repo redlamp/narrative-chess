@@ -685,6 +685,29 @@ select {
   font-weight: 600;
 }
 
+.saved-match__summary {
+  min-width: 0;
+}
+
+.saved-match__icon-button {
+  align-self: start;
+}
+
+.saved-match__icon-button--load {
+  justify-self: end;
+}
+
+.saved-match__icon-button--destructive {
+  justify-self: start;
+  color: hsl(var(--destructive));
+}
+
+.saved-match__icon-button--destructive:hover,
+.saved-match__icon-button--destructive:focus-visible {
+  color: hsl(var(--destructive));
+  background: color-mix(in srgb, hsl(var(--destructive)) 10%, var(--background) 90%);
+}
+
 .menu-toggle__description,
 .study-panel__summary-copy,
 .saved-match__meta,
@@ -972,6 +995,11 @@ select {
 .role-page__intro-header {
   justify-content: space-between;
   align-items: flex-start;
+}
+
+.saved-match {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
 }
 
 .panel__title,

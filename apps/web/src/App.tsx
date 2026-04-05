@@ -8,7 +8,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode
 } from "react";
-import { LayoutDashboard, Moon, Sun } from "lucide-react";
+import { FolderOpen, LayoutDashboard, Moon, Save, Sun, Trash2 } from "lucide-react";
 import { getPieceAtSquare } from "@narrative-chess/game-core";
 import { getCharacterEventHistory } from "@narrative-chess/narrative-engine";
 import type { PieceKind, Square } from "@narrative-chess/content-schema";
@@ -1465,14 +1465,16 @@ export default function App() {
                 title="Saved Matches"
                 collapsed={workspaceLayout.collapsed.saved}
                 action={renderPanelTools(
-                  <button
+                  <Button
                     type="button"
-                    className="button button--ghost"
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={() => saveCurrentMatch()}
                     disabled={!canSave}
+                    aria-label="Save current match"
                   >
-                    Save current match
-                  </button>
+                    <Save />
+                  </Button>
                 )}
                 onToggleCollapse={() => handleTogglePanelCollapse("saved")}
               >
@@ -1480,28 +1482,32 @@ export default function App() {
                   <div className="saved-match-list">
                     {savedMatches.map((savedMatch) => (
                       <article key={savedMatch.id} className="saved-match">
-                        <div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          className="saved-match__icon-button saved-match__icon-button--destructive"
+                          onClick={() => removeSavedMatch(savedMatch.id)}
+                          aria-label={`Delete saved match ${savedMatch.name}`}
+                        >
+                          <Trash2 />
+                        </Button>
+                        <div className="saved-match__summary">
                           <h3 className="saved-match__title">{savedMatch.name}</h3>
                           <p className="saved-match__meta">
                             {formatSavedAt(savedMatch.savedAt)} | {savedMatch.moveCount} moves
                           </p>
                         </div>
-                        <div className="saved-match__actions">
-                          <button
-                            type="button"
-                            className="button button--ghost"
-                            onClick={() => loadSavedMatch(savedMatch.id)}
-                          >
-                            Load
-                          </button>
-                          <button
-                            type="button"
-                            className="button button--ghost"
-                            onClick={() => removeSavedMatch(savedMatch.id)}
-                          >
-                            Delete
-                          </button>
-                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          className="saved-match__icon-button saved-match__icon-button--load"
+                          onClick={() => loadSavedMatch(savedMatch.id)}
+                          aria-label={`Load saved match ${savedMatch.name}`}
+                        >
+                          <FolderOpen />
+                        </Button>
                       </article>
                     ))}
                   </div>
