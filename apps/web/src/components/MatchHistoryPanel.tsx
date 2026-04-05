@@ -46,6 +46,30 @@ function buildMovePairs(moves: MoveRecord[]): MovePair[] {
   return pairs;
 }
 
+function renderCapturedPiece(
+  move: MoveRecord,
+  characters: Record<string, CharacterSummary>
+) {
+  if (!move.capturedPieceId) {
+    return null;
+  }
+
+  const capturedPiece = characters[move.capturedPieceId];
+  const capturedPieceKind = capturedPiece?.pieceKind ?? "pawn";
+  const capturedPieceSide = capturedPiece?.side ?? (move.side === "white" ? "black" : "white");
+
+  return (
+    <span className="match-history__capture-kind">
+      <PieceArt
+        side={capturedPieceSide}
+        kind={capturedPieceKind}
+        className="board-piece-art board-piece-art--history"
+      />
+      <span>{getPieceKindLabel(capturedPieceKind)}</span>
+    </span>
+  );
+}
+
 export function MatchHistoryPanel({
   moves,
   characters,
@@ -149,13 +173,7 @@ export function MatchHistoryPanel({
                       />
                     </span>
                     <span className="match-history__move-san">{movePair.white.san}</span>
-                    {movePair.white.capturedPieceId ? (
-                      <span className="match-history__capture-kind">
-                        {getPieceKindLabel(
-                          characters[movePair.white.capturedPieceId]?.pieceKind ?? "pawn"
-                        )}
-                      </span>
-                    ) : null}
+                    {renderCapturedPiece(movePair.white, characters)}
                   </button>
                   {movePair.black ? (
                     <button
@@ -180,17 +198,11 @@ export function MatchHistoryPanel({
                         <PieceArt
                           side={movePair.black.side}
                           kind={movePair.black.pieceKind}
-                        className="board-piece-art board-piece-art--history"
-                      />
-                    </span>
+                          className="board-piece-art board-piece-art--history"
+                        />
+                      </span>
                       <span className="match-history__move-san">{movePair.black.san}</span>
-                      {movePair.black.capturedPieceId ? (
-                        <span className="match-history__capture-kind">
-                          {getPieceKindLabel(
-                            characters[movePair.black.capturedPieceId]?.pieceKind ?? "pawn"
-                          )}
-                        </span>
-                      ) : null}
+                      {renderCapturedPiece(movePair.black, characters)}
                     </button>
                   ) : (
                     <span className="match-history__move-empty">...</span>
