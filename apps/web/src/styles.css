@@ -733,7 +733,7 @@ select {
   --workspace-cell-radius: calc(var(--radius) - 0.1rem);
 }
 
-.workspace-grid--layout-mode {
+.workspace-grid--freeform {
   display: block;
   min-height: calc(
     (var(--workspace-row-height) * var(--workspace-row-count)) +
@@ -767,7 +767,7 @@ select {
   pointer-events: none;
 }
 
-.workspace-grid--layout-mode .workspace-grid__sizer {
+.workspace-grid--freeform .workspace-grid__sizer {
   display: none;
 }
 
@@ -795,7 +795,7 @@ select {
   border-radius: var(--workspace-cell-radius);
 }
 
-.workspace-grid--layout-mode > .workspace-item {
+.workspace-grid--freeform > .workspace-item {
   position: absolute;
 }
 

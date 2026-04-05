@@ -333,6 +333,7 @@ export default function App() {
     null;
   const hasActiveGame = isStudyMode || totalPlies > 0;
   const effectiveLayoutMode = isLayoutMode && !isCompactViewport;
+  const useFreeformWorkspaceLayout = !isCompactViewport;
   const workspaceRowCount = useMemo(
     () => getWorkspaceLayoutRowCount(workspaceLayout),
     [workspaceLayout]
@@ -1272,7 +1273,7 @@ export default function App() {
 
           <main
             ref={workspaceRef}
-            className={`workspace-grid ${effectiveLayoutMode ? "workspace-grid--layout-mode" : ""}`}
+            className={`workspace-grid ${useFreeformWorkspaceLayout ? "workspace-grid--freeform" : ""} ${effectiveLayoutMode ? "workspace-grid--layout-mode" : ""}`}
             style={workspaceGridStyle}
           >
             {!isCompactViewport ? (
@@ -1310,7 +1311,7 @@ export default function App() {
                 workspaceLayout,
                 "board",
                 isCompactViewport,
-                effectiveLayoutMode
+                useFreeformWorkspaceLayout
               )}
             >
               <Card className="board-panel" size="sm">
@@ -1358,7 +1359,7 @@ export default function App() {
                 workspaceLayout,
                 "moves",
                 isCompactViewport,
-                effectiveLayoutMode
+                useFreeformWorkspaceLayout
               )}
             >
               <MatchHistoryPanel
@@ -1389,7 +1390,7 @@ export default function App() {
                 workspaceLayout,
                 "narrative",
                 isCompactViewport,
-                effectiveLayoutMode
+                useFreeformWorkspaceLayout
               )}
             >
               <StoryPanel
@@ -1423,7 +1424,7 @@ export default function App() {
                 workspaceLayout,
                 "saved",
                 isCompactViewport,
-                effectiveLayoutMode
+                useFreeformWorkspaceLayout
               )}
             >
               <Panel
@@ -1494,7 +1495,7 @@ export default function App() {
                 workspaceLayout,
                 "study",
                 isCompactViewport,
-                effectiveLayoutMode
+                useFreeformWorkspaceLayout
               )}
             >
               <Panel

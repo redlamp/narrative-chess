@@ -120,6 +120,7 @@ export function IndexedWorkspace({
   const [activeLayoutEdit, setActiveLayoutEdit] = useState<ActivePageLayoutEdit | null>(null);
   const layoutRef = useRef<HTMLDivElement | null>(null);
   const effectiveLayoutMode = layoutMode && !isCompactViewport;
+  const useFreeformLayout = !isCompactViewport;
   const rowCount = useMemo(
     () =>
       getPageLayoutRowCount({
@@ -385,7 +386,7 @@ export function IndexedWorkspace({
     </button>
   );
 
-  if (!effectiveLayoutMode) {
+  if (isCompactViewport) {
     return (
       <main
         className={cn(
@@ -413,55 +414,65 @@ export function IndexedWorkspace({
   }
 
   return (
-    <div className="workspace-layout-shell workspace-layout-shell--editing">
-      <aside className="workspace-layout-shell__sidebar">
-        <PageLayoutToolbar
-          columnCount={layoutState.columnCount}
-          columnGap={layoutState.columnGap}
-          rowHeight={layoutState.rowHeight}
-          showLayoutGrid={showLayoutGrid}
-          onToggleLayoutMode={() => onToggleLayoutMode?.()}
-          onColumnCountChange={(value) =>
-            setLayoutState((currentLayout) =>
-              updatePageLayoutColumnCount({
-                layoutState: currentLayout,
-                panelIds: activePanelIds,
-                variant: resolvedLayoutVariant,
-                value
-              })
-            )
-          }
-          onColumnGapChange={(value) =>
-            setLayoutState((currentLayout) =>
-              updatePageLayoutColumnGap({
-                layoutState: currentLayout,
-                value
-              })
-            )
-          }
-          onRowHeightChange={(value) =>
-            setLayoutState((currentLayout) =>
-              updatePageLayoutRowHeight({
-                layoutState: currentLayout,
-                value
-              })
-            )
-          }
-          onToggleLayoutGrid={(checked) => onToggleLayoutGrid?.(checked)}
-          onResetLayout={handleResetLayout}
-        />
-      </aside>
+    <div className={cn("workspace-layout-shell", effectiveLayoutMode ? "workspace-layout-shell--editing" : null)}>
+      {effectiveLayoutMode ? (
+        <aside className="workspace-layout-shell__sidebar">
+          <PageLayoutToolbar
+            columnCount={layoutState.columnCount}
+            columnGap={layoutState.columnGap}
+            rowHeight={layoutState.rowHeight}
+            showLayoutGrid={showLayoutGrid}
+            onToggleLayoutMode={() => onToggleLayoutMode?.()}
+            onColumnCountChange={(value) =>
+              setLayoutState((currentLayout) =>
+                updatePageLayoutColumnCount({
+                  layoutState: currentLayout,
+                  panelIds: activePanelIds,
+                  variant: resolvedLayoutVariant,
+                  value
+                })
+              )
+            }
+            onColumnGapChange={(value) =>
+              setLayoutState((currentLayout) =>
+                updatePageLayoutColumnGap({
+                  layoutState: currentLayout,
+                  value
+                })
+              )
+            }
+            onRowHeightChange={(value) =>
+              setLayoutState((currentLayout) =>
+                updatePageLayoutRowHeight({
+                  layoutState: currentLayout,
+                  value
+                })
+              )
+            }
+            onToggleLayoutGrid={(checked) => onToggleLayoutGrid?.(checked)}
+            onResetLayout={handleResetLayout}
+          />
+        </aside>
+      ) : null}
 
       <main
         className={cn(
           "indexed-workspace",
-          "indexed-workspace--layout-mode",
+          useFreeformLayout ? "indexed-workspace--layout-mode" : null,
           secondaryIndex ? "indexed-workspace--three-pane" : null,
           scrollMode === "page" ? "indexed-workspace--page-scroll" : null,
           className
         )}
       >
-        <div ref={layoutRef} className="workspace-grid workspace-grid--layout-mode" style={pageGridStyle}>
+        <div
+          ref={layoutRef}
+          className={cn(
+            "workspace-grid",
+            useFreeformLayout ? "workspace-grid--freeform" : null,
+            effectiveLayoutMode ? "workspace-grid--layout-mode" : null
+          )}
+          style={pageGridStyle}
+        >
           <div
             className="workspace-grid__sizer"
             style={{
@@ -470,7 +481,7 @@ export function IndexedWorkspace({
             }}
             aria-hidden="true"
           />
-          {showLayoutGrid ? (
+          {effectiveLayoutMode && showLayoutGrid ? (
             <div
               className="workspace-grid__overlay"
               style={{ gridTemplateRows: `repeat(${rowCount}, var(--workspace-row-height))` }}
