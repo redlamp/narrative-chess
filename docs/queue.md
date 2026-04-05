@@ -15,7 +15,7 @@ Shipped:
 - layout editing, theme toggle, local match saves, and named workspace layout files
 
 Gaps that still matter:
-- content editing patterns are still inconsistent across Cities, Roles, and Classics
+- the editor shell is much more consistent now, but multi-city authoring still needs a second real sample city
 - board keyboard support is underway, but layout editing and editor-page semantics still need an accessibility pass
 - the match shell still feels busier than a chess-first tool should
 
@@ -54,7 +54,7 @@ Result:
 - The Classics page now behaves like an editable study library and the selected edited game can be loaded into study mode directly.
 
 ### 3. Shared Index + Detail Editor Pattern
-Status: in progress
+Status: completed (recovery pass)
 
 Goal:
 - align Cities, Roles, and Classics around one reusable editing shell
@@ -96,6 +96,12 @@ Deliverables:
 - backend persistence
 - ambitious city simulation systems
 - broad architecture changes outside the current package boundaries
+
+## Current Recovery Follow-Up
+
+1. Add London as a second sample city and validate the multi-city Cities workflow.
+2. Run a focused Match-page design cleanup so the chess surface reads as primary.
+3. Continue the accessibility pass after the latest recovery controls settle.
 
 ## Working Rules
 
