@@ -32,13 +32,6 @@ export type WorkspaceLayoutState = {
   collapsed: Record<CollapsibleWorkspacePanelId, boolean>;
 };
 
-type PanelPlacementRect = {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-};
-
 const storageKey = "narrative-chess:workspace-layout:v1";
 const workspaceDefaultColumnCount = 12;
 const workspaceMinimumColumns = 1;
@@ -136,8 +129,8 @@ function normalizePanelRect(
     columnCount
   );
   const x = clamp(roundOrFallback(candidate.x, fallback.x), 1, columnCount - width + 1);
-  const height = clamp(roundOrFallback(candidate.h, fallback.h), minimumPanelHeight[panelId], 32);
-  const y = clamp(roundOrFallback(candidate.y, fallback.y), 1, 64);
+  const height = clamp(roundOrFallback(candidate.h, fallback.h), minimumPanelHeight[panelId], 256);
+  const y = clamp(roundOrFallback(candidate.y, fallback.y), 1, 256);
 
   return {
     x,
@@ -145,24 +138,6 @@ function normalizePanelRect(
     w: width,
     h: height
   };
-}
-
-function getPanelPlacementRect(panel: WorkspacePanelRect): PanelPlacementRect {
-  return {
-    x: panel.x,
-    y: panel.y,
-    w: panel.w,
-    h: panel.h
-  };
-}
-
-function rectanglesOverlap(left: PanelPlacementRect, right: PanelPlacementRect) {
-  const leftX2 = left.x + left.w - 1;
-  const rightX2 = right.x + right.w - 1;
-  const leftY2 = left.y + left.h - 1;
-  const rightY2 = right.y + right.h - 1;
-
-  return !(leftX2 < right.x || rightX2 < left.x || leftY2 < right.y || rightY2 < left.y);
 }
 
 function scalePanelRect(
@@ -195,62 +170,6 @@ function scalePanelRect(
     },
     toColumnCount
   );
-}
-
-function reflowWorkspacePanels(
-  panels: Record<WorkspacePanelId, WorkspacePanelRect>,
-  fromColumnCount: number,
-  toColumnCount: number,
-  pinnedPanelId?: WorkspacePanelId
-) {
-  const nextPanels = {} as Record<WorkspacePanelId, WorkspacePanelRect>;
-  const sortedPanelIds = [...workspacePanelIds].sort((leftId, rightId) => {
-    if (leftId === pinnedPanelId) {
-      return -1;
-    }
-
-    if (rightId === pinnedPanelId) {
-      return 1;
-    }
-
-    const left = panels[leftId];
-    const right = panels[rightId];
-
-    if (left.y !== right.y) {
-      return left.y - right.y;
-    }
-
-    return left.x - right.x;
-  });
-
-  for (const panelId of sortedPanelIds) {
-    const baseRect = scalePanelRect(panelId, panels[panelId], fromColumnCount, toColumnCount);
-    let candidateRect = baseRect;
-
-    while (
-      Object.entries(nextPanels).some(([otherPanelId, otherRect]) =>
-        otherPanelId !== panelId &&
-        rectanglesOverlap(getPanelPlacementRect(candidateRect), getPanelPlacementRect(otherRect))
-      )
-    ) {
-      const overlappingPanels = Object.entries(nextPanels).filter(([otherPanelId, otherRect]) =>
-        otherPanelId !== panelId &&
-        rectanglesOverlap(getPanelPlacementRect(candidateRect), getPanelPlacementRect(otherRect))
-      );
-      const nextRow = overlappingPanels.reduce((highestRow, [, otherRect]) => {
-        return Math.max(highestRow, otherRect.y + otherRect.h);
-      }, candidateRect.y + 1);
-
-      candidateRect = {
-        ...candidateRect,
-        y: nextRow
-      };
-    }
-
-    nextPanels[panelId] = candidateRect;
-  }
-
-  return nextPanels;
 }
 
 export function getDefaultWorkspaceLayoutState(): WorkspaceLayoutState {
@@ -299,7 +218,7 @@ export function normalizeWorkspaceLayoutState(value: unknown): WorkspaceLayoutSt
       workspaceMinimumRowHeight,
       workspaceMaximumRowHeight
     ),
-    panels: reflowWorkspacePanels(normalizedPanels, columnCount, columnCount),
+    panels: normalizedPanels,
     collapsed: collapsibleWorkspacePanelIds.reduce((nextCollapsed, panelId) => {
       nextCollapsed[panelId] =
         typeof candidateCollapsed[panelId] === "boolean"
@@ -367,21 +286,7 @@ export function canPlaceWorkspacePanel(
   nextRect: WorkspacePanelRect
 ) {
   const normalizedRect = normalizePanelRect(panelId, nextRect, layoutState.columnCount);
-  const nextPlacementRect = getPanelPlacementRect(normalizedRect);
-
-  for (const otherPanelId of workspacePanelIds) {
-    if (otherPanelId === panelId) {
-      continue;
-    }
-
-    if (
-      rectanglesOverlap(nextPlacementRect, getPanelPlacementRect(layoutState.panels[otherPanelId]))
-    ) {
-      return false;
-    }
-  }
-
-  return true;
+  return normalizedRect.w >= minimumPanelWidth[panelId] && normalizedRect.h >= minimumPanelHeight[panelId];
 }
 
 export function updateWorkspacePanelRect(input: {
@@ -394,21 +299,6 @@ export function updateWorkspacePanelRect(input: {
     input.nextRect,
     input.layoutState.columnCount
   );
-
-  if (!canPlaceWorkspacePanel(input.layoutState, input.panelId, normalizedRect)) {
-    return {
-      ...input.layoutState,
-      panels: reflowWorkspacePanels(
-        {
-          ...input.layoutState.panels,
-          [input.panelId]: normalizedRect
-        },
-        input.layoutState.columnCount,
-        input.layoutState.columnCount,
-        input.panelId
-      )
-    };
-  }
 
   return {
     ...input.layoutState,
@@ -456,11 +346,15 @@ export function updateWorkspaceColumnCount(input: {
   return {
     ...input.layoutState,
     columnCount: nextColumnCount,
-    panels: reflowWorkspacePanels(
-      input.layoutState.panels,
-      input.layoutState.columnCount,
-      nextColumnCount
-    )
+    panels: workspacePanelIds.reduce((nextPanels, panelId) => {
+      nextPanels[panelId] = scalePanelRect(
+        panelId,
+        input.layoutState.panels[panelId],
+        input.layoutState.columnCount,
+        nextColumnCount
+      );
+      return nextPanels;
+    }, {} as Record<WorkspacePanelId, WorkspacePanelRect>)
   };
 }
 

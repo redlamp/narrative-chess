@@ -22,9 +22,10 @@ describe("pageLayoutState", () => {
     expect(layoutState.columnCount).toBe(24);
     expect(layoutState.columnGap).toBe(4);
     expect(layoutState.rowHeight).toBe(256);
+    expect(layoutState.panels.detail.h).toBeLessThanOrEqual(256);
   });
 
-  it("prevents overlapping panels", () => {
+  it("allows overlapping page panels when the user places them intentionally", () => {
     const layoutState = getDefaultPageLayoutState("two-pane");
     const canPlaceIndexOnIntro = canPlacePageLayoutPanel({
       layoutState,
@@ -39,7 +40,7 @@ describe("pageLayoutState", () => {
       }
     });
 
-    expect(canPlaceIndexOnIntro).toBe(false);
+    expect(canPlaceIndexOnIntro).toBe(true);
   });
 
   it("reflows active panels when the column count changes", () => {

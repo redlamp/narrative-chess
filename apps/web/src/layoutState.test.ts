@@ -29,12 +29,13 @@ describe("layoutState", () => {
     expect(layoutState.rowHeight).toBe(256);
     expect(layoutState.panels.moves.x).toBeLessThanOrEqual(23);
     expect(layoutState.panels.moves.h).toBeGreaterThanOrEqual(1);
+    expect(layoutState.panels.moves.y).toBeLessThanOrEqual(256);
   });
 
-  it("reflows overlapping panel placements by moving lower panels down", () => {
+  it("allows overlapping panel placements so the user can layer panels freely", () => {
     const layoutState = getDefaultWorkspaceLayoutState();
     const canPlaceMovesOnBoard = canPlaceWorkspacePanel(layoutState, "moves", {
-      x: 7,
+      x: 1,
       y: 1,
       w: 3,
       h: 12
@@ -43,16 +44,17 @@ describe("layoutState", () => {
       layoutState,
       panelId: "moves",
       nextRect: {
-        x: 7,
+        x: 1,
         y: 1,
         w: 3,
         h: 12
       }
     });
 
-    expect(canPlaceMovesOnBoard).toBe(false);
+    expect(canPlaceMovesOnBoard).toBe(true);
     expect(nextLayoutState.panels.moves.h).toBe(12);
-    expect(nextLayoutState.panels.saved.y).toBeGreaterThan(layoutState.panels.saved.y);
+    expect(nextLayoutState.panels.moves.x).toBe(1);
+    expect(nextLayoutState.panels.saved.y).toBe(layoutState.panels.saved.y);
   });
 
   it("keeps layouts valid when the column count changes", () => {

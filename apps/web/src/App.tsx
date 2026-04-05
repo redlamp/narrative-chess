@@ -210,10 +210,13 @@ function getWorkspacePanelStyle(
   }
 
   const panel = layoutState.panels[panelId];
+  const area = panel.w * panel.h;
+  const zIndex = 10000 - area * 100 - panel.w * 10 - panel.h;
 
   return {
     gridColumn: `${panel.x} / span ${panel.w}`,
-    gridRow: `${panel.y} / span ${getWorkspacePanelRenderHeight(layoutState, panelId)}`
+    gridRow: `${panel.y} / span ${getWorkspacePanelRenderHeight(layoutState, panelId)}`,
+    zIndex
   };
 }
 

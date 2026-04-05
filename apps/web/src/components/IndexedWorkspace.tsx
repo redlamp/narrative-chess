@@ -70,10 +70,13 @@ function getPageGridStyle(layoutState: PageLayoutState): CSSProperties {
 
 function getPagePanelStyle(layoutState: PageLayoutState, panelId: PageLayoutPanelId): CSSProperties {
   const panel = layoutState.panels[panelId];
+  const area = panel.w * panel.h;
+  const zIndex = 10000 - area * 100 - panel.w * 10 - panel.h;
 
   return {
     gridColumn: `${panel.x} / span ${panel.w}`,
-    gridRow: `${panel.y} / span ${panel.h}`
+    gridRow: `${panel.y} / span ${panel.h}`,
+    zIndex
   };
 }
 
@@ -187,11 +190,13 @@ export function IndexedWorkspace({
       const nextColumn = getSnappedPageLayoutColumn({
         offsetX: event.clientX - rect.left,
         width: rect.width,
-        columnCount: layoutState.columnCount
+        columnCount: layoutState.columnCount,
+        columnGap: layoutState.columnGap
       });
       const nextRow = getSnappedPageLayoutRow({
         offsetY: event.clientY - rect.top,
-        rowHeight: layoutState.rowHeight
+        rowHeight: layoutState.rowHeight,
+        rowGap: layoutState.columnGap
       });
 
       setLayoutState((currentLayout) => {
@@ -256,11 +261,13 @@ export function IndexedWorkspace({
       const originColumn = getSnappedPageLayoutColumn({
         offsetX: event.clientX - rect.left,
         width: rect.width,
-        columnCount: layoutState.columnCount
+        columnCount: layoutState.columnCount,
+        columnGap: layoutState.columnGap
       });
       const originRow = getSnappedPageLayoutRow({
         offsetY: event.clientY - rect.top,
-        rowHeight: layoutState.rowHeight
+        rowHeight: layoutState.rowHeight,
+        rowGap: layoutState.columnGap
       });
 
       setActiveLayoutEdit({

@@ -19,13 +19,6 @@ export type PageLayoutState = {
   panels: Record<PageLayoutPanelId, PageLayoutRect>;
 };
 
-type PanelPlacementRect = {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-};
-
 const pageLayoutDefaultColumnCount = 12;
 const pageLayoutMinimumColumns = 1;
 const pageLayoutMaximumColumns = 24;
@@ -121,8 +114,8 @@ function normalizePanelRect(
     columnCount
   );
   const x = clamp(roundOrFallback(candidate.x, fallback.x), 1, columnCount - width + 1);
-  const height = clamp(roundOrFallback(candidate.h, fallback.h), minimumPanelHeight[panelId], 40);
-  const y = clamp(roundOrFallback(candidate.y, fallback.y), 1, 72);
+  const height = clamp(roundOrFallback(candidate.h, fallback.h), minimumPanelHeight[panelId], 256);
+  const y = clamp(roundOrFallback(candidate.y, fallback.y), 1, 256);
 
   return {
     x,
@@ -130,24 +123,6 @@ function normalizePanelRect(
     w: width,
     h: height
   };
-}
-
-function getPanelPlacementRect(panel: PageLayoutRect): PanelPlacementRect {
-  return {
-    x: panel.x,
-    y: panel.y,
-    w: panel.w,
-    h: panel.h
-  };
-}
-
-function rectanglesOverlap(left: PanelPlacementRect, right: PanelPlacementRect) {
-  const leftX2 = left.x + left.w - 1;
-  const rightX2 = right.x + right.w - 1;
-  const leftY2 = left.y + left.h - 1;
-  const rightY2 = right.y + right.h - 1;
-
-  return !(leftX2 < right.x || rightX2 < left.x || leftY2 < right.y || rightY2 < left.y);
 }
 
 function scalePanelRect(
@@ -182,60 +157,6 @@ function scalePanelRect(
     },
     toColumnCount
   );
-}
-
-function reflowPageLayoutPanels(input: {
-  variant: PageLayoutVariant;
-  panelIds: PageLayoutPanelId[];
-  panels: Record<PageLayoutPanelId, PageLayoutRect>;
-  fromColumnCount: number;
-  toColumnCount: number;
-}) {
-  const nextPanels = { ...input.panels };
-  const orderedPanelIds = [...input.panelIds].sort((leftId, rightId) => {
-    const left = input.panels[leftId];
-    const right = input.panels[rightId];
-
-    if (left.y !== right.y) {
-      return left.y - right.y;
-    }
-
-    return left.x - right.x;
-  });
-
-  for (const panelId of orderedPanelIds) {
-    const baseRect = scalePanelRect(
-      input.variant,
-      panelId,
-      input.panels[panelId],
-      input.fromColumnCount,
-      input.toColumnCount
-    );
-    let candidateRect = baseRect;
-
-    while (
-      input.panelIds.some((otherPanelId) => {
-        if (otherPanelId === panelId) {
-          return false;
-        }
-
-        const otherRect = nextPanels[otherPanelId];
-        return rectanglesOverlap(
-          getPanelPlacementRect(candidateRect),
-          getPanelPlacementRect(otherRect)
-        );
-      })
-    ) {
-      candidateRect = {
-        ...candidateRect,
-        y: candidateRect.y + 1
-      };
-    }
-
-    nextPanels[panelId] = candidateRect;
-  }
-
-  return nextPanels;
 }
 
 function getStorageKey(layoutKey: string) {
@@ -289,13 +210,7 @@ export function normalizePageLayoutState(input: {
       pageLayoutMinimumRowHeight,
       pageLayoutMaximumRowHeight
     ),
-    panels: reflowPageLayoutPanels({
-      variant: input.variant,
-      panelIds: input.panelIds,
-      panels: normalizedPanels,
-      fromColumnCount: columnCount,
-      toColumnCount: columnCount
-    })
+    panels: normalizedPanels
   };
 }
 
@@ -372,21 +287,7 @@ export function canPlacePageLayoutPanel(input: {
     input.nextRect,
     input.layoutState.columnCount
   );
-  const nextPlacementRect = getPanelPlacementRect(normalizedRect);
-
-  for (const otherPanelId of input.panelIds) {
-    if (otherPanelId === input.panelId) {
-      continue;
-    }
-
-    if (
-      rectanglesOverlap(nextPlacementRect, getPanelPlacementRect(input.layoutState.panels[otherPanelId]))
-    ) {
-      return false;
-    }
-  }
-
-  return true;
+  return normalizedRect.w >= minimumPanelWidth[input.panelId] && normalizedRect.h >= minimumPanelHeight[input.panelId];
 }
 
 export function updatePageLayoutPanelRect(input: {
@@ -402,18 +303,6 @@ export function updatePageLayoutPanelRect(input: {
     input.nextRect,
     input.layoutState.columnCount
   );
-
-  if (
-    !canPlacePageLayoutPanel({
-      layoutState: input.layoutState,
-      panelIds: input.panelIds,
-      panelId: input.panelId,
-      variant: input.variant,
-      nextRect: normalizedRect
-    })
-  ) {
-    return input.layoutState;
-  }
 
   return {
     ...input.layoutState,
@@ -439,13 +328,16 @@ export function updatePageLayoutColumnCount(input: {
   return {
     ...input.layoutState,
     columnCount: nextColumnCount,
-    panels: reflowPageLayoutPanels({
-      variant: input.variant,
-      panelIds: input.panelIds,
-      panels: input.layoutState.panels,
-      fromColumnCount: input.layoutState.columnCount,
-      toColumnCount: nextColumnCount
-    })
+    panels: input.panelIds.reduce((nextPanels, panelId) => {
+      nextPanels[panelId] = scalePanelRect(
+        input.variant,
+        panelId,
+        input.layoutState.panels[panelId],
+        input.layoutState.columnCount,
+        nextColumnCount
+      );
+      return nextPanels;
+    }, {} as Record<PageLayoutPanelId, PageLayoutRect>)
   };
 }
 
@@ -473,20 +365,26 @@ export function getSnappedPageLayoutColumn(input: {
   offsetX: number;
   width: number;
   columnCount: number;
+  columnGap: number;
 }) {
   const safeWidth = Math.max(input.width, 1);
+  const totalGapWidth = Math.max(0, input.columnCount - 1) * Math.max(0, input.columnGap);
+  const availableColumnWidth = Math.max(1, safeWidth - totalGapWidth);
+  const columnWidth = availableColumnWidth / Math.max(1, input.columnCount);
+  const stride = columnWidth + Math.max(0, input.columnGap);
   const clampedOffset = clamp(input.offsetX, 0, safeWidth);
-  const ratio = clampedOffset / safeWidth;
 
-  return clamp(Math.floor(ratio * input.columnCount) + 1, 1, input.columnCount);
+  return clamp(Math.floor(clampedOffset / Math.max(stride, 1)) + 1, 1, input.columnCount);
 }
 
 export function getSnappedPageLayoutRow(input: {
   offsetY: number;
   rowHeight: number;
+  rowGap: number;
 }) {
   const safeRowHeight = Math.max(input.rowHeight, 1);
-  return Math.max(1, Math.floor(Math.max(input.offsetY, 0) / safeRowHeight) + 1);
+  const stride = safeRowHeight + Math.max(0, input.rowGap);
+  return Math.max(1, Math.floor(Math.max(input.offsetY, 0) / Math.max(stride, 1)) + 1);
 }
 
 export function getPageLayoutRowCount(input: {
