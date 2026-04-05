@@ -1,7 +1,7 @@
 export type AppSettings = {
   theme: "light" | "dark";
   defaultViewMode: "board" | "map";
-  storyPanelLayout: "vertical" | "horizontal";
+  storyPanelLayout: "vertical" | "grid" | "row";
   showBoardCoordinates: boolean;
   showDistrictLabels: boolean;
   showRecentCharacterActions: boolean;
@@ -47,7 +47,11 @@ export function normalizeAppSettings(value: unknown): AppSettings {
     theme: normalizeAppTheme(candidate.theme),
     defaultViewMode: candidate.defaultViewMode === "map" ? "map" : "board",
     storyPanelLayout:
-      candidate.storyPanelLayout === "horizontal" ? "horizontal" : "vertical",
+      candidate.storyPanelLayout === "row"
+        ? "row"
+        : candidate.storyPanelLayout === "grid" || candidate.storyPanelLayout === "horizontal"
+          ? "grid"
+          : "vertical",
     showBoardCoordinates:
       typeof candidate.showBoardCoordinates === "boolean"
         ? candidate.showBoardCoordinates

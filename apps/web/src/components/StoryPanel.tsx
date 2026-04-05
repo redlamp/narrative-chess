@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Columns2, Rows3 } from "lucide-react";
+import { Columns2, Grid2x2, Rows3 } from "lucide-react";
 import type {
   CharacterSummary,
   DistrictCell,
@@ -24,12 +24,41 @@ type StoryPanelProps = {
   focusedCharacter: CharacterSummary | null;
   focusedCharacterMoments: NarrativeEvent[];
   showRecentCharacterActions: boolean;
-  panelLayout: "vertical" | "horizontal";
-  onPanelLayoutChange: (layout: "vertical" | "horizontal") => void;
+  panelLayout: "vertical" | "grid" | "row";
+  onPanelLayoutChange: (layout: "vertical" | "grid" | "row") => void;
   tonePreset: "grounded" | "civic-noir" | "dark-comedy";
   onToneChange: (tone: "grounded" | "civic-noir" | "dark-comedy") => void;
   headerAction?: ReactNode;
 };
+
+const storyPanelLayouts = ["vertical", "grid", "row"] as const;
+
+function getNextStoryPanelLayout(current: StoryPanelProps["panelLayout"]) {
+  const currentIndex = storyPanelLayouts.indexOf(current);
+  return storyPanelLayouts[(currentIndex + 1) % storyPanelLayouts.length];
+}
+
+function getStoryPanelLayoutLabel(layout: StoryPanelProps["panelLayout"]) {
+  switch (layout) {
+    case "grid":
+      return "grid";
+    case "row":
+      return "horizontal row";
+    default:
+      return "vertical stack";
+  }
+}
+
+function getStoryPanelLayoutIcon(layout: StoryPanelProps["panelLayout"]) {
+  switch (layout) {
+    case "grid":
+      return <Grid2x2 />;
+    case "row":
+      return <Columns2 />;
+    default:
+      return <Rows3 />;
+  }
+}
 
 export function StoryPanel({
   collapsed,
@@ -58,21 +87,11 @@ export function StoryPanel({
           type="button"
           variant="ghost"
           size="icon-xs"
-          onClick={() =>
-            onPanelLayoutChange(panelLayout === "vertical" ? "horizontal" : "vertical")
-          }
-          aria-label={
-            panelLayout === "vertical"
-              ? "Switch story panel to horizontal layout"
-              : "Switch story panel to vertical layout"
-          }
-          title={
-            panelLayout === "vertical"
-              ? "Switch story panel to horizontal layout"
-              : "Switch story panel to vertical layout"
-          }
+          onClick={() => onPanelLayoutChange(getNextStoryPanelLayout(panelLayout))}
+          aria-label={`Switch story panel layout. Current layout is ${getStoryPanelLayoutLabel(panelLayout)}.`}
+          title={`Story layout: ${getStoryPanelLayoutLabel(panelLayout)}`}
         >
-          {panelLayout === "vertical" ? <Columns2 /> : <Rows3 />}
+          {getStoryPanelLayoutIcon(panelLayout)}
         </Button>
       }
       action={headerAction}
@@ -80,7 +99,11 @@ export function StoryPanel({
     >
       <div
         className={`story-panel ${
-          panelLayout === "horizontal" ? "story-panel--horizontal" : "story-panel--vertical"
+          panelLayout === "grid"
+            ? "story-panel--grid"
+            : panelLayout === "row"
+              ? "story-panel--row"
+              : "story-panel--vertical"
         }`}
       >
         <div className="detail-card">

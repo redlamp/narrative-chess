@@ -1594,19 +1594,27 @@ select {
   padding-right: 4px;
 }
 
-.story-panel--horizontal {
+.story-panel--grid {
   height: 100%;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-auto-rows: minmax(0, 1fr);
   align-items: stretch;
 }
 
-.story-panel--horizontal .detail-card {
+.story-panel--grid .detail-card,
+.story-panel--row .detail-card {
   min-height: 0;
   height: 100%;
   overflow: auto;
   align-content: start;
   scrollbar-gutter: stable;
+}
+
+.story-panel--row {
+  height: 100%;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
 }
 
 .saved-match-list,

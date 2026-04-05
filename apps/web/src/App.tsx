@@ -875,7 +875,7 @@ export default function App() {
     }));
   };
 
-  const handleStoryPanelLayoutChange = (storyPanelLayout: "vertical" | "horizontal") => {
+  const handleStoryPanelLayoutChange = (storyPanelLayout: "vertical" | "grid" | "row") => {
     setSettings((current) => ({
       ...current,
       storyPanelLayout
