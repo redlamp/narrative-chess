@@ -425,6 +425,11 @@ select {
   justify-content: flex-start;
 }
 
+.page-switcher-tabs [data-slot="tabs-trigger"] {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
 .page-switcher {
   display: flex;
   flex-wrap: wrap;
