@@ -601,6 +601,28 @@ export default function App() {
     }
   }, [lastMove?.to]);
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Toggle view mode with 'M' key (case-insensitive)
+      if ((event.key === 'M' || event.key === 'm') && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        // Check if focus is not in an input field
+        const activeElement = document.activeElement;
+        if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+          return;
+        }
+        
+        event.preventDefault();
+        const nextViewMode = settings.defaultViewMode === 'board' ? 'map' : 'board';
+        handleDefaultViewModeChange(nextViewMode);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [settings.defaultViewMode]);
+
   const beginPanelEdit =
     (panelId: WorkspacePanelId, mode: LayoutEditMode) =>
     (event: ReactPointerEvent<HTMLButtonElement>) => {
