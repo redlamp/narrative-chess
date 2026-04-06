@@ -1913,6 +1913,93 @@ select {
   right: 10px;
   bottom: 10px;
   z-index: 3;
+
+/* Recent Games Panel */
+
+.recent-games-panel {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 12px;
+  height: 100%;
+}
+
+.recent-games-tabs {
+  width: 100%;
+}
+
+.recent-games-content {
+  display: grid;
+  grid-template-rows: 1fr;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.recent-games-shell {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 12px;
+  height: 100%;
+}
+
+.recent-games-list {
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.recent-games-list__item {
+  cursor: pointer;
+}
+
+.recent-games__meta {
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+}
+
+.recent-games-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.recent-games-historic {
+  display: grid;
+  gap: 16px;
+}
+
+.recent-games-selector {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.recent-games-selector select {
+  flex: 1;
+  min-width: 0;
+}
+
+.recent-games-details {
+  display: grid;
+  gap: 10px;
+}
+
+.recent-games-details h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.recent-games-summary {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--foreground) !important;
+}
+
+.recent-games-link {
+  margin: 0;
+}
 }
 
 .saved-match-list,

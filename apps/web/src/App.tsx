@@ -97,7 +97,7 @@ import { MatchHistoryPanel } from "./components/MatchHistoryPanel";
 import { ResearchPage } from "./components/ResearchPage";
 import { RoleCatalogPage } from "./components/RoleCatalogPage";
 import { StoryPanel } from "./components/StoryPanel";
-import { StudyPanel } from "./components/StudyPanel";
+import { RecentGamesPanel } from "./components/RecentGamesPanel";
 import { WorkspaceListItem } from "./components/WorkspaceListItem";
 import { useChessMatch } from "./hooks/useChessMatch";
 import {
@@ -130,8 +130,7 @@ const panelTitles: Record<WorkspacePanelId, string> = {
   board: "Board",
   moves: "Match History (PGN)",
   narrative: "Story",
-  saved: "Saved Matches",
-  study: "Historic Games"
+  "recent-games": "Recent Games"
 };
 
 const pageOptions: Array<{ value: AppPage; label: string; icon?: React.ReactNode }> = [
@@ -394,8 +393,7 @@ export default function App() {
       { id: "board", label: panelTitles.board },
       { id: "moves", label: panelTitles.moves, collapsed: workspaceLayout.collapsed.moves },
       { id: "narrative", label: panelTitles.narrative, collapsed: workspaceLayout.collapsed.narrative },
-      { id: "saved", label: panelTitles.saved, collapsed: workspaceLayout.collapsed.saved },
-      { id: "study", label: panelTitles.study, collapsed: workspaceLayout.collapsed.study }
+      { id: "recent-games", label: panelTitles["recent-games"], collapsed: workspaceLayout.collapsed["recent-games"] }
     ],
     [workspaceLayout.collapsed]
   );
@@ -1526,152 +1524,37 @@ export default function App() {
             <div
               className={[
                 "workspace-item",
-                "workspace-item--saved",
-                activeLayoutEdit?.panelId === "saved" ? "is-editing" : ""
+                "workspace-item--recent-games",
+                activeLayoutEdit?.panelId === "recent-games" ? "is-editing" : ""
               ]
                 .filter(Boolean)
                 .join(" ")}
               style={getWorkspacePanelStyle(
                 workspaceLayout,
-                "saved",
+                "recent-games",
                 isCompactViewport,
                 useFreeformWorkspaceLayout
               )}
             >
               <Panel
-                title="Saved Matches"
-                collapsed={workspaceLayout.collapsed.saved}
-                action={renderPanelTools(
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => saveCurrentMatch()}
-                    disabled={!canSave}
-                    aria-label="Save current match"
-                  >
-                    <Save />
-                  </Button>
-                )}
-                onToggleCollapse={() => handleTogglePanelCollapse("saved")}
+                title="Recent Games"
+                collapsed={workspaceLayout.collapsed["recent-games"]}
+                onToggleCollapse={() => handleTogglePanelCollapse("recent-games")}
               >
-                {savedMatches.length ? (
-                  <div className="saved-match-shell">
-                    <div className="saved-match-list" role="listbox" aria-label="Saved matches">
-                      {savedMatches.map((savedMatch) => (
-                        <WorkspaceListItem
-                          key={savedMatch.id}
-                          type="button"
-                          selected={savedMatch.id === selectedSavedMatchId}
-                          className="saved-match-list__item"
-                          onClick={() => setSelectedSavedMatchId(savedMatch.id)}
-                          title={savedMatch.name}
-                          description={formatSavedAt(savedMatch.savedAt)}
-                          meta={<span className="saved-match__count">{savedMatch.moveCount} moves</span>}
-                        />
-                      ))}
-                    </div>
-                    <div className="saved-match-actions">
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon-sm"
-                            disabled={!selectedSavedMatch}
-                            aria-label={
-                              selectedSavedMatch
-                                ? `Delete saved match ${selectedSavedMatch.name}`
-                                : "Delete selected saved match"
-                            }
-                          >
-                            <Trash2 />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete saved match?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              {selectedSavedMatch
-                                ? `This will permanently remove ${selectedSavedMatch.name} from local saved matches.`
-                                : "This will permanently remove the selected local saved match."}
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction variant="destructive" onClick={handleRemoveSelectedSavedMatch}>
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        disabled={!selectedSavedMatch}
-                        onClick={handleLoadSelectedSavedMatch}
-                        aria-label={
-                          selectedSavedMatch
-                            ? `Load saved match ${selectedSavedMatch.name}`
-                            : "Load selected saved match"
-                        }
-                      >
-                        <FolderOpen />
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="muted">
-                    {isStudyMode
-                      ? "Local save is disabled in study mode. Resume local play to save a match."
-                      : "No saved matches yet. Save the current local game to keep your place."}
-                  </p>
-                )}
-              </Panel>
-              {renderMoveSurface("saved")}
-              {renderResizeHandle("saved")}
-            </div>
-
-            <div
-              className={[
-                "workspace-item",
-                "workspace-item--study",
-                activeLayoutEdit?.panelId === "study" ? "is-editing" : ""
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              style={getWorkspacePanelStyle(
-                workspaceLayout,
-                "study",
-                isCompactViewport,
-                useFreeformWorkspaceLayout
-              )}
-            >
-              <Panel
-                title="Historic Games"
-                collapsed={workspaceLayout.collapsed.study}
-                action={renderPanelTools()}
-                onToggleCollapse={() => handleTogglePanelCollapse("study")}
-                >
-                  <StudyPanel
-                    referenceGames={referenceGamesLibrary}
-                    selectedReferenceGameId={selectedReferenceGameId}
-                    onSelectReferenceGame={setSelectedReferenceGameId}
-                    onLoadReferenceGame={handleLoadReferenceGame}
-                  studySession={studySession}
-                  canStepBackward={canStepBackward}
-                  canStepForward={canStepForward}
-                  onJumpToStart={jumpToStart}
-                  onStepBackward={stepBackward}
-                  onStepForward={stepForward}
-                  onJumpToEnd={jumpToEnd}
-                  onExitStudy={exitStudyMode}
-                  embedded
+                <RecentGamesPanel
+                  savedMatches={savedMatches}
+                  selectedSavedMatchId={selectedSavedMatchId}
+                  onSelectSavedMatch={setSelectedSavedMatchId}
+                  onLoadSavedMatch={handleLoadSelectedSavedMatch}
+                  onDeleteSelectedSavedMatch={handleRemoveSelectedSavedMatch}
+                  referenceGames={referenceGamesLibrary}
+                  selectedReferenceGameId={selectedReferenceGameId}
+                  onSelectReferenceGame={setSelectedReferenceGameId}
+                  onLoadReferenceGame={handleLoadReferenceGame}
                 />
               </Panel>
-              {renderMoveSurface("study")}
-              {renderResizeHandle("study")}
+              {renderMoveSurface("recent-games")}
+              {renderResizeHandle("recent-games")}
             </div>
 
           </main>
