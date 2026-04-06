@@ -60,13 +60,30 @@ export function StoryCharacterSection({
               <dd>{focusedSquare ?? "None"}</dd>
             </div>
           </dl>
-          <div className="chip-row">
-            {focusedCharacter.traits.map((trait) => (
-              <span key={trait} className="chip">
-                {trait}
-              </span>
-            ))}
-          </div>
+          {focusedCharacter.traits.length > 0 && (
+            <div>
+              <p className="field-label">Traits</p>
+              <div className="chip-row">
+                {focusedCharacter.traits.map((trait) => (
+                  <span key={trait} className="chip">
+                    {trait}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {focusedCharacter.verbs.length > 0 && (
+            <div>
+              <p className="field-label">Actions</p>
+              <div className="chip-row">
+                {focusedCharacter.verbs.map((verb) => (
+                  <span key={verb} className="chip">
+                    {verb}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
           {showRecentCharacterActions && focusedCharacterMoments.length ? (
             <div className="memory-list">
               <p className="memory-list__label">Recent actions</p>
