@@ -1443,7 +1443,7 @@ export default function App() {
                     hoveredSquare={hoveredSquare}
                     inspectedSquare={inspectedSquare}
                     legalMoves={legalMoves}
-                    viewMode="board"
+                    viewMode={settings.defaultViewMode}
                     districtsBySquare={edinburghDistrictsBySquare}
                     showCoordinates={settings.showBoardCoordinates}
                     showDistrictLabels={settings.showDistrictLabels}
