@@ -1913,6 +1913,7 @@ select {
   right: 10px;
   bottom: 10px;
   z-index: 3;
+}
 
 /* Recent Games Panel */
 
@@ -1940,6 +1941,7 @@ select {
   grid-template-rows: 1fr auto;
   gap: 12px;
   height: 100%;
+  min-width: 0;
 }
 
 .recent-games-list {
@@ -1948,6 +1950,7 @@ select {
   min-height: 0;
   overflow: auto;
   scrollbar-gutter: stable;
+  min-width: 0;
 }
 
 .recent-games-list__item {
@@ -1967,12 +1970,14 @@ select {
 .recent-games-historic {
   display: grid;
   gap: 16px;
+  min-width: 0;
 }
 
 .recent-games-selector {
   display: flex;
   gap: 8px;
   align-items: flex-start;
+  min-width: 0;
 }
 
 .recent-games-selector select {
@@ -1983,6 +1988,7 @@ select {
 .recent-games-details {
   display: grid;
   gap: 10px;
+  min-width: 0;
 }
 
 .recent-games-details h4 {
@@ -2086,9 +2092,6 @@ select {
   line-height: 1.5;
   color: var(--muted-foreground);
 }
-
-}
-
 
 .saved-match-list,
 .study-panel {

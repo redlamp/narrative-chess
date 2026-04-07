@@ -130,7 +130,7 @@ const panelTitles: Record<WorkspacePanelId, string> = {
   board: "Board",
   moves: "Match History (PGN)",
   narrative: "Story",
-  "recent-games": "Recent Games"
+  "recent-games": "Saved Games"
 };
 
 const pageOptions: Array<{ value: AppPage; label: string; icon?: React.ReactNode }> = [
@@ -240,9 +240,23 @@ function getWorkspacePanelStyle(
   }
 
   const panel = layoutState.panels[panelId];
+  if (!panel) {
+    // Fallback: return a minimal style for panels that don't exist in layout
+    return {
+      gridColumn: "1 / span 1",
+      gridRow: "1 / span 1",
+      zIndex: 100
+    };
+  }
+
   const renderHeight = getWorkspacePanelRenderHeight(layoutState, panelId);
   const area = panel.w * renderHeight;
-  const zIndex = Math.max(100, 6000 - area * 10 - panel.w - renderHeight);
+  const zIndex = Math.max(
+    100,
+    Number.isFinite(area) && Number.isFinite(panel.w) && Number.isFinite(renderHeight)
+      ? 6000 - area * 10 - panel.w - renderHeight
+      : 100
+  );
 
   if (freeformLayout) {
     const columnOffset = Math.max(0, panel.x - 1);
@@ -524,6 +538,10 @@ export default function App() {
       });
 
       setWorkspaceLayout((currentLayout) => {
+        if (!activeLayoutEdit) {
+          return currentLayout;
+        }
+
         if (activeLayoutEdit.mode === "move") {
           return updateWorkspacePanelRect({
             layoutState: currentLayout,
@@ -630,6 +648,11 @@ export default function App() {
 
       event.preventDefault();
 
+      const initialRect = workspaceLayout.panels[panelId];
+      if (!initialRect) {
+        return;
+      }
+
       const rect = workspaceRef.current.getBoundingClientRect();
       const originColumn = getSnappedWorkspaceColumn({
         offsetX: event.clientX - rect.left,
@@ -648,7 +671,7 @@ export default function App() {
         mode,
         originColumn,
         originRow,
-        initialRect: workspaceLayout.panels[panelId]
+        initialRect
       });
     };
 
@@ -1343,7 +1366,7 @@ export default function App() {
         />
       ) : (
         <div className={`workspace-layout-shell ${effectiveLayoutMode ? "workspace-layout-shell--editing" : ""}`}>
-          {effectiveLayoutMode && page === "match" ? (
+          {page === "match" ? (
             <aside className="workspace-layout-shell__sidebar">
               <LayoutToolbar
                 columnCount={workspaceLayout.columnCount}

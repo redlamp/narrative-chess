@@ -26,6 +26,14 @@ export function CharacterDetailPanel({
   moveHistory,
   showRecentCharacterActions
 }: CharacterDetailPanelProps) {
+  // Guard clause - return early if no character or piece is selected
+  if (!focusedCharacter || !focusedPiece) {
+    if (focusedSquare) {
+      return <p className="muted">No active piece is standing on this tile right now.</p>;
+    }
+    return <p className="muted">Hover a square to inspect the piece standing there.</p>;
+  }
+
   // Build a map of moveNumber -> MoveRecord for quick lookup
   const movesByNumber = new Map(moveHistory.map((move) => [move.moveNumber, move]));
 
@@ -134,13 +142,6 @@ export function CharacterDetailPanel({
       </Tabs>
     </div>
   );
-
-  if (!focusedCharacter || !focusedPiece) {
-    if (focusedSquare) {
-      return <p className="muted">No active piece is standing on this tile right now.</p>;
-    }
-    return <p className="muted">Hover a square to inspect the piece standing there.</p>;
-  }
 
   return characterContent;
 }

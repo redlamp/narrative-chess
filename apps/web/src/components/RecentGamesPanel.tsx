@@ -58,11 +58,55 @@ export function RecentGamesPanel({
   };
 
   return (
-    <Tabs defaultValue="saved" className="recent-games-panel">
+    <Tabs defaultValue="historic" className="recent-games-panel w-full">
       <TabsList className="recent-games-tabs">
-        <TabsTrigger value="saved">Saved ({savedMatches.length})</TabsTrigger>
-        <TabsTrigger value="historic">Historic</TabsTrigger>
+        <TabsTrigger value="historic">Historic Games</TabsTrigger>
+        <TabsTrigger value="saved">Your Games ({savedMatches.length})</TabsTrigger>
       </TabsList>
+
+      {/* Historic Games Tab */}
+      <TabsContent value="historic" className="recent-games-content">
+        <div className="recent-games-historic">
+          {/* Game Selector */}
+          <div className="recent-games-selector">
+            <select
+              id="reference-game-select"
+              className="field-select"
+              value={selectedReferenceGameId}
+              onChange={handleReferenceGameSelectChange}
+            >
+              {referenceGames.map((game) => (
+                <option key={game.id} value={game.id}>
+                  {game.title} ({game.white} vs {game.black})
+                </option>
+              ))}
+            </select>
+            <Button type="button" variant="outline" size="sm" onClick={onLoadReferenceGame}>
+              Load
+            </Button>
+          </div>
+
+          {/* Game Details */}
+          {selectedReferenceGame ? (
+            <div className="recent-games-details">
+              <h4>{selectedReferenceGame.title}</h4>
+              <p className="muted">
+                {selectedReferenceGame.white} vs {selectedReferenceGame.black}, {selectedReferenceGame.event},{" "}
+                {selectedReferenceGame.year}
+              </p>
+              {selectedReferenceGame.site ? <p className="muted">📍 {selectedReferenceGame.site}</p> : null}
+              <p className="recent-games-summary">{selectedReferenceGame.summary}</p>
+              {selectedReferenceGame.sourceUrl ? (
+                <p className="recent-games-link">
+                  <a href={selectedReferenceGame.sourceUrl} target="_blank" rel="noreferrer">
+                    Reference →
+                  </a>
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      </TabsContent>
 
       {/* Saved Games Tab */}
       <TabsContent value="saved" className="recent-games-content">
@@ -135,50 +179,6 @@ export function RecentGamesPanel({
         ) : (
           <p className="muted">No saved games yet. Save the current local game to keep your place.</p>
         )}
-      </TabsContent>
-
-      {/* Historic Games Tab */}
-      <TabsContent value="historic" className="recent-games-content">
-        <div className="recent-games-historic">
-          {/* Game Selector */}
-          <div className="recent-games-selector">
-            <select
-              id="reference-game-select"
-              className="field-select"
-              value={selectedReferenceGameId}
-              onChange={handleReferenceGameSelectChange}
-            >
-              {referenceGames.map((game) => (
-                <option key={game.id} value={game.id}>
-                  {game.title} ({game.white} vs {game.black})
-                </option>
-              ))}
-            </select>
-            <Button type="button" variant="outline" size="sm" onClick={onLoadReferenceGame}>
-              Load
-            </Button>
-          </div>
-
-          {/* Game Details */}
-          {selectedReferenceGame ? (
-            <div className="recent-games-details">
-              <h4>{selectedReferenceGame.title}</h4>
-              <p className="muted">
-                {selectedReferenceGame.white} vs {selectedReferenceGame.black}, {selectedReferenceGame.event},{" "}
-                {selectedReferenceGame.year}
-              </p>
-              {selectedReferenceGame.site ? <p className="muted">📍 {selectedReferenceGame.site}</p> : null}
-              <p className="recent-games-summary">{selectedReferenceGame.summary}</p>
-              {selectedReferenceGame.sourceUrl ? (
-                <p className="recent-games-link">
-                  <a href={selectedReferenceGame.sourceUrl} target="_blank" rel="noreferrer">
-                    Reference →
-                  </a>
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
       </TabsContent>
     </Tabs>
   );

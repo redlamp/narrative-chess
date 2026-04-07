@@ -26,14 +26,8 @@
         "w": 10,
         "h": 8
       },
-      "saved": {
+      "recent-games": {
         "x": 1,
-        "y": 1,
-        "w": 3,
-        "h": 8
-      },
-      "study": {
-        "x": 4,
         "y": 1,
         "w": 3,
         "h": 8
@@ -42,8 +36,7 @@
     "collapsed": {
       "moves": false,
       "narrative": false,
-      "saved": false,
-      "study": false
+      "recent-games": false
     }
   }
 }

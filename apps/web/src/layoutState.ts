@@ -2,15 +2,13 @@ export const workspacePanelIds = [
   "board",
   "moves",
   "narrative",
-  "saved",
-  "study"
+  "recent-games"
 ] as const;
 
 export const collapsibleWorkspacePanelIds = [
   "moves",
   "narrative",
-  "saved",
-  "study"
+  "recent-games"
 ] as const;
 
 export type WorkspacePanelId = (typeof workspacePanelIds)[number];
@@ -64,19 +62,17 @@ const defaultLayoutState: WorkspaceLayoutState = {
   version: 2,
   columnCount: workspaceDefaultColumnCount,
   columnGap: workspaceDefaultColumnGap,
-  rowHeight: 44,
+  rowHeight: 64,
   panels: {
-    board: { x: 1, y: 1, w: 6, h: 16 },
-    moves: { x: 7, y: 1, w: 3, h: 10 },
-    narrative: { x: 10, y: 1, w: 3, h: 10 },
-    saved: { x: 7, y: 11, w: 3, h: 6 },
-    study: { x: 10, y: 11, w: 3, h: 6 }
+    board: { x: 8, y: 1, w: 3, h: 6 },
+    moves: { x: 11, y: 0, w: 2, h: 14 },
+    narrative: { x: 0, y: 7, w: 10, h: 8 },
+    "recent-games": { x: 1, y: 1, w: 4, h: 6 }
   },
   collapsed: {
     moves: false,
     narrative: false,
-    saved: false,
-    study: false
+    "recent-games": false
   }
 };
 
@@ -302,11 +298,16 @@ export function getWorkspacePanelRenderHeight(
   layoutState: WorkspaceLayoutState,
   panelId: WorkspacePanelId
 ) {
-  if (panelId === "board") {
-    return layoutState.panels[panelId].h;
+  const panel = layoutState.panels[panelId];
+  if (!panel) {
+    return 0;
   }
 
-  return layoutState.collapsed[panelId] ? collapsedPanelHeight : layoutState.panels[panelId].h;
+  if (panelId === "board") {
+    return panel.h;
+  }
+
+  return layoutState.collapsed[panelId] ? collapsedPanelHeight : panel.h;
 }
 
 export function canPlaceWorkspacePanel(
