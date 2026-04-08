@@ -7,7 +7,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent
 } from "react";
-import { Building2, ChessPawn, Cog, FolderOpen, LayoutDashboard, Moon, Pencil, Save, Scroll, Sun, Trash2, UsersRound } from "lucide-react";
+import { Building2, ChessPawn, Cog, LayoutDashboard, Moon, Pencil, Scroll, Sun, UsersRound } from "lucide-react";
 import { getPieceAtSquare } from "@narrative-chess/game-core";
 import { getCharacterEventHistory } from "@narrative-chess/narrative-engine";
 import type { PieceKind, Square } from "@narrative-chess/content-schema";
@@ -15,18 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger
-} from "@/components/ui/alert-dialog";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   applyAppTheme,
   listAppSettings,
@@ -97,7 +86,6 @@ import { StoryCityTileSection } from "./components/StoryCityTileSection";
 import { StoryToneSection } from "./components/StoryToneSection";
 import { CharacterDetailPanel } from "./components/CharacterDetailPanel";
 import { RecentGamesPanel } from "./components/RecentGamesPanel";
-import { WorkspaceListItem } from "./components/WorkspaceListItem";
 import { useChessMatch } from "./hooks/useChessMatch";
 import {
   addRoleCatalogEntry,
@@ -194,27 +182,6 @@ function statusLabel(isCheck: boolean, isCheckmate: boolean, isStalemate: boolea
 
 function turnLabel(turn: "white" | "black") {
   return turn === "white" ? "White" : "Black";
-}
-
-function formatSavedAt(savedAt: string) {
-  return new Date(savedAt).toLocaleString();
-}
-
-function getPageCaption(page: AppPage) {
-  switch (page) {
-    case "cities":
-      return "Review city boards and district drafts.";
-    case "classics":
-      return "Study historic games and their key lines.";
-    case "roles":
-      return "Edit piece roles and roster flavor.";
-    case "design":
-      return "Inspect piece assets and edit the shared style sheet.";
-    case "research":
-      return "Review competitive chess products and references.";
-    default:
-      return "Keep the board central and inspect moves in context.";
-  }
 }
 
 function getWorkspaceGridStyle(
@@ -378,23 +345,17 @@ export default function App() {
     selectedSquare,
     savedMatches,
     legalMoves,
-    canSave,
     isStudyMode,
     tonePreset,
-    studySession,
-    canStepBackward,
-    canStepForward,
     lastMove,
     handleSquareClick,
     goToPly,
     loadReferenceGame,
-    exitStudyMode,
     jumpToStart,
     stepBackward,
     stepForward,
     jumpToEnd,
     updateTonePreset,
-    saveCurrentMatch,
     loadSavedMatch,
     removeSavedMatch
   } = useChessMatch({

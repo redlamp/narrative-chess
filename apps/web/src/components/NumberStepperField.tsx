@@ -1,3 +1,4 @@
+import { useEffect, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { Input } from "@/components/ui/input";
 
 type NumberStepperFieldProps = {
@@ -13,11 +14,6 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
-function snapToStep(value: number, min: number, max: number, step: number) {
-  const snapped = min + Math.round((value - min) / step) * step;
-  return clamp(snapped, min, max);
-}
-
 export function NumberStepperField({
   label,
   value,
@@ -26,8 +22,35 @@ export function NumberStepperField({
   step,
   onChange
 }: NumberStepperFieldProps) {
+  const [draftValue, setDraftValue] = useState(() => String(value));
+
+  useEffect(() => {
+    setDraftValue(String(value));
+  }, [value]);
+
   const updateValue = (nextValue: number) => {
-    onChange(snapToStep(nextValue, min, max, step));
+    onChange(clamp(Math.round(nextValue), min, max));
+  };
+
+  const commitDraftValue = () => {
+    const nextValue = Number(draftValue);
+    if (Number.isFinite(nextValue)) {
+      updateValue(nextValue);
+      return;
+    }
+
+    setDraftValue(String(value));
+  };
+
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.currentTarget.blur();
+    }
+
+    if (event.key === "Escape") {
+      setDraftValue(String(value));
+      event.currentTarget.blur();
+    }
   };
 
   return (
@@ -39,13 +62,10 @@ export function NumberStepperField({
         min={min}
         max={max}
         step={step}
-        value={value}
-        onChange={(event) => {
-          const nextValue = Number(event.currentTarget.value);
-          if (Number.isFinite(nextValue)) {
-            updateValue(nextValue);
-          }
-        }}
+        value={draftValue}
+        onChange={(event) => setDraftValue(event.currentTarget.value)}
+        onBlur={commitDraftValue}
+        onKeyDown={handleKeyDown}
         className="stepper-field__input"
         aria-label={label}
       />

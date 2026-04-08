@@ -6,8 +6,7 @@ import {
   deleteSavedMatch,
   getSavedMatch,
   listSavedMatches,
-  saveMatch,
-  type SavedMatchRecord
+  saveMatch
 } from "./savedMatches";
 
 function createSnapshot() {
@@ -95,7 +94,7 @@ describe("savedMatches", () => {
 
       saveMatch(snapshot1, "First Save");
       saveMatch(snapshot2, "Second Save");
-      const saved3 = saveMatch(snapshot3, "Third Save");
+      saveMatch(snapshot3, "Third Save");
 
       const allMatches = listSavedMatches();
       expect(allMatches).toHaveLength(3);
@@ -153,8 +152,8 @@ describe("savedMatches", () => {
       expect(snapshot1.pieces.length).toBe(snapshot2.pieces.length);
 
       // Save both with different names
-      const save1 = saveMatch(snapshot1, "Snapshot 1");
-      const save2 = saveMatch(snapshot2, "Snapshot 2");
+      saveMatch(snapshot1, "Snapshot 1");
+      saveMatch(snapshot2, "Snapshot 2");
 
       // Since both saves happen at the same millisecond with the same state,
       // they will have the same ID. The most recent save (Snapshot 2) will be first.

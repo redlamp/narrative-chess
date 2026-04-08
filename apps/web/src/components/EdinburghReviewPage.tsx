@@ -358,6 +358,9 @@ export function EdinburghReviewPage({
 }: EdinburghReviewPageProps) {
   const [selectedCityId, setSelectedCityId] = useState(initialCityId);
   const [draft, setDraft] = useState<CityBoard>(() => createInitialCityDraft());
+  const cityDraftsRef = useRef<Record<string, CityBoard>>({
+    [initialCityId]: createInitialCityDraft()
+  });
   const [selectedRecordId, setSelectedRecordId] = useState(cityOverviewId);
   const [hoveredDistrictId, setHoveredDistrictId] = useState<string | null>(null);
   const [hoveredBoardSquare, setHoveredBoardSquare] = useState<Square | null>(null);
@@ -409,23 +412,32 @@ export function EdinburghReviewPage({
   }, []);
 
   useEffect(() => {
-    if (validation.isValid) {
+    try {
       saveCityBoardDraft(draft);
+    } catch {
+      // Keep persisting local working edits even while the draft is temporarily invalid.
     }
-  }, [draft, validation.isValid]);
+  }, [draft]);
 
   useEffect(() => {
     if (!selectedCityDefinition) {
       return;
     }
 
-    setDraft(listCityBoardDraft(selectedCityDefinition.id, selectedCityDefinition.board));
+    const cachedDraft = cityDraftsRef.current[selectedCityDefinition.id];
+    const nextDraft = cachedDraft ?? listCityBoardDraft(selectedCityDefinition.id, selectedCityDefinition.board);
+    cityDraftsRef.current[selectedCityDefinition.id] = nextDraft;
+    setDraft(nextDraft);
     setSelectedRecordId(cityOverviewId);
     setSelectedCityTab("basics");
     setIsMapImportArmed(false);
     setHoveredDistrictId(null);
     setHoveredBoardSquare(null);
   }, [selectedCityDefinition]);
+
+  useEffect(() => {
+    cityDraftsRef.current[draft.id] = draft;
+  }, [draft]);
 
   useEffect(() => {
     if (
@@ -589,7 +601,9 @@ export function EdinburghReviewPage({
                           return;
                         }
 
-                  setDraft(saveCityBoardDraft(result.board));
+                  const nextDraft = saveCityBoardDraft(result.board);
+                  cityDraftsRef.current[nextDraft.id] = nextDraft;
+                  setDraft(nextDraft);
                   setSelectedCityId(result.board.id);
                   setSelectedRecordId(cityOverviewId);
                   setSelectedCityTab("basics");

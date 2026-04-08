@@ -336,7 +336,7 @@ export function CityDistrictMapEditor({
       syncDistrictMarkerLayers(map, cityBoard, activeSquare);
       map.resize();
     });
-  }, [activeSquare, cityBoard, viewMode]);
+  }, [viewMode]);
 
   useEffect(() => {
     const map = mapRef.current;
