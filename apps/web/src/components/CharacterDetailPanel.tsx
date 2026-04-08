@@ -114,60 +114,62 @@ export function CharacterDetailPanel({
               )}
             </div>
           ) : (
-            <div className="content-outline content-outline--character">
-              <div className="content-outline__media-row">
-                <span className="content-outline__block content-outline__block--avatar" />
-                <div className="content-outline__stack">
-                  <p className="piece-badge__label content-outline__heading">Piece</p>
-                  <span className="content-outline__block content-outline__block--line content-outline__block--line-short" />
+            <div className="character-detail-container character-detail-container--empty">
+              <div className="piece-badge">
+                <div>
+                  <p className="piece-badge__label">Piece</p>
                 </div>
               </div>
-              <h3 className="character-detail-container__name content-outline__heading">Character</h3>
-              <div className="content-outline__stack">
-                <span className="content-outline__block content-outline__block--line" />
-                <span className="content-outline__block content-outline__block--line content-outline__block--line-medium" />
-                <span className="content-outline__block content-outline__block--line content-outline__block--line-short" />
-              </div>
-              <dl className="detail-grid detail-grid--placeholder">
+              <h3 className="character-detail-container__name">Character</h3>
+              <div
+                className="story-empty-state__spacer story-empty-state__spacer--description"
+                aria-hidden="true"
+              />
+              <dl className="detail-grid">
                 <div>
                   <dt>Role</dt>
                   <dd>
-                    <span className="content-outline__block content-outline__block--line content-outline__block--line-short content-outline__block--inline" />
+                    <span
+                      className="story-empty-state__spacer story-empty-state__spacer--detail-line"
+                      aria-hidden="true"
+                    />
                   </dd>
                 </div>
                 <div>
                   <dt>Origin</dt>
                   <dd>
-                    <span className="content-outline__block content-outline__block--line content-outline__block--line-short content-outline__block--inline" />
+                    <span
+                      className="story-empty-state__spacer story-empty-state__spacer--detail-line"
+                      aria-hidden="true"
+                    />
                   </dd>
                 </div>
                 <div>
                   <dt>Faction</dt>
                   <dd>
-                    <span className="content-outline__block content-outline__block--line content-outline__block--line-short content-outline__block--inline" />
+                    <span
+                      className="story-empty-state__spacer story-empty-state__spacer--detail-line"
+                      aria-hidden="true"
+                    />
                   </dd>
                 </div>
                 <div>
                   <dt>Square</dt>
                   <dd>
-                    <span className="content-outline__block content-outline__block--line content-outline__block--line-short content-outline__block--inline" />
+                    <span
+                      className="story-empty-state__spacer story-empty-state__spacer--detail-line"
+                      aria-hidden="true"
+                    />
                   </dd>
                 </div>
               </dl>
-              <div className="content-outline__group">
-                <p className="field-label content-outline__section-label">Traits</p>
-                <div className="content-outline__chips">
-                  <span className="content-outline__block content-outline__block--chip" />
-                  <span className="content-outline__block content-outline__block--chip-wide" />
-                  <span className="content-outline__block content-outline__block--chip" />
-                </div>
+              <div className="character-detail-container__chip-group">
+                <p className="field-label">Traits</p>
+                <div className="story-empty-state__spacer story-empty-state__spacer--group" aria-hidden="true" />
               </div>
-              <div className="content-outline__group">
-                <p className="field-label content-outline__section-label">Actions</p>
-                <div className="content-outline__chips">
-                  <span className="content-outline__block content-outline__block--chip-wide" />
-                  <span className="content-outline__block content-outline__block--chip" />
-                </div>
+              <div className="character-detail-container__chip-group">
+                <p className="field-label">Actions</p>
+                <div className="story-empty-state__spacer story-empty-state__spacer--group" aria-hidden="true" />
               </div>
             </div>
           )}
@@ -178,16 +180,7 @@ export function CharacterDetailPanel({
           <TabsContent value="recent" className="character-tabs-content">
             <div className="character-recent-actions">
               {!hasCharacter ? (
-                <div className="content-outline content-outline--character-recent">
-                  <div className="content-outline__action-card">
-                    <div className="content-outline__row">
-                      <span className="content-outline__block content-outline__block--line content-outline__block--line-short" />
-                      <span className="content-outline__section-label">Action</span>
-                    </div>
-                    <span className="content-outline__block content-outline__block--line" />
-                    <span className="content-outline__block content-outline__block--line content-outline__block--line-medium" />
-                  </div>
-                </div>
+                <p className="muted">No character selected.</p>
               ) : momentsWithSan.length > 0 ? (
                 momentsWithSan.map(({ event, san }) => (
                   <article key={event.id} className="character-action-item">

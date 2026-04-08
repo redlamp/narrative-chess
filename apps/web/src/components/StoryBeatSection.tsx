@@ -43,19 +43,16 @@ export function StoryBeatSection({
           </>
         )
       ) : (
-        <div className="content-outline content-outline--beat">
+        <div className="story-empty-state story-empty-state--beat">
           <div className="detail-card__title-row story-section__title-row">
-            <h3 className="story-section__title content-outline__heading">Headline</h3>
-            <span className="content-outline__block content-outline__block--pill" />
+            <h3 className="story-section__title">Headline</h3>
           </div>
-          <div className="content-outline__stack">
-            <span className="content-outline__block content-outline__block--line" />
-            <span className="content-outline__block content-outline__block--line content-outline__block--line-short" />
-            <span className="content-outline__block content-outline__block--line content-outline__block--line-medium" />
-          </div>
-          <p className="timeline__link story-section__meta content-outline__meta-row">
+          <div
+            className="story-empty-state__spacer story-empty-state__spacer--description"
+            aria-hidden="true"
+          />
+          <p className="timeline__link story-section__meta">
             <span className="content-outline__section-label">Board action:</span>
-            <span className="content-outline__block content-outline__block--line content-outline__block--line-short content-outline__block--inline" />
           </p>
         </div>
       )}

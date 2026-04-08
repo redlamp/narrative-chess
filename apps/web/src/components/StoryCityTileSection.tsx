@@ -69,40 +69,25 @@ export function StoryCityTileSection({
           ) : null}
         </>
       ) : (
-        <div className="content-outline content-outline--city">
+        <div className="story-empty-state story-empty-state--city">
           <div className="detail-card__title-row story-section__title-row">
-            <h3 className="story-section__title content-outline__heading">District</h3>
-            <span className="content-outline__block content-outline__block--pill" />
+            <h3 className="story-section__title city-map-panel__title">District</h3>
           </div>
-          <div className="content-outline__media-row">
-            <span className="content-outline__block content-outline__block--avatar" />
-            <span className="content-outline__block content-outline__block--line content-outline__block--line-short" />
+          <div
+            className="story-empty-state__spacer story-empty-state__spacer--description"
+            aria-hidden="true"
+          />
+          <div className="story-empty-state__group">
+            <p className="field-label">Descriptors</p>
+            <div className="story-empty-state__spacer story-empty-state__spacer--group" aria-hidden="true" />
           </div>
-          <div className="content-outline__stack">
-            <span className="content-outline__block content-outline__block--line" />
-            <span className="content-outline__block content-outline__block--line content-outline__block--line-short" />
+          <div className="story-empty-state__group">
+            <p className="field-label">Landmarks</p>
+            <div className="story-empty-state__spacer story-empty-state__spacer--group" aria-hidden="true" />
           </div>
-          <div className="content-outline__group">
-            <p className="field-label content-outline__section-label">Descriptors</p>
-            <div className="content-outline__chips">
-              <span className="content-outline__block content-outline__block--chip-wide" />
-              <span className="content-outline__block content-outline__block--chip" />
-              <span className="content-outline__block content-outline__block--chip" />
-            </div>
-          </div>
-          <div className="content-outline__group">
-            <p className="field-label content-outline__section-label">Landmarks</p>
-            <div className="content-outline__chips">
-              <span className="content-outline__block content-outline__block--chip" />
-              <span className="content-outline__block content-outline__block--chip-wide" />
-            </div>
-          </div>
-          <div className="content-outline__group">
-            <p className="field-label content-outline__section-label">Occupant</p>
-            <div className="content-outline__media-row">
-              <span className="content-outline__block content-outline__block--avatar" />
-              <span className="content-outline__block content-outline__block--line content-outline__block--line-short" />
-            </div>
+          <div className="story-empty-state__group">
+            <p className="field-label">Occupant</p>
+            <div className="story-empty-state__spacer story-empty-state__spacer--occupant" aria-hidden="true" />
           </div>
         </div>
       )}
