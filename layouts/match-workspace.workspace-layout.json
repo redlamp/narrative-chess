@@ -3,7 +3,7 @@
   "name": "match-workspace",
   "savedAt": "2026-04-05T14:38:00.272Z",
   "layoutState": {
-    "version": 2,
+    "version": 3,
     "columnCount": 12,
     "columnGap": 16,
     "rowHeight": 64,
@@ -20,11 +20,41 @@
         "w": 2,
         "h": 15
       },
-      "narrative": {
+      "city-map": {
+        "x": 7,
+        "y": 12,
+        "w": 4,
+        "h": 5
+      },
+      "city-map-maplibre": {
+        "x": 7,
+        "y": 17,
+        "w": 4,
+        "h": 5
+      },
+      "story-beat": {
         "x": 1,
         "y": 9,
-        "w": 10,
-        "h": 8
+        "w": 6,
+        "h": 3
+      },
+      "story-tile": {
+        "x": 1,
+        "y": 12,
+        "w": 3,
+        "h": 5
+      },
+      "story-character": {
+        "x": 4,
+        "y": 12,
+        "w": 3,
+        "h": 5
+      },
+      "story-tone": {
+        "x": 7,
+        "y": 9,
+        "w": 4,
+        "h": 3
       },
       "recent-games": {
         "x": 1,
@@ -35,8 +65,24 @@
     },
     "collapsed": {
       "moves": false,
-      "narrative": false,
+      "city-map": false,
+      "city-map-maplibre": false,
+      "story-beat": false,
+      "story-tile": false,
+      "story-character": false,
+      "story-tone": false,
       "recent-games": false
+    },
+    "visible": {
+      "board": true,
+      "moves": true,
+      "city-map": true,
+      "city-map-maplibre": true,
+      "story-beat": true,
+      "story-tile": true,
+      "story-character": true,
+      "story-tone": true,
+      "recent-games": true
     }
   }
 }

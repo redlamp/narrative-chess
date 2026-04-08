@@ -1,42 +1,88 @@
 {
   "version": 1,
   "name": "play-space",
-  "savedAt": "2026-04-07T07:37:27.241Z",
+  "savedAt": "2026-04-08T08:56:00.125Z",
   "layoutState": {
-    "version": 2,
-    "columnCount": 12,
+    "version": 3,
+    "columnCount": 14,
     "columnGap": 16,
-    "rowHeight": 84,
+    "rowHeight": 64,
     "panels": {
       "board": {
-        "x": 7,
+        "x": 8,
         "y": 1,
-        "w": 4,
-        "h": 6
+        "w": 5,
+        "h": 8
       },
       "moves": {
-        "x": 11,
+        "x": 13,
         "y": 1,
         "w": 2,
-        "h": 11
+        "h": 14
       },
-      "narrative": {
+      "city-map": {
         "x": 1,
-        "y": 7,
-        "w": 10,
+        "y": 1,
+        "w": 4,
+        "h": 4
+      },
+      "city-map-maplibre": {
+        "x": 1,
+        "y": 5,
+        "w": 4,
+        "h": 4
+      },
+      "story-beat": {
+        "x": 5,
+        "y": 8,
+        "w": 3,
         "h": 5
       },
-      "recent-games": {
-        "x": null,
+      "story-tile": {
+        "x": 5,
         "y": 1,
-        "w": null,
-        "h": null
+        "w": 3,
+        "h": 7
+      },
+      "story-character": {
+        "x": 8,
+        "y": 9,
+        "w": 5,
+        "h": 6
+      },
+      "story-tone": {
+        "x": 1,
+        "y": 8,
+        "w": 4,
+        "h": 1
+      },
+      "recent-games": {
+        "x": 1,
+        "y": 9,
+        "w": 4,
+        "h": 6
       }
     },
     "collapsed": {
       "moves": false,
-      "narrative": false,
+      "city-map": false,
+      "city-map-maplibre": false,
+      "story-beat": false,
+      "story-tile": false,
+      "story-character": false,
+      "story-tone": false,
       "recent-games": false
+    },
+    "visible": {
+      "board": true,
+      "moves": true,
+      "city-map": true,
+      "city-map-maplibre": true,
+      "story-beat": true,
+      "story-tile": true,
+      "story-character": true,
+      "story-tone": true,
+      "recent-games": true
     }
   }
 }

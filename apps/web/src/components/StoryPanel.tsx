@@ -8,14 +8,6 @@ import {
   type ReactNode
 } from "react";
 import { Grip } from "lucide-react";
-import type {
-  CharacterSummary,
-  DistrictCell,
-  MoveRecord,
-  NarrativeEvent,
-  PieceState,
-  Square
-} from "@narrative-chess/content-schema";
 import { Button } from "@/components/ui/button";
 import {
   getSnappedStoryPanelColumn,
@@ -27,31 +19,16 @@ import {
   type StoryPanelSectionRect
 } from "../storyPanelLayoutState";
 import { Panel } from "./Panel";
-import { StoryBeatSection } from "./StoryBeatSection";
-import { CharacterDetailPanel } from "./CharacterDetailPanel";
-import { StoryCityTileSection } from "./StoryCityTileSection";
-import { StoryToneSection } from "./StoryToneSection";
 
 type StoryPanelProps = {
   collapsed: boolean;
   onToggleCollapse: () => void;
-  selectedMove: MoveRecord | null;
-  selectedEvent: NarrativeEvent | null;
-  focusedSquare: Square | null;
-  focusedSquareSummary: string;
-  focusedDistrict: DistrictCell | null;
-  focusedPiece: PieceState | null;
-  focusedCharacter: CharacterSummary | null;
-  focusedCharacterMoments: NarrativeEvent[];
-  moveHistory: MoveRecord[];
-  showRecentCharacterActions: boolean;
   layoutState: StoryPanelLayoutState;
   layoutMode: boolean;
   parentColumnGap: number;
   parentRowHeight: number;
   onLayoutRectChange: (panelId: StoryPanelSectionId, nextRect: StoryPanelSectionRect) => void;
-  tonePreset: "grounded" | "civic-noir" | "dark-comedy";
-  onToneChange: (tone: "grounded" | "civic-noir" | "dark-comedy") => void;
+  sections: Record<StoryPanelSectionId, ReactNode>;
   headerAction?: ReactNode;
 };
 
@@ -87,23 +64,12 @@ function getStoryPanelStyle(
 export function StoryPanel({
   collapsed,
   onToggleCollapse,
-  selectedMove,
-  selectedEvent,
-  focusedSquare,
-  focusedSquareSummary,
-  focusedDistrict,
-  focusedPiece,
-  focusedCharacter,
-  focusedCharacterMoments,
-  moveHistory,
-  showRecentCharacterActions,
   layoutState,
   layoutMode,
   parentColumnGap,
   parentRowHeight,
   onLayoutRectChange,
-  tonePreset,
-  onToneChange,
+  sections,
   headerAction
 }: StoryPanelProps) {
   const canvasRef = useRef<HTMLDivElement | null>(null);
@@ -207,31 +173,6 @@ export function StoryPanel({
       });
     };
 
-  const sectionPanels: Record<StoryPanelSectionId, ReactNode> = {
-    beat: (
-      <StoryBeatSection selectedMove={selectedMove} selectedEvent={selectedEvent} />
-    ),
-    tile: (
-      <StoryCityTileSection
-        focusedSquareSummary={focusedSquareSummary}
-        focusedDistrict={focusedDistrict}
-      />
-    ),
-    character: (
-      <CharacterDetailPanel
-        focusedSquare={focusedSquare}
-        focusedPiece={focusedPiece}
-        focusedCharacter={focusedCharacter}
-        focusedCharacterMoments={focusedCharacterMoments}
-        moveHistory={moveHistory}
-        showRecentCharacterActions={showRecentCharacterActions}
-      />
-    ),
-    tone: (
-      <StoryToneSection tonePreset={tonePreset} onToneChange={onToneChange} />
-    )
-  };
-
   return (
     <Panel
       title="Story"
@@ -259,7 +200,7 @@ export function StoryPanel({
             }`}
             style={getStoryPanelStyle(layoutState, panelId)}
           >
-            {sectionPanels[panelId]}
+            {sections[panelId]}
             {layoutMode ? (
               <>
                 <button

@@ -3,13 +3,23 @@ import bundledMatchWorkspaceLayout from "../../../layouts/match-workspace.worksp
 export const workspacePanelIds = [
   "board",
   "moves",
-  "narrative",
+  "city-map",
+  "city-map-maplibre",
+  "story-beat",
+  "story-tile",
+  "story-character",
+  "story-tone",
   "recent-games"
 ] as const;
 
 export const collapsibleWorkspacePanelIds = [
   "moves",
-  "narrative",
+  "city-map",
+  "city-map-maplibre",
+  "story-beat",
+  "story-tile",
+  "story-character",
+  "story-tone",
   "recent-games"
 ] as const;
 
@@ -24,12 +34,13 @@ export type WorkspacePanelRect = {
 };
 
 export type WorkspaceLayoutState = {
-  version: 2;
+  version: 3;
   columnCount: number;
   columnGap: number;
   rowHeight: number;
   panels: Record<WorkspacePanelId, WorkspacePanelRect>;
   collapsed: Record<CollapsibleWorkspacePanelId, boolean>;
+  visible: Record<WorkspacePanelId, boolean>;
 };
 
 const storageKey = "narrative-chess:workspace-layout:v1";
@@ -42,37 +53,68 @@ const workspaceMaximumColumnGap = 64;
 const workspaceMinimumRowHeight = 8;
 const workspaceMaximumRowHeight = 256;
 const workspaceMinimumRows = 18;
-const collapsedPanelHeight = 2;
+const collapsedPanelHeight = 1;
 
 const minimumPanelWidth: Record<WorkspacePanelId, number> = {
-  board: 4,
-  moves: 2,
-  narrative: 2,
-  "recent-games": 2
+  board: 1,
+  moves: 1,
+  "city-map": 1,
+  "city-map-maplibre": 1,
+  "story-beat": 1,
+  "story-tile": 1,
+  "story-character": 1,
+  "story-tone": 1,
+  "recent-games": 1
 };
 
 const minimumPanelHeight: Record<WorkspacePanelId, number> = {
-  board: 2,
+  board: 1,
   moves: 1,
-  narrative: 1,
+  "city-map": 1,
+  "city-map-maplibre": 1,
+  "story-beat": 1,
+  "story-tile": 1,
+  "story-character": 1,
+  "story-tone": 1,
   "recent-games": 1
 };
 
 const bundledFallbackLayoutState: WorkspaceLayoutState = {
-  version: 2,
+  version: 3,
   columnCount: workspaceDefaultColumnCount,
   columnGap: workspaceDefaultColumnGap,
   rowHeight: 64,
   panels: {
     board: { x: 7, y: 1, w: 4, h: 8 },
     moves: { x: 11, y: 1, w: 2, h: 15 },
-    narrative: { x: 1, y: 9, w: 10, h: 8 },
+    "city-map": { x: 7, y: 12, w: 4, h: 5 },
+    "city-map-maplibre": { x: 7, y: 17, w: 4, h: 5 },
+    "story-beat": { x: 1, y: 9, w: 6, h: 3 },
+    "story-tile": { x: 1, y: 12, w: 3, h: 5 },
+    "story-character": { x: 4, y: 12, w: 3, h: 5 },
+    "story-tone": { x: 7, y: 9, w: 4, h: 3 },
     "recent-games": { x: 1, y: 1, w: 3, h: 8 }
   },
   collapsed: {
     moves: false,
-    narrative: false,
+    "city-map": false,
+    "city-map-maplibre": false,
+    "story-beat": false,
+    "story-tile": false,
+    "story-character": false,
+    "story-tone": false,
     "recent-games": false
+  },
+  visible: {
+    board: true,
+    moves: true,
+    "city-map": true,
+    "city-map-maplibre": true,
+    "story-beat": true,
+    "story-tile": true,
+    "story-character": true,
+    "story-tone": true,
+    "recent-games": true
   }
 };
 
@@ -140,6 +182,43 @@ function normalizePanelRectFromFallback(
   };
 }
 
+const legacyNarrativePanelId = "narrative";
+
+function legacyStoryRectForPanel(
+  panelId: WorkspacePanelId,
+  legacyNarrativeRect: WorkspacePanelRect
+): WorkspacePanelRect | null {
+  if (
+    panelId !== "story-beat" &&
+    panelId !== "story-tile" &&
+    panelId !== "story-character" &&
+    panelId !== "story-tone"
+  ) {
+    return null;
+  }
+
+  const unitWidth = Math.max(1, legacyNarrativeRect.w / 8);
+  const unitHeight = Math.max(1, legacyNarrativeRect.h / 11);
+
+  const legacyStorySpec: Record<
+    "story-beat" | "story-tile" | "story-character" | "story-tone",
+    { x: number; y: number; w: number; h: number }
+  > = {
+    "story-beat": { x: 0, y: 0, w: 8, h: 4 },
+    "story-tile": { x: 0, y: 4, w: 4, h: 4 },
+    "story-character": { x: 4, y: 4, w: 4, h: 7 },
+    "story-tone": { x: 0, y: 8, w: 4, h: 3 }
+  };
+  const spec = legacyStorySpec[panelId];
+
+  return {
+    x: legacyNarrativeRect.x + Math.round(spec.x * unitWidth),
+    y: legacyNarrativeRect.y + Math.round(spec.y * unitHeight),
+    w: Math.max(2, Math.round(spec.w * unitWidth)),
+    h: Math.max(1, Math.round(spec.h * unitHeight))
+  };
+}
+
 const bundledLayoutStateCandidate = isRecord(bundledMatchWorkspaceLayout)
   ? bundledMatchWorkspaceLayout.layoutState
   : null;
@@ -154,9 +233,19 @@ const bundledCollapsedPanels: Record<string, unknown> = isRecord(
 const defaultLayoutColumnCount = normalizeColumnCount(
   bundledLayoutStateCandidate?.columnCount ?? bundledFallbackLayoutState.columnCount
 );
+const bundledLegacyNarrativeRect = normalizePanelRectFromFallback(
+  "story-beat",
+  bundledLayoutPanels[legacyNarrativePanelId],
+  defaultLayoutColumnCount,
+  bundledFallbackLayoutState.panels["story-beat"]
+);
+const bundledLegacyNarrativeCollapsed =
+  typeof bundledCollapsedPanels[legacyNarrativePanelId] === "boolean"
+    ? (bundledCollapsedPanels[legacyNarrativePanelId] as boolean)
+    : null;
 
 const defaultLayoutState: WorkspaceLayoutState = {
-  version: 2,
+  version: 3,
   columnCount: defaultLayoutColumnCount,
   columnGap: normalizeColumnGap(
     bundledLayoutStateCandidate?.columnGap ?? bundledFallbackLayoutState.columnGap
@@ -170,9 +259,12 @@ const defaultLayoutState: WorkspaceLayoutState = {
     workspaceMaximumRowHeight
   ),
   panels: workspacePanelIds.reduce((nextPanels, panelId) => {
+    const bundledPanelValue =
+      bundledLayoutPanels[panelId] ??
+      legacyStoryRectForPanel(panelId, bundledLegacyNarrativeRect);
     nextPanels[panelId] = normalizePanelRectFromFallback(
       panelId,
-      bundledLayoutPanels[panelId],
+      bundledPanelValue,
       defaultLayoutColumnCount,
       bundledFallbackLayoutState.panels[panelId]
     );
@@ -182,9 +274,19 @@ const defaultLayoutState: WorkspaceLayoutState = {
     nextCollapsed[panelId] =
       typeof bundledCollapsedPanels[panelId] === "boolean"
         ? (bundledCollapsedPanels[panelId] as boolean)
+        : bundledLegacyNarrativeCollapsed !== null &&
+            (panelId === "story-beat" ||
+              panelId === "story-tile" ||
+              panelId === "story-character" ||
+              panelId === "story-tone")
+          ? bundledLegacyNarrativeCollapsed
         : bundledFallbackLayoutState.collapsed[panelId];
     return nextCollapsed;
-  }, {} as Record<CollapsibleWorkspacePanelId, boolean>)
+  }, {} as Record<CollapsibleWorkspacePanelId, boolean>),
+  visible: workspacePanelIds.reduce((nextVisible, panelId) => {
+    nextVisible[panelId] = bundledFallbackLayoutState.visible[panelId];
+    return nextVisible;
+  }, {} as Record<WorkspacePanelId, boolean>)
 };
 
 function normalizePanelRect(
@@ -234,7 +336,7 @@ function scalePanelRect(
 
 export function getDefaultWorkspaceLayoutState(): WorkspaceLayoutState {
   return {
-    version: 2,
+    version: 3,
     columnCount: defaultLayoutState.columnCount,
     columnGap: defaultLayoutState.columnGap,
     rowHeight: defaultLayoutState.rowHeight,
@@ -245,7 +347,11 @@ export function getDefaultWorkspaceLayoutState(): WorkspaceLayoutState {
     collapsed: collapsibleWorkspacePanelIds.reduce((nextCollapsed, panelId) => {
       nextCollapsed[panelId] = defaultLayoutState.collapsed[panelId];
       return nextCollapsed;
-    }, {} as Record<CollapsibleWorkspacePanelId, boolean>)
+    }, {} as Record<CollapsibleWorkspacePanelId, boolean>),
+    visible: workspacePanelIds.reduce((nextVisible, panelId) => {
+      nextVisible[panelId] = defaultLayoutState.visible[panelId];
+      return nextVisible;
+    }, {} as Record<WorkspacePanelId, boolean>)
   };
 }
 
@@ -263,14 +369,30 @@ export function normalizeWorkspaceLayoutState(value: unknown): WorkspaceLayoutSt
     candidate.collapsed && typeof candidate.collapsed === "object"
       ? (candidate.collapsed as Record<string, unknown>)
       : {};
+  const candidateVisible =
+    candidate.visible && typeof candidate.visible === "object"
+      ? (candidate.visible as Record<string, unknown>)
+      : {};
   const columnCount = normalizeColumnCount(candidate.columnCount);
+  const legacyNarrativeRect = normalizePanelRectFromFallback(
+    "story-beat",
+    candidatePanels[legacyNarrativePanelId],
+    columnCount,
+    defaultLayoutState.panels["story-beat"]
+  );
+  const legacyNarrativeCollapsed =
+    typeof candidateCollapsed[legacyNarrativePanelId] === "boolean"
+      ? (candidateCollapsed[legacyNarrativePanelId] as boolean)
+      : null;
   const normalizedPanels = workspacePanelIds.reduce((nextPanels, panelId) => {
-    nextPanels[panelId] = normalizePanelRect(panelId, candidatePanels[panelId], columnCount);
+    const candidatePanelValue =
+      candidatePanels[panelId] ?? legacyStoryRectForPanel(panelId, legacyNarrativeRect);
+    nextPanels[panelId] = normalizePanelRect(panelId, candidatePanelValue, columnCount);
     return nextPanels;
   }, {} as Record<WorkspacePanelId, WorkspacePanelRect>);
 
   return {
-    version: 2,
+    version: 3,
     columnCount,
     columnGap: normalizeColumnGap(candidate.columnGap),
     rowHeight: clamp(
@@ -283,9 +405,22 @@ export function normalizeWorkspaceLayoutState(value: unknown): WorkspaceLayoutSt
       nextCollapsed[panelId] =
         typeof candidateCollapsed[panelId] === "boolean"
           ? (candidateCollapsed[panelId] as boolean)
+          : legacyNarrativeCollapsed !== null &&
+              (panelId === "story-beat" ||
+                panelId === "story-tile" ||
+                panelId === "story-character" ||
+                panelId === "story-tone")
+            ? legacyNarrativeCollapsed
           : defaultLayoutState.collapsed[panelId];
       return nextCollapsed;
-    }, {} as Record<CollapsibleWorkspacePanelId, boolean>)
+    }, {} as Record<CollapsibleWorkspacePanelId, boolean>),
+    visible: workspacePanelIds.reduce((nextVisible, panelId) => {
+      nextVisible[panelId] =
+        typeof candidateVisible[panelId] === "boolean"
+          ? (candidateVisible[panelId] as boolean)
+          : defaultLayoutState.visible[panelId];
+      return nextVisible;
+    }, {} as Record<WorkspacePanelId, boolean>)
   };
 }
 
@@ -345,6 +480,10 @@ export function restoreWorkspacePanel(input: {
     panels: {
       ...input.layoutState.panels,
       [input.panelId]: restoredRect
+    },
+    visible: {
+      ...input.layoutState.visible,
+      [input.panelId]: true
     }
   };
 
@@ -362,6 +501,10 @@ export function getWorkspacePanelRenderHeight(
   layoutState: WorkspaceLayoutState,
   panelId: WorkspacePanelId
 ) {
+  if (!layoutState.visible[panelId]) {
+    return 0;
+  }
+
   const panel = layoutState.panels[panelId];
   if (!panel) {
     return 0;
@@ -413,6 +556,20 @@ export function setWorkspacePanelCollapsed(input: {
     collapsed: {
       ...input.layoutState.collapsed,
       [input.panelId]: input.collapsed
+    }
+  };
+}
+
+export function setWorkspacePanelVisible(input: {
+  layoutState: WorkspaceLayoutState;
+  panelId: WorkspacePanelId;
+  visible: boolean;
+}) {
+  return {
+    ...input.layoutState,
+    visible: {
+      ...input.layoutState.visible,
+      [input.panelId]: input.visible
     }
   };
 }
@@ -500,6 +657,10 @@ export function getSnappedWorkspaceRow(input: {
 
 export function getWorkspaceLayoutRowCount(layoutState: WorkspaceLayoutState) {
   const maxRow = workspacePanelIds.reduce((currentMax, panelId) => {
+    if (!layoutState.visible[panelId]) {
+      return currentMax;
+    }
+
     const panel = layoutState.panels[panelId];
     return Math.max(currentMax, panel.y + panel.h - 1);
   }, workspaceMinimumRows);

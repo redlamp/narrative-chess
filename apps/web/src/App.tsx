@@ -5,15 +5,15 @@ import {
   useState,
   type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
-  type PointerEvent as ReactPointerEvent,
-  type ReactNode
+  type PointerEvent as ReactPointerEvent
 } from "react";
-import { Building2, ChessPawn, FolderOpen, LayoutDashboard, Moon, Pencil, Save, Scroll, Sun, Trash2, UsersRound } from "lucide-react";
+import { Building2, ChessPawn, Cog, FolderOpen, LayoutDashboard, Moon, Pencil, Save, Scroll, Sun, Trash2, UsersRound } from "lucide-react";
 import { getPieceAtSquare } from "@narrative-chess/game-core";
 import { getCharacterEventHistory } from "@narrative-chess/narrative-engine";
 import type { PieceKind, Square } from "@narrative-chess/content-schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -34,8 +34,7 @@ import {
   saveAppSettings,
   type AppSettings
 } from "./appSettings";
-import { edinburghDistrictsBySquare, getDistrictForSquare } from "./edinburghBoard";
-import { getPieceDisplayName } from "./chessPresentation";
+import { edinburghBoard, edinburghDistrictsBySquare, getDistrictForSquare } from "./edinburghBoard";
 import {
   getSnappedWorkspaceColumn,
   getSnappedWorkspaceRow,
@@ -46,10 +45,12 @@ import {
   restoreWorkspacePanel,
   saveWorkspaceLayoutState,
   setWorkspacePanelCollapsed,
+  setWorkspacePanelVisible,
   updateWorkspaceColumnCount,
   updateWorkspaceColumnGap,
   updateWorkspacePanelRect,
   updateWorkspaceRowHeight,
+  workspacePanelIds,
   type CollapsibleWorkspacePanelId,
   type WorkspaceLayoutState,
   type WorkspacePanelId,
@@ -61,14 +62,6 @@ import {
 } from "./layoutFiles";
 import { applyPieceStyleSheet, listPieceStyleSheet, resetPieceStyleSheet, savePieceStyleSheet } from "./pieceStyles";
 import { listReferenceGames, type ReferenceGameLibrary } from "./referenceGames";
-import {
-  listStoryPanelLayoutState,
-  saveStoryPanelLayoutState,
-  updateStoryPanelRect,
-  type StoryPanelLayoutState,
-  type StoryPanelSectionId,
-  type StoryPanelSectionRect
-} from "./storyPanelLayoutState";
 import {
   connectRoleCatalogDirectory,
   getConnectedRoleCatalogDirectoryName,
@@ -87,6 +80,8 @@ import {
   supportsWorkspaceLayoutDirectory
 } from "./fileSystemAccess";
 import { Board } from "./components/Board";
+import { CityMapLibrePanel } from "./components/CityMapLibrePanel";
+import { CityMapPanel } from "./components/CityMapPanel";
 import { Panel } from "./components/Panel";
 import { AppMenu } from "./components/AppMenu";
 import { ClassicGamesLibraryPage } from "./components/ClassicGamesLibraryPage";
@@ -96,7 +91,10 @@ import { LayoutToolbar } from "./components/LayoutToolbar";
 import { MatchHistoryPanel } from "./components/MatchHistoryPanel";
 import { ResearchPage } from "./components/ResearchPage";
 import { RoleCatalogPage } from "./components/RoleCatalogPage";
-import { StoryPanel } from "./components/StoryPanel";
+import { StoryBeatSection } from "./components/StoryBeatSection";
+import { StoryCityTileSection } from "./components/StoryCityTileSection";
+import { StoryToneSection } from "./components/StoryToneSection";
+import { CharacterDetailPanel } from "./components/CharacterDetailPanel";
 import { RecentGamesPanel } from "./components/RecentGamesPanel";
 import { WorkspaceListItem } from "./components/WorkspaceListItem";
 import { useChessMatch } from "./hooks/useChessMatch";
@@ -126,10 +124,22 @@ type LayoutFileNotice = {
   text: string;
 };
 
+type PanelSizeConstraint = {
+  minW: number;
+  maxW: number;
+  minH: number;
+  maxH: number;
+};
+
 const panelTitles: Record<WorkspacePanelId, string> = {
   board: "Board",
   moves: "Match History (PGN)",
-  narrative: "Story",
+  "city-map": "City Map (Google)",
+  "city-map-maplibre": "City Map (MapLibre)",
+  "story-beat": "Story Beat",
+  "story-tile": "City Tile",
+  "story-character": "Character",
+  "story-tone": "Narrative Tone",
   "recent-games": "Saved Games"
 };
 
@@ -182,18 +192,7 @@ function statusLabel(isCheck: boolean, isCheckmate: boolean, isStalemate: boolea
 }
 
 function turnLabel(turn: "white" | "black") {
-  return turn === "white" ? "White to move" : "Black to move";
-}
-
-function toneLabel(tonePreset: "grounded" | "civic-noir" | "dark-comedy") {
-  switch (tonePreset) {
-    case "civic-noir":
-      return "Civic noir";
-    case "dark-comedy":
-      return "Dark comedy";
-    default:
-      return "Grounded";
-  }
+  return turn === "white" ? "White" : "Black";
 }
 
 function formatSavedAt(savedAt: string) {
@@ -278,6 +277,50 @@ function getWorkspacePanelStyle(
   };
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function createDefaultPanelSizeConstraints(input: {
+  maxWidth: number;
+  maxHeight: number;
+}): Record<WorkspacePanelId, PanelSizeConstraint> {
+  const safeMaxWidth = Math.max(1, input.maxWidth);
+  const safeMaxHeight = Math.max(1, input.maxHeight);
+
+  return workspacePanelIds.reduce((next, panelId) => {
+    next[panelId] = {
+      minW: 1,
+      maxW: safeMaxWidth,
+      minH: 1,
+      maxH: safeMaxHeight
+    };
+    return next;
+  }, {} as Record<WorkspacePanelId, PanelSizeConstraint>);
+}
+
+function normalizePanelSizeConstraint(
+  constraint: PanelSizeConstraint,
+  maxSize: {
+    maxWidth: number;
+    maxHeight: number;
+  }
+): PanelSizeConstraint {
+  const safeMaxWidth = Math.max(1, maxSize.maxWidth);
+  const safeMaxHeight = Math.max(1, maxSize.maxHeight);
+  const minW = clamp(Math.round(constraint.minW), 1, safeMaxWidth);
+  const maxW = clamp(Math.round(constraint.maxW), minW, safeMaxWidth);
+  const minH = clamp(Math.round(constraint.minH), 1, safeMaxHeight);
+  const maxH = clamp(Math.round(constraint.maxH), minH, safeMaxHeight);
+
+  return {
+    minW,
+    maxW,
+    minH,
+    maxH
+  };
+}
+
 export default function App() {
   const [page, setPage] = useState<AppPage>(() => getInitialPage());
   const [referenceGamesLibrary, setReferenceGamesLibrary] = useState<ReferenceGameLibrary>(() =>
@@ -298,9 +341,16 @@ export default function App() {
   const [roleCatalogFileNotice, setRoleCatalogFileNotice] = useState<LayoutFileNotice | null>(null);
   const [isRoleCatalogDirectorySupported, setIsRoleCatalogDirectorySupported] = useState(false);
   const [workspaceLayout, setWorkspaceLayout] = useState(() => listWorkspaceLayoutState());
-  const [storyPanelLayout, setStoryPanelLayout] = useState<StoryPanelLayoutState>(() =>
-    listStoryPanelLayoutState()
-  );
+  const [panelSizeConstraints, setPanelSizeConstraints] = useState<
+    Record<WorkspacePanelId, PanelSizeConstraint>
+  >(() => {
+    const initialLayout = listWorkspaceLayoutState();
+    return createDefaultPanelSizeConstraints({
+      maxWidth: initialLayout.columnCount,
+      maxHeight: Math.max(24, getWorkspaceLayoutRowCount(initialLayout) + 12)
+    });
+  });
+  const [activePanelConstraintEditor, setActivePanelConstraintEditor] = useState<WorkspacePanelId | null>(null);
   const [layoutFileName, setLayoutFileName] = useState("match-workspace");
   const [layoutDirectoryName, setLayoutDirectoryName] = useState<string | null>(null);
   const [layoutFileBusyAction, setLayoutFileBusyAction] = useState<string | null>(null);
@@ -360,6 +410,7 @@ export default function App() {
     ? savedMatches.find((savedMatch) => savedMatch.id === selectedSavedMatchId) ?? null
     : null;
   const focusedDistrict = getDistrictForSquare(storyFocusedSquare);
+  const lastMoveDistrict = lastMove ? getDistrictForSquare(lastMove.to) : null;
   const focusedPiece = storyFocusedSquare ? getPieceAtSquare(snapshot, storyFocusedSquare) : null;
   const focusedCharacter = focusedPiece ? snapshot.characters[focusedPiece.pieceId] ?? null : null;
   const focusedCharacterMoments = focusedCharacter
@@ -380,37 +431,100 @@ export default function App() {
     () => getWorkspaceLayoutRowCount(workspaceLayout),
     [workspaceLayout]
   );
+  const panelConstraintMaxSize = useMemo(
+    () => ({
+      maxWidth: Math.max(1, workspaceLayout.columnCount),
+      maxHeight: Math.max(24, workspaceRowCount + 12)
+    }),
+    [workspaceLayout.columnCount, workspaceRowCount]
+  );
   const workspaceGridStyle = useMemo(
     () => getWorkspaceGridStyle(workspaceLayout, workspaceRowCount),
     [workspaceLayout, workspaceRowCount]
   );
-  const focusedSquareSummary = storyFocusedSquare
-    ? (() => {
-        const squareParts = [`Inspecting ${storyFocusedSquare}`];
-        if (focusedPiece) {
-          squareParts.push(getPieceDisplayName(focusedPiece));
-        } else {
-          squareParts.push("empty square");
-        }
-        if (focusedDistrict) {
-          squareParts.push(`mapped to ${focusedDistrict.name}`);
-        }
-        return `${squareParts.join(", ")}.`;
-      })()
-    : "Hover a square to inspect it. When hover ends, the Story panel returns to the current move.";
   const gridOverlayCells = useMemo(
     () => Array.from({ length: workspaceRowCount * workspaceLayout.columnCount }, (_, index) => index),
     [workspaceLayout.columnCount, workspaceRowCount]
   );
   const layoutToolbarComponents = useMemo(
     () => [
-      { id: "board", label: panelTitles.board },
-      { id: "moves", label: panelTitles.moves, collapsed: workspaceLayout.collapsed.moves },
-      { id: "narrative", label: panelTitles.narrative, collapsed: workspaceLayout.collapsed.narrative },
-      { id: "recent-games", label: panelTitles["recent-games"], collapsed: workspaceLayout.collapsed["recent-games"] }
+      {
+        id: "board",
+        label: panelTitles.board,
+        visible: workspaceLayout.visible.board
+      },
+      {
+        id: "moves",
+        label: panelTitles.moves,
+        collapsed: workspaceLayout.collapsed.moves,
+        visible: workspaceLayout.visible.moves
+      },
+      {
+        id: "city-map",
+        label: panelTitles["city-map"],
+        collapsed: workspaceLayout.collapsed["city-map"],
+        visible: workspaceLayout.visible["city-map"]
+      },
+      {
+        id: "city-map-maplibre",
+        label: panelTitles["city-map-maplibre"],
+        collapsed: workspaceLayout.collapsed["city-map-maplibre"],
+        visible: workspaceLayout.visible["city-map-maplibre"]
+      },
+      {
+        id: "story-beat",
+        label: panelTitles["story-beat"],
+        collapsed: workspaceLayout.collapsed["story-beat"],
+        visible: workspaceLayout.visible["story-beat"]
+      },
+      {
+        id: "story-tile",
+        label: panelTitles["story-tile"],
+        collapsed: workspaceLayout.collapsed["story-tile"],
+        visible: workspaceLayout.visible["story-tile"]
+      },
+      {
+        id: "story-character",
+        label: panelTitles["story-character"],
+        collapsed: workspaceLayout.collapsed["story-character"],
+        visible: workspaceLayout.visible["story-character"]
+      },
+      {
+        id: "story-tone",
+        label: panelTitles["story-tone"],
+        collapsed: workspaceLayout.collapsed["story-tone"],
+        visible: workspaceLayout.visible["story-tone"]
+      },
+      {
+        id: "recent-games",
+        label: panelTitles["recent-games"],
+        collapsed: workspaceLayout.collapsed["recent-games"],
+        visible: workspaceLayout.visible["recent-games"]
+      }
     ],
-    [workspaceLayout.collapsed]
+    [workspaceLayout.collapsed, workspaceLayout.visible]
   );
+
+  const applyResizeConstraints = (
+    panelId: WorkspacePanelId,
+    nextRect: WorkspacePanelRect,
+    layoutState: WorkspaceLayoutState = workspaceLayout
+  ): WorkspacePanelRect => {
+    const maxSize = {
+      maxWidth: Math.max(1, layoutState.columnCount),
+      maxHeight: Math.max(24, getWorkspaceLayoutRowCount(layoutState) + 12)
+    };
+    const normalized = normalizePanelSizeConstraint(
+      panelSizeConstraints[panelId],
+      maxSize
+    );
+
+    return {
+      ...nextRect,
+      w: clamp(nextRect.w, normalized.minW, normalized.maxW),
+      h: clamp(nextRect.h, normalized.minH, normalized.maxH)
+    };
+  };
 
   useEffect(() => {
     if (
@@ -451,6 +565,21 @@ export default function App() {
   }, [isCompactViewport]);
 
   useEffect(() => {
+    setPanelSizeConstraints((current) =>
+      workspacePanelIds.reduce((next, panelId) => {
+        next[panelId] = normalizePanelSizeConstraint(current[panelId], panelConstraintMaxSize);
+        return next;
+      }, {} as Record<WorkspacePanelId, PanelSizeConstraint>)
+    );
+  }, [panelConstraintMaxSize]);
+
+  useEffect(() => {
+    if (!effectiveLayoutMode) {
+      setActivePanelConstraintEditor(null);
+    }
+  }, [effectiveLayoutMode]);
+
+  useEffect(() => {
     applyAppTheme(settings.theme);
   }, [settings.theme]);
 
@@ -465,10 +594,6 @@ export default function App() {
   useEffect(() => {
     saveWorkspaceLayoutState(workspaceLayout);
   }, [workspaceLayout]);
-
-  useEffect(() => {
-    saveStoryPanelLayoutState(storyPanelLayout);
-  }, [storyPanelLayout]);
 
   useEffect(() => {
     if (selectedSavedMatchId && !savedMatches.some((savedMatch) => savedMatch.id === selectedSavedMatchId)) {
@@ -557,11 +682,15 @@ export default function App() {
         return updateWorkspacePanelRect({
           layoutState: currentLayout,
           panelId: activeLayoutEdit.panelId,
-          nextRect: {
-            ...activeLayoutEdit.initialRect,
-            w: Math.max(1, nextColumn - activeLayoutEdit.initialRect.x + 1),
-            h: Math.max(2, nextRow - activeLayoutEdit.initialRect.y + 1)
-          }
+          nextRect: applyResizeConstraints(
+            activeLayoutEdit.panelId,
+            {
+              ...activeLayoutEdit.initialRect,
+              w: Math.max(1, nextColumn - activeLayoutEdit.initialRect.x + 1),
+              h: Math.max(1, nextRow - activeLayoutEdit.initialRect.y + 1)
+            },
+            currentLayout
+          )
         });
       });
     };
@@ -578,6 +707,7 @@ export default function App() {
       window.removeEventListener("pointerup", handlePointerUp);
     };
   }, [
+    applyResizeConstraints,
     activeLayoutEdit,
     isCompactViewport,
     workspaceLayout.columnCount,
@@ -694,11 +824,15 @@ export default function App() {
               x: currentRect.x + deltaX,
               y: currentRect.y + deltaY
             }
-          : {
-              ...currentRect,
-              w: currentRect.w + deltaX,
-              h: currentRect.h + deltaY
-            };
+          : applyResizeConstraints(
+              panelId,
+              {
+                ...currentRect,
+                w: currentRect.w + deltaX,
+                h: currentRect.h + deltaY
+              },
+              currentLayout
+            );
 
       return updateWorkspacePanelRect({
         layoutState: currentLayout,
@@ -902,6 +1036,23 @@ export default function App() {
         collapsed: !currentLayout.collapsed[panelId]
       })
     );
+  };
+
+  const handleWorkspacePanelVisibilityChange = (panelId: WorkspacePanelId, visible: boolean) => {
+    setWorkspaceLayout((currentLayout) =>
+      setWorkspacePanelVisible({
+        layoutState: currentLayout,
+        panelId,
+        visible
+      })
+    );
+
+    if (!visible) {
+      setActiveLayoutEdit((currentEdit) => (currentEdit?.panelId === panelId ? null : currentEdit));
+      setActivePanelConstraintEditor((currentPanelId) =>
+        currentPanelId === panelId ? null : currentPanelId
+      );
+    }
   };
 
   const handleWorkspaceColumnCountChange = (value: number) => {
@@ -1145,28 +1296,48 @@ export default function App() {
     setSelectedSavedMatchId(null);
   };
 
-  const handleStoryPanelRectChange = (
-    panelId: StoryPanelSectionId,
-    nextRect: StoryPanelSectionRect
+  const updatePanelConstraintRange = (
+    panelId: WorkspacePanelId,
+    axis: "width" | "height",
+    nextRange: number[]
   ) => {
-    setStoryPanelLayout((currentLayout) =>
-      updateStoryPanelRect({
-        layoutState: currentLayout,
-        panelId,
-        nextRect
-      })
-    );
-  };
-
-  const renderPanelTools = (extraActions?: ReactNode) => {
-    if (!effectiveLayoutMode && !extraActions) {
-      return undefined;
+    if (nextRange.length < 2) {
+      return;
     }
 
-    return (
-      <div className="panel-toolbar">
-        {extraActions}
-      </div>
+    const [start, end] = nextRange;
+    const minValue = Math.min(start, end);
+    const maxValue = Math.max(start, end);
+    const normalized = normalizePanelSizeConstraint(
+      axis === "width"
+        ? {
+            ...panelSizeConstraints[panelId],
+            minW: minValue,
+            maxW: maxValue
+          }
+        : {
+            ...panelSizeConstraints[panelId],
+            minH: minValue,
+            maxH: maxValue
+          },
+      panelConstraintMaxSize
+    );
+
+    setPanelSizeConstraints((current) => ({
+      ...current,
+      [panelId]: normalized
+    }));
+
+    setWorkspaceLayout((currentLayout) =>
+      updateWorkspacePanelRect({
+        layoutState: currentLayout,
+        panelId,
+        nextRect: {
+          ...currentLayout.panels[panelId],
+          w: clamp(currentLayout.panels[panelId].w, normalized.minW, normalized.maxW),
+          h: clamp(currentLayout.panels[panelId].h, normalized.minH, normalized.maxH)
+        }
+      })
     );
   };
 
@@ -1193,6 +1364,71 @@ export default function App() {
         <span />
       </button>
     ) : null;
+
+  const renderConstraintHandle = (panelId: WorkspacePanelId) => {
+    if (!effectiveLayoutMode) {
+      return null;
+    }
+
+    const isOpen = activePanelConstraintEditor === panelId;
+    const constraint = normalizePanelSizeConstraint(
+      panelSizeConstraints[panelId],
+      panelConstraintMaxSize
+    );
+
+    return (
+      <>
+        <Button
+          type="button"
+          variant={isOpen ? "secondary" : "outline"}
+          size="icon-sm"
+          className="workspace-item__settings-handle"
+          aria-label={`Edit ${panelTitles[panelId]} resize bounds`}
+          onClick={(event) => {
+            event.stopPropagation();
+            setActivePanelConstraintEditor((current) => (current === panelId ? null : panelId));
+          }}
+        >
+          <Cog />
+        </Button>
+        {isOpen ? (
+          <Card
+            className="workspace-item__settings-card"
+            size="sm"
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <CardHeader className="workspace-item__settings-card-header">
+              <CardTitle className="workspace-item__settings-card-title">
+                {panelTitles[panelId]} bounds
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="workspace-item__settings-card-body">
+              <label className="workspace-item__settings-row">
+                <span>Width: {constraint.minW} to {constraint.maxW}</span>
+                <Slider
+                  min={1}
+                  max={panelConstraintMaxSize.maxWidth}
+                  step={1}
+                  value={[constraint.minW, constraint.maxW]}
+                  onValueChange={(value) => updatePanelConstraintRange(panelId, "width", value)}
+                />
+              </label>
+              <label className="workspace-item__settings-row">
+                <span>Height: {constraint.minH} to {constraint.maxH}</span>
+                <Slider
+                  min={1}
+                  max={panelConstraintMaxSize.maxHeight}
+                  step={1}
+                  value={[constraint.minH, constraint.maxH]}
+                  onValueChange={(value) => updatePanelConstraintRange(panelId, "height", value)}
+                />
+              </label>
+            </CardContent>
+          </Card>
+        ) : null}
+      </>
+    );
+  };
 
   return (
     <div className="app-shell">
@@ -1284,16 +1520,6 @@ export default function App() {
                   <strong className="app-header__status-value">
                     {totalPlies}
                   </strong>
-                </div>
-                <div className="app-header__status-card">
-                  <span className="app-header__status-label">Mode</span>
-                  <strong className="app-header__status-value">
-                    {isStudyMode ? "Study replay" : "Local play"}
-                  </strong>
-                </div>
-                <div className="app-header__status-card">
-                  <span className="app-header__status-label">Tone</span>
-                  <strong className="app-header__status-value">{toneLabel(tonePreset)}</strong>
                 </div>
               </div>
             ) : null}
@@ -1392,6 +1618,9 @@ export default function App() {
                 onDeleteLayoutFile={handleDeleteLayoutFile}
                 onSelectKnownLayoutFile={setLayoutFileName}
                 onRestoreComponent={(panelId) => handleRestoreWorkspaceComponent(panelId as WorkspacePanelId)}
+                onToggleComponentVisibility={(panelId, visible) =>
+                  handleWorkspacePanelVisibilityChange(panelId as WorkspacePanelId, visible)
+                }
                 onResetLayout={handleResetLayout}
               />
             </aside>
@@ -1425,6 +1654,7 @@ export default function App() {
               </div>
             ) : null}
 
+            {workspaceLayout.visible.board ? (
             <div
               className={[
                 "workspace-item",
@@ -1442,8 +1672,12 @@ export default function App() {
             >
               <Card className="board-panel" size="sm">
                 <CardHeader className="board-panel__header">
-                  <div>
-                    <CardTitle>{isStudyMode ? "Study replay board" : "Board"}</CardTitle>
+                  <div className="panel__heading">
+                    <div className="grid gap-1">
+                      <CardTitle className="panel__title">
+                        {isStudyMode ? "Study replay board" : "Board"}
+                      </CardTitle>
+                    </div>
                   </div>
                   <div className="board-panel__meta">
                     <span className="side-pill">Edinburgh</span>
@@ -1471,8 +1705,11 @@ export default function App() {
 
               {renderMoveSurface("board")}
               {renderResizeHandle("board")}
+              {renderConstraintHandle("board")}
             </div>
+            ) : null}
 
+            {workspaceLayout.visible.moves ? (
             <div
               className={[
                 "workspace-item",
@@ -1503,48 +1740,219 @@ export default function App() {
               />
               {renderMoveSurface("moves")}
               {renderResizeHandle("moves")}
+              {renderConstraintHandle("moves")}
             </div>
+            ) : null}
 
+            {workspaceLayout.visible["city-map"] ? (
             <div
               className={[
                 "workspace-item",
-                "workspace-item--narrative",
-                activeLayoutEdit?.panelId === "narrative" ? "is-editing" : ""
+                "workspace-item--city-map",
+                activeLayoutEdit?.panelId === "city-map" ? "is-editing" : ""
               ]
                 .filter(Boolean)
                 .join(" ")}
               style={getWorkspacePanelStyle(
                 workspaceLayout,
-                "narrative",
+                "city-map",
                 isCompactViewport,
                 useFreeformWorkspaceLayout
               )}
             >
-              <StoryPanel
-                collapsed={workspaceLayout.collapsed.narrative}
-                onToggleCollapse={() => handleTogglePanelCollapse("narrative")}
-                selectedMove={selectedMove}
-                selectedEvent={selectedEvent}
-                focusedSquare={storyFocusedSquare}
-                focusedSquareSummary={focusedSquareSummary}
-                focusedDistrict={focusedDistrict}
-                focusedPiece={focusedPiece}
-                focusedCharacter={focusedCharacter}
-                focusedCharacterMoments={focusedCharacterMoments}
-                moveHistory={moveHistory}
-                showRecentCharacterActions={settings.showRecentCharacterActions}
-                layoutState={storyPanelLayout}
-                layoutMode={effectiveLayoutMode}
-                parentColumnGap={workspaceLayout.columnGap}
-                parentRowHeight={workspaceLayout.rowHeight}
-                onLayoutRectChange={handleStoryPanelRectChange}
-                tonePreset={tonePreset}
-                onToneChange={updateTonePreset}
-              />
-              {renderMoveSurface("narrative")}
-              {renderResizeHandle("narrative")}
+              <Panel
+                title="City Map (Google)"
+                collapsed={workspaceLayout.collapsed["city-map"]}
+                onToggleCollapse={() => handleTogglePanelCollapse("city-map")}
+              >
+                <CityMapPanel
+                  cityBoard={edinburghBoard}
+                  hoveredDistrict={hoveredSquare ? focusedDistrict : null}
+                  lastMoveDistrict={lastMoveDistrict}
+                  lastMove={lastMove}
+                />
+              </Panel>
+              {renderMoveSurface("city-map")}
+              {renderResizeHandle("city-map")}
+              {renderConstraintHandle("city-map")}
             </div>
+            ) : null}
 
+            {workspaceLayout.visible["city-map-maplibre"] ? (
+            <div
+              className={[
+                "workspace-item",
+                "workspace-item--city-map-maplibre",
+                activeLayoutEdit?.panelId === "city-map-maplibre" ? "is-editing" : ""
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              style={getWorkspacePanelStyle(
+                workspaceLayout,
+                "city-map-maplibre",
+                isCompactViewport,
+                useFreeformWorkspaceLayout
+              )}
+            >
+              <Panel
+                title="City Map (MapLibre)"
+                collapsed={workspaceLayout.collapsed["city-map-maplibre"]}
+                onToggleCollapse={() => handleTogglePanelCollapse("city-map-maplibre")}
+              >
+                <CityMapLibrePanel
+                  cityBoard={edinburghBoard}
+                  hoveredDistrict={hoveredSquare ? focusedDistrict : null}
+                  lastMoveDistrict={lastMoveDistrict}
+                  lastMove={lastMove}
+                />
+              </Panel>
+              {renderMoveSurface("city-map-maplibre")}
+              {renderResizeHandle("city-map-maplibre")}
+              {renderConstraintHandle("city-map-maplibre")}
+            </div>
+            ) : null}
+
+            {workspaceLayout.visible["story-beat"] ? (
+            <div
+              className={[
+                "workspace-item",
+                "workspace-item--story-beat",
+                activeLayoutEdit?.panelId === "story-beat" ? "is-editing" : ""
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              style={getWorkspacePanelStyle(
+                workspaceLayout,
+                "story-beat",
+                isCompactViewport,
+                useFreeformWorkspaceLayout
+              )}
+            >
+              <Panel
+                title="Story Beat"
+                collapsed={workspaceLayout.collapsed["story-beat"]}
+                onToggleCollapse={() => handleTogglePanelCollapse("story-beat")}
+              >
+                <StoryBeatSection
+                  selectedMove={selectedMove}
+                  selectedEvent={selectedEvent}
+                  showLabel={false}
+                />
+              </Panel>
+              {renderMoveSurface("story-beat")}
+              {renderResizeHandle("story-beat")}
+              {renderConstraintHandle("story-beat")}
+            </div>
+            ) : null}
+
+            {workspaceLayout.visible["story-tile"] ? (
+            <div
+              className={[
+                "workspace-item",
+                "workspace-item--story-tile",
+                activeLayoutEdit?.panelId === "story-tile" ? "is-editing" : ""
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              style={getWorkspacePanelStyle(
+                workspaceLayout,
+                "story-tile",
+                isCompactViewport,
+                useFreeformWorkspaceLayout
+              )}
+            >
+              <Panel
+                title="City Tile"
+                collapsed={workspaceLayout.collapsed["story-tile"]}
+                onToggleCollapse={() => handleTogglePanelCollapse("story-tile")}
+              >
+                <StoryCityTileSection
+                  focusedDistrict={focusedDistrict}
+                  focusedPiece={focusedPiece}
+                  focusedCharacter={focusedCharacter}
+                  showLabel={false}
+                />
+              </Panel>
+              {renderMoveSurface("story-tile")}
+              {renderResizeHandle("story-tile")}
+              {renderConstraintHandle("story-tile")}
+            </div>
+            ) : null}
+
+            {workspaceLayout.visible["story-character"] ? (
+            <div
+              className={[
+                "workspace-item",
+                "workspace-item--story-character",
+                activeLayoutEdit?.panelId === "story-character" ? "is-editing" : ""
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              style={getWorkspacePanelStyle(
+                workspaceLayout,
+                "story-character",
+                isCompactViewport,
+                useFreeformWorkspaceLayout
+              )}
+            >
+              <Panel
+                title="Character"
+                collapsed={workspaceLayout.collapsed["story-character"]}
+                onToggleCollapse={() => handleTogglePanelCollapse("story-character")}
+              >
+                <CharacterDetailPanel
+                  focusedSquare={storyFocusedSquare}
+                  focusedPiece={focusedPiece}
+                  focusedCharacter={focusedCharacter}
+                  focusedCharacterMoments={focusedCharacterMoments}
+                  moveHistory={moveHistory}
+                  showRecentCharacterActions={settings.showRecentCharacterActions}
+                />
+              </Panel>
+              {renderMoveSurface("story-character")}
+              {renderResizeHandle("story-character")}
+              {renderConstraintHandle("story-character")}
+            </div>
+            ) : null}
+
+            {workspaceLayout.visible["story-tone"] ? (
+            <div
+              className={[
+                "workspace-item",
+                "workspace-item--story-tone",
+                activeLayoutEdit?.panelId === "story-tone" ? "is-editing" : ""
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              style={getWorkspacePanelStyle(
+                workspaceLayout,
+                "story-tone",
+                isCompactViewport,
+                useFreeformWorkspaceLayout
+              )}
+            >
+              <Panel
+                title="Narrative Tone"
+                collapsed={workspaceLayout.collapsed["story-tone"]}
+                action={
+                  <StoryToneSection
+                    tonePreset={tonePreset}
+                    onToneChange={updateTonePreset}
+                    showLabel={false}
+                    inline
+                  />
+                }
+                onToggleCollapse={() => handleTogglePanelCollapse("story-tone")}
+              >
+                <p className="muted">Set the narration style for generated beats and summaries.</p>
+              </Panel>
+              {renderMoveSurface("story-tone")}
+              {renderResizeHandle("story-tone")}
+              {renderConstraintHandle("story-tone")}
+            </div>
+            ) : null}
+
+            {workspaceLayout.visible["recent-games"] ? (
             <div
               className={[
                 "workspace-item",
@@ -1561,7 +1969,7 @@ export default function App() {
               )}
             >
               <Panel
-                title="Recent Games"
+                title="Saved Games"
                 collapsed={workspaceLayout.collapsed["recent-games"]}
                 onToggleCollapse={() => handleTogglePanelCollapse("recent-games")}
               >
@@ -1579,7 +1987,9 @@ export default function App() {
               </Panel>
               {renderMoveSurface("recent-games")}
               {renderResizeHandle("recent-games")}
+              {renderConstraintHandle("recent-games")}
             </div>
+            ) : null}
 
           </main>
         </div>

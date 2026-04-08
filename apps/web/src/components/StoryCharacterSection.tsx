@@ -13,6 +13,7 @@ type StoryCharacterSectionProps = {
   focusedCharacter: CharacterSummary | null;
   focusedCharacterMoments: NarrativeEvent[];
   showRecentCharacterActions: boolean;
+  showLabel?: boolean;
 };
 
 export function StoryCharacterSection({
@@ -20,11 +21,12 @@ export function StoryCharacterSection({
   focusedPiece,
   focusedCharacter,
   focusedCharacterMoments,
-  showRecentCharacterActions
+  showRecentCharacterActions,
+  showLabel = true
 }: StoryCharacterSectionProps) {
   return (
     <>
-      <p className="field-label">Character</p>
+      {showLabel ? <p className="field-label">Character</p> : null}
       {focusedCharacter && focusedPiece ? (
         <>
           <div className="piece-badge">

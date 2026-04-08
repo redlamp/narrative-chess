@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Folder, FolderOpen, RefreshCw, Save, Trash2, X } from "lucide-react";
+import { ChevronDown, Folder, FolderOpen, RefreshCw, Save, Trash2, X } from "lucide-react";
 import type { WorkspaceLayoutFileReference } from "../layoutFiles";
 import { NumberStepperField } from "./NumberStepperField";
 
@@ -17,6 +19,7 @@ type LayoutToolbarComponent = {
   id: string;
   label: string;
   collapsed?: boolean;
+  visible: boolean;
 };
 
 type LayoutToolbarProps = {
@@ -43,6 +46,7 @@ type LayoutToolbarProps = {
   onDeleteLayoutFile: () => void;
   onSelectKnownLayoutFile: (name: string) => void;
   onRestoreComponent: (id: string) => void;
+  onToggleComponentVisibility: (id: string, visible: boolean) => void;
   onResetLayout: () => void;
 };
 
@@ -70,8 +74,15 @@ export function LayoutToolbar({
   onDeleteLayoutFile,
   onSelectKnownLayoutFile,
   onRestoreComponent,
+  onToggleComponentVisibility,
   onResetLayout
 }: LayoutToolbarProps) {
+  const [openSections, setOpenSections] = useState({
+    grid: true,
+    components: true,
+    layouts: true
+  });
+
   return (
     <TooltipProvider delayDuration={150}>
       <Card className="layout-toolbar">
@@ -96,72 +107,140 @@ export function LayoutToolbar({
         </CardHeader>
 
         <CardContent className="layout-toolbar__body">
-          <section className="layout-toolbar__section">
-            <h3 className="layout-toolbar__section-title">Grid</h3>
-            <div className="layout-toolbar__controls">
-              <NumberStepperField
-                label="Column count"
-                value={columnCount}
-                min={1}
-                max={24}
-                step={1}
-                onChange={onColumnCountChange}
-              />
-              <NumberStepperField
-                label="Column gap (px)"
-                value={columnGap}
-                min={0}
-                max={64}
-                step={2}
-                onChange={onColumnGapChange}
-              />
-              <NumberStepperField
-                label="Row height (px)"
-                value={rowHeight}
-                min={8}
-                max={256}
-                step={2}
-                onChange={onRowHeightChange}
-              />
+          <Collapsible
+            open={openSections.grid}
+            onOpenChange={(open) => setOpenSections((current) => ({ ...current, grid: open }))}
+            className="layout-toolbar__section"
+          >
+            <div className="layout-toolbar__section-header">
+              <h3 className="layout-toolbar__section-title">Grid</h3>
+              <CollapsibleTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={openSections.grid ? "Collapse grid section" : "Expand grid section"}
+                >
+                  <ChevronDown className={`layout-toolbar__section-chevron ${openSections.grid ? "is-open" : ""}`} />
+                </Button>
+              </CollapsibleTrigger>
             </div>
 
-            <div className="layout-toolbar__actions">
-              <label className="menu-toggle menu-toggle--inline">
-                <span className="menu-toggle__label">Show grid</span>
-                <Switch checked={showLayoutGrid} onCheckedChange={onToggleLayoutGrid} />
-              </label>
-            </div>
-          </section>
+            <CollapsibleContent className="layout-toolbar__section-content">
+              <div className="layout-toolbar__controls">
+                <NumberStepperField
+                  label="Column count"
+                  value={columnCount}
+                  min={1}
+                  max={24}
+                  step={1}
+                  onChange={onColumnCountChange}
+                />
+                <NumberStepperField
+                  label="Column gap (px)"
+                  value={columnGap}
+                  min={0}
+                  max={64}
+                  step={2}
+                  onChange={onColumnGapChange}
+                />
+                <NumberStepperField
+                  label="Row height (px)"
+                  value={rowHeight}
+                  min={8}
+                  max={256}
+                  step={2}
+                  onChange={onRowHeightChange}
+                />
+              </div>
 
-          <section className="layout-toolbar__section layout-toolbar__file-section">
+              <div className="layout-toolbar__actions">
+                <label className="menu-toggle menu-toggle--inline">
+                  <span className="menu-toggle__label">Show grid</span>
+                  <Switch checked={showLayoutGrid} onCheckedChange={onToggleLayoutGrid} />
+                </label>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          <Collapsible
+            open={openSections.components}
+            onOpenChange={(open) => setOpenSections((current) => ({ ...current, components: open }))}
+            className="layout-toolbar__section layout-toolbar__file-section"
+          >
             <div className="layout-toolbar__section-header">
               <h3 className="layout-toolbar__section-title">Components</h3>
-            </div>
-
-            <div className="layout-toolbar__component-list">
-              {components.map((component) => (
+              <CollapsibleTrigger asChild>
                 <Button
-                  key={component.id}
                   type="button"
-                  variant="outline"
-                  size="sm"
-                  className="layout-toolbar__component-button"
-                  onClick={() => onRestoreComponent(component.id)}
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={openSections.components ? "Collapse components section" : "Expand components section"}
                 >
-                  <span>{component.label}</span>
-                  {component.collapsed ? <Badge variant="secondary">Collapsed</Badge> : null}
+                  <ChevronDown
+                    className={`layout-toolbar__section-chevron ${openSections.components ? "is-open" : ""}`}
+                  />
                 </Button>
-              ))}
+              </CollapsibleTrigger>
             </div>
-          </section>
 
-          <section className="layout-toolbar__section layout-toolbar__file-section">
+            <CollapsibleContent className="layout-toolbar__section-content">
+              <div className="layout-toolbar__component-list">
+                {components.map((component) => (
+                  <div key={component.id} className="layout-toolbar__component-row">
+                    <label className="layout-toolbar__component-toggle">
+                      <input
+                        type="checkbox"
+                        checked={component.visible}
+                        onChange={(event) =>
+                          onToggleComponentVisibility(component.id, event.currentTarget.checked)
+                        }
+                      />
+                      <span>{component.label}</span>
+                    </label>
+                    <div className="layout-toolbar__component-actions">
+                      {component.collapsed ? <Badge variant="secondary">Collapsed</Badge> : null}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onRestoreComponent(component.id)}
+                      >
+                        Reset
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          <Collapsible
+            open={openSections.layouts}
+            onOpenChange={(open) => setOpenSections((current) => ({ ...current, layouts: open }))}
+            className="layout-toolbar__section layout-toolbar__file-section"
+          >
             <div className="layout-toolbar__section-header">
               <h3 className="layout-toolbar__section-title">Layouts</h3>
-              {layoutDirectoryName ? <Badge variant="outline">Connected: {layoutDirectoryName}</Badge> : null}
+              <div className="layout-toolbar__section-meta">
+                {layoutDirectoryName ? <Badge variant="outline">Connected: {layoutDirectoryName}</Badge> : null}
+                <CollapsibleTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={openSections.layouts ? "Collapse layouts section" : "Expand layouts section"}
+                  >
+                    <ChevronDown
+                      className={`layout-toolbar__section-chevron ${openSections.layouts ? "is-open" : ""}`}
+                    />
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
             </div>
 
-            <div className="layout-toolbar__file-controls">
+            <CollapsibleContent className="layout-toolbar__section-content">
+              <div className="layout-toolbar__file-controls">
               <label className="slider-field">
                 <div className="slider-field__header">
                   <span>File name</span>
@@ -257,38 +336,39 @@ export function LayoutToolbar({
                   <TooltipContent>Remove named file</TooltipContent>
                 </Tooltip>
               </div>
-            </div>
-
-            {knownLayoutFiles.length ? (
-              <div className="layout-toolbar__saved-files">
-                {knownLayoutFiles.map((file) => (
-                  <Button
-                    key={file.fileName}
-                    type="button"
-                    variant={file.name === layoutFileName ? "secondary" : "outline"}
-                    size="sm"
-                    onClick={() => onSelectKnownLayoutFile(file.name)}
-                  >
-                    {file.name}
-                  </Button>
-                ))}
               </div>
-            ) : null}
 
-            {layoutFileNotice ? (
-              <div
-                className={`layout-toolbar__notice layout-toolbar__notice--${layoutFileNotice.tone}`}
-                role="status"
-                aria-live="polite"
-              >
-                {layoutFileNotice.text}
-              </div>
-            ) : null}
+              {knownLayoutFiles.length ? (
+                <div className="layout-toolbar__saved-files">
+                  {knownLayoutFiles.map((file) => (
+                    <Button
+                      key={file.fileName}
+                      type="button"
+                      variant={file.name === layoutFileName ? "secondary" : "outline"}
+                      size="sm"
+                      onClick={() => onSelectKnownLayoutFile(file.name)}
+                    >
+                      {file.name}
+                    </Button>
+                  ))}
+                </div>
+              ) : null}
 
-            {!isLayoutDirectorySupported ? (
-              <p className="muted">Folder save requires the File System Access API on localhost or HTTPS.</p>
-            ) : null}
-          </section>
+              {layoutFileNotice ? (
+                <div
+                  className={`layout-toolbar__notice layout-toolbar__notice--${layoutFileNotice.tone}`}
+                  role="status"
+                  aria-live="polite"
+                >
+                  {layoutFileNotice.text}
+                </div>
+              ) : null}
+
+              {!isLayoutDirectorySupported ? (
+                <p className="muted">Folder save requires the File System Access API on localhost or HTTPS.</p>
+              ) : null}
+            </CollapsibleContent>
+          </Collapsible>
         </CardContent>
       </Card>
     </TooltipProvider>
