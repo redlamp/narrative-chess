@@ -463,7 +463,9 @@ export function getSnappedPageLayoutRow(input: {
 export function getPageLayoutRowCount(input: {
   layoutState: PageLayoutState;
   panelIds: PageLayoutPanelId[];
+  minimumRows?: number;
 }) {
+  const minimumRows = Math.max(1, input.minimumRows ?? pageLayoutMinimumRows);
   const maxRow = input.panelIds.reduce((currentMax, panelId) => {
     if (!input.layoutState.visible[panelId]) {
       return currentMax;
@@ -471,7 +473,7 @@ export function getPageLayoutRowCount(input: {
 
     const panel = input.layoutState.panels[panelId];
     return Math.max(currentMax, panel.y + panel.h - 1);
-  }, pageLayoutMinimumRows);
+  }, minimumRows);
 
-  return Math.max(pageLayoutMinimumRows, maxRow);
+  return Math.max(minimumRows, maxRow);
 }

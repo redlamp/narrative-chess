@@ -257,7 +257,7 @@ select {
   min-width: 0;
   height: 100%;
   border-radius: var(--workspace-card-radius);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .page-card--intro {
@@ -310,6 +310,245 @@ select {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--background) 82%, transparent 18%);
 }
 
+.design-typography-zoo {
+  position: relative;
+}
+
+.design-typography-zoo-card,
+.design-typography-zoo-scroll {
+  min-height: 0;
+  height: 100%;
+}
+
+.design-typography-zoo-scroll {
+  padding-right: var(--space-4);
+}
+
+.design-typography-zoo__hero {
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--secondary) 72%, transparent 28%), transparent 42%),
+    linear-gradient(135deg, color-mix(in srgb, var(--background) 72%, var(--muted) 28%), var(--card));
+}
+
+.design-typography-zoo__options {
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--muted) 52%, var(--background) 48%), var(--card));
+}
+
+.design-typography-zoo__options-body {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.design-typography-zoo__tabs-list {
+  width: 100%;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.design-typography-zoo__tabs-content {
+  display: grid;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+}
+
+.design-typography-zoo__options-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.design-typography-zoo__options-count {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.design-typography-zoo__options-note {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.design-typography-zoo__hero-copy {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.design-typography-zoo__hero-copy h2 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.35rem);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+.design-typography-zoo__hero-copy p {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--muted-foreground);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.design-typography-zoo__eyebrow {
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+.design-typography-zoo__hero-panel {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--border) 80%, var(--foreground) 20%);
+  border-radius: var(--workspace-card-radius);
+  background: color-mix(in srgb, var(--card) 78%, var(--muted) 22%);
+}
+
+.design-typography-zoo__hero-panel-row {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.design-typography-zoo__specimen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.design-typography-zoo__specimen-body {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.design-typography-zoo__heading-stack {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.design-typography-zoo__heading-stack > div {
+  display: grid;
+  gap: var(--space-1_5);
+}
+
+.design-typography-zoo__heading-sample {
+  margin: 0;
+}
+
+.design-typography-zoo__heading-sample--h1 {
+  font-size: clamp(2.7rem, 4vw, 4rem);
+  line-height: 0.94;
+  letter-spacing: -0.06em;
+  font-weight: 650;
+}
+
+.design-typography-zoo__heading-sample--h2 {
+  font-size: clamp(2.1rem, 3vw, 3rem);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+  font-weight: 620;
+}
+
+.design-typography-zoo__heading-sample--h3 {
+  font-size: clamp(1.65rem, 2.2vw, 2.2rem);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  font-weight: 600;
+}
+
+.design-typography-zoo__heading-sample--h4 {
+  font-size: 1.32rem;
+  line-height: 1.14;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+}
+
+.design-typography-zoo__heading-sample--h5 {
+  font-size: 1.08rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  font-weight: 580;
+}
+
+.design-typography-zoo__heading-sample--h6 {
+  font-size: 0.95rem;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  font-weight: 580;
+}
+
+.design-typography-zoo__sample-label {
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+  line-height: 1.1;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+
+.design-typography-zoo__sample-value {
+  min-width: 0;
+}
+
+.design-typography-zoo__sample-value--display {
+  font-size: clamp(2.8rem, 4vw, 4.2rem);
+  line-height: 0.92;
+  letter-spacing: -0.06em;
+  font-weight: 600;
+}
+
+.design-typography-zoo__sample-value--section {
+  font-size: clamp(1.65rem, 2vw, 2.2rem);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+  font-weight: 600;
+}
+
+.design-typography-zoo__sample-value--subhead {
+  font-size: 1.1rem;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+}
+
+.design-typography-zoo__sample-value--body {
+  font-size: 0.98rem;
+  line-height: 1.7;
+}
+
+.design-typography-zoo__sample-value--label {
+  font-size: 0.82rem;
+  line-height: 1.3;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.design-typography-zoo__sample-value--mono {
+  font-family: var(--font-mono, "Geist Mono", monospace);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.design-typography-zoo__specimen-note {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.design-typography-zoo__footer {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--muted) 68%, var(--background) 32%), var(--card));
+}
+
 .page-card--secondary-index {
   display: flex;
   flex-direction: column;
@@ -334,7 +573,7 @@ select {
 .cities-page__list,
 .classic-games-page__score-list {
   display: grid;
-  gap: 12px;
+  gap: 8px;
 }
 
 .classic-games-page__score-list {
@@ -736,8 +975,10 @@ select {
 }
 
 .workspace-list-item {
-  min-height: 5rem;
+  width: 100%;
+  min-height: 0;
   border-radius: var(--workspace-card-radius);
+  container-type: inline-size;
 }
 
 .workspace-list-item--overview {
@@ -904,14 +1145,31 @@ select {
 }
 
 .clearable-search-field {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
 }
 
 .clearable-search-field__input {
   flex: 1 1 auto;
   min-width: 0;
+  padding-right: 4.75rem;
+}
+
+.clearable-search-field__actions {
+  position: absolute;
+  right: var(--space-2);
+  top: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  transform: translateY(-50%);
+}
+
+.clearable-search-field__icon {
+  width: 0.95rem;
+  height: 0.95rem;
+  color: var(--muted-foreground);
 }
 
 .clearable-search-field__clear.is-hidden {
@@ -1658,6 +1916,22 @@ select {
 .board-square--map {
   align-items: end;
   padding: 10px;
+}
+
+.board-square__square-label {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border) 72%, var(--foreground) 28%);
+  background: color-mix(in srgb, var(--background) 88%, transparent 12%);
+  color: var(--foreground);
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.01em;
 }
 
 .board-square--hovered {
@@ -2433,11 +2707,47 @@ select {
 
 .recent-games-list__item {
   cursor: pointer;
+  width: 100%;
+}
+
+.recent-games-list__item > div:first-child {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-2);
+}
+
+.recent-games-list__item > div:first-child > div:first-child {
+  display: block;
+  min-width: 0;
+}
+
+.recent-games-list__item > div:first-child > div:first-child > .font-medium {
+  display: block;
+  min-width: 0;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.recent-games-list__item > div:first-child > div:last-child {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: start;
+  gap: var(--space-1_5);
+  min-width: 0;
+}
+
+.recent-games-list__item p,
+.recent-games-historic__item-desc {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .recent-games__meta {
   font-size: 0.85rem;
   color: var(--muted-foreground);
+  white-space: nowrap;
 }
 
 .recent-games-actions {
@@ -2472,6 +2782,10 @@ select {
   padding-right: var(--space-0_5);
   scrollbar-gutter: stable;
   container-type: inline-size;
+}
+
+.recent-games-historic__item-year {
+  white-space: nowrap;
 }
 
 .recent-games-historic__splitter {
@@ -2838,6 +3152,201 @@ select {
   background: color-mix(in srgb, var(--muted) 82%, var(--background) 18%);
 }
 
+.cities-page__overview-item {
+  border-color: color-mix(in srgb, var(--ring) 20%, var(--border) 80%);
+  background: color-mix(in srgb, var(--secondary) 54%, var(--background) 46%);
+}
+
+.cities-page__overview-item[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--foreground) 26%, var(--ring) 34%);
+  background: color-mix(in srgb, var(--secondary) 74%, var(--background) 26%);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--foreground) 10%, transparent 90%),
+    0 0 0 1px color-mix(in srgb, var(--ring) 18%, transparent 82%);
+}
+
+.cities-districts-divider {
+  width: 100%;
+  height: 1px;
+  margin: 0;
+  border: 0;
+  background: var(--border);
+}
+
+.cities-districts-section-header h3,
+.cities-page__district-title {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+
+.cities-page__overview-title {
+  display: grid;
+  gap: var(--space-1_5);
+  justify-items: start;
+}
+
+.cities-page__overview-pill {
+  width: fit-content;
+}
+
+.cities-districts-sort-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.cities-districts-sort-row__select {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.cities-districts-sort-trigger {
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: space-between;
+}
+
+.cities-districts-sort-row__actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: end;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+}
+
+.cities-page__status-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  color: var(--muted-foreground);
+  background: color-mix(in srgb, currentColor 12%, var(--background) 88%);
+}
+
+.cities-page__status-indicator svg {
+  width: 0.72rem;
+  height: 0.72rem;
+}
+
+.cities-page__city-list-title {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  justify-items: start;
+}
+
+.status-menu-trigger {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.status-menu-trigger__value,
+.status-menu-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.status-menu-trigger__value svg,
+.status-menu-item svg {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex: 0 0 auto;
+}
+
+.status-tone--empty {
+  color: var(--muted-foreground);
+}
+
+.status-tone--procedural {
+  color: #2563eb;
+}
+
+.status-tone--authored {
+  color: #ea580c;
+}
+
+.status-tone--needs-review {
+  color: var(--destructive);
+}
+
+.status-tone--reviewed {
+  color: #d97706;
+}
+
+.status-tone--approved {
+  color: #16a34a;
+}
+
+@container (max-width: 17rem) {
+  .cities-page__district-square-badge {
+    display: none;
+  }
+}
+
+.cities-overview-intro {
+  display: grid;
+  gap: var(--space-2_5);
+}
+
+.cities-overview-intro__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.cities-overview-intro__actions-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1);
+  border: 1px solid color-mix(in srgb, var(--border) 88%, var(--foreground) 12%);
+  border-radius: calc(var(--radius) + 0.1rem);
+  background: color-mix(in srgb, var(--muted) 52%, var(--background) 48%);
+  min-width: 0;
+}
+
+.cities-overview-intro__save-button {
+  margin-inline-start: auto;
+}
+
+.cities-overview-intro__reset-button:hover,
+.cities-overview-intro__reset-button:focus-visible {
+  border-color: color-mix(in srgb, var(--destructive) 68%, var(--border) 32%);
+  background: color-mix(in srgb, var(--destructive) 10%, var(--background) 90%);
+  color: var(--destructive);
+}
+
+@media (max-width: 640px) {
+  .cities-overview-intro__actions {
+    align-items: stretch;
+  }
+
+  .cities-overview-intro__actions-group {
+    width: 100%;
+  }
+
+  .cities-overview-intro__save-button {
+    margin-inline-start: 0;
+  }
+}
+
 .city-placement-editor {
   display: grid;
   gap: var(--space-4);
@@ -2872,6 +3381,17 @@ select {
 .city-placement-editor__map {
   display: grid;
   gap: var(--space-3);
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.city-placement-editor__board {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.city-placement-editor__map {
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 .city-placement-editor__hint-row {
@@ -2908,14 +3428,27 @@ select {
 }
 
 .city-placement-editor__map-frame {
+  min-width: 0;
   min-height: 20rem;
+  height: 100%;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: calc(var(--radius) - 2px);
 }
 
-.city-placement-editor__map-canvas {
+.city-placement-editor__board .board-shell {
   min-height: 20rem;
+  height: 100%;
+}
+
+.city-placement-editor__board .board-grid {
+  margin-inline: 0;
+}
+
+.city-placement-editor__map-canvas {
+  width: 100%;
+  min-height: 20rem;
+  height: 100%;
 }
 
 @media (max-width: 1360px) {

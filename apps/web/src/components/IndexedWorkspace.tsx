@@ -261,9 +261,10 @@ export function IndexedWorkspace({
     () =>
       getPageLayoutRowCount({
         layoutState,
-        panelIds: activePanelIds
+        panelIds: activePanelIds,
+        minimumRows: effectiveLayoutMode ? undefined : 1
       }),
-    [activePanelIds, layoutState]
+    [activePanelIds, effectiveLayoutMode, layoutState]
   );
   const panelConstraintMaxSize = useMemo(
     () => ({

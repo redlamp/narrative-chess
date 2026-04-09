@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import maplibregl, { type GeoJSONSource, type Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { Crosshair, ExternalLink, Map as MapIcon, MapPinOff, Satellite } from "lucide-react";
+import { ExternalLink, Map as MapIcon, MapPinOff, Satellite } from "lucide-react";
 import { createSnapshotFromFen, getBoardSquares } from "@narrative-chess/game-core";
 import type { CityBoard, DistrictCell, Square } from "@narrative-chess/content-schema";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Board } from "./Board";
 import {
@@ -143,18 +142,6 @@ export function CityDistrictBoardEditor({
 
   return (
     <div className="city-placement-editor__board">
-      <div className="city-placement-editor__hint-row">
-        <div className="city-placement-editor__hint">
-          {selectedDistrict
-            ? "Use the board to reassign the selected district on the 8x8 city board."
-            : "Use the board to find the matching district entry."}
-        </div>
-        <div className="city-placement-editor__coordinates">
-          {activeDistrict ? <Badge variant="secondary">{activeDistrict.square}</Badge> : null}
-          {hoveredSquare ? <Badge variant="outline">Hover {hoveredSquare}</Badge> : null}
-        </div>
-      </div>
-
       <Board
         snapshot={previewSnapshot}
         cells={previewCells}
@@ -164,8 +151,9 @@ export function CityDistrictBoardEditor({
         legalMoves={[]}
         viewMode="board"
         districtsBySquare={districtsBySquare}
-        showCoordinates
+        showCoordinates={false}
         showDistrictLabels={false}
+        showActiveSquareLabel
         showPieces={false}
         onSquareClick={(square) => {
           if (selectedDistrict) {
@@ -212,14 +200,24 @@ export function CityDistrictMapEditor({
   const importModeArmedRef = useRef(importModeArmed);
   const onImportModeConsumedRef = useRef(onImportModeConsumed);
   const activeDistrict = highlightedDistrict ?? selectedDistrict ?? null;
-  const selectedCenter = useMemo(
-    () => getDistrictMapCenter(cityBoard, activeDistrict ?? cityBoard.districts[0]!),
-    [activeDistrict, cityBoard]
+  const cameraCenter = useMemo(
+    () =>
+      selectedDistrict
+        ? getDistrictMapCenter(cityBoard, selectedDistrict)
+        : [
+            (markerBounds[0][0] + markerBounds[1][0]) / 2,
+            (markerBounds[0][1] + markerBounds[1][1]) / 2
+          ] as [number, number],
+    [cityBoard, markerBounds, selectedDistrict]
   );
   const activeSquare = activeDistrict?.square ?? null;
   const openUrl = useMemo(
-    () => buildOpenStreetMapUrl(selectedCenter, activeDistrict?.mapAnchor ? 14 : 12),
-    [activeDistrict?.mapAnchor, selectedCenter]
+    () =>
+      buildOpenStreetMapUrl(
+        selectedDistrict ? cameraCenter : getDistrictMapCenter(cityBoard, activeDistrict ?? cityBoard.districts[0]!),
+        selectedDistrict?.mapAnchor ? 14 : 12
+      ),
+    [activeDistrict, cameraCenter, cityBoard, selectedDistrict]
   );
 
   useEffect(() => {
@@ -248,7 +246,7 @@ export function CityDistrictMapEditor({
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       style: createMapLibreRasterStyle(viewMode),
-      center: selectedCenter,
+      center: cameraCenter,
       zoom: selectedDistrict?.mapAnchor ? 13.75 : 11.5,
       attributionControl: {}
     });
@@ -356,7 +354,7 @@ export function CityDistrictMapEditor({
     if (!hasHydratedCamera.current) {
       if (selectedDistrict?.mapAnchor) {
         map.jumpTo({
-          center: selectedCenter,
+          center: cameraCenter,
           zoom: 13.75
         });
       } else {
@@ -373,10 +371,12 @@ export function CityDistrictMapEditor({
     map.stop();
     if (selectedDistrict) {
       map.flyTo({
-        center: selectedCenter,
+        center: cameraCenter,
         zoom: selectedDistrict.mapAnchor ? 13.75 : 12,
-        duration: 500,
-        essential: true
+        duration: 1000,
+        essential: true,
+        curve: 0.5,
+        speed: 1
       });
       return;
     }
@@ -386,7 +386,7 @@ export function CityDistrictMapEditor({
       duration: 500,
       maxZoom: 12
     });
-  }, [markerBounds, selectedCenter, selectedDistrict]);
+  }, [cameraCenter, markerBounds, selectedDistrict]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -451,34 +451,6 @@ export function CityDistrictMapEditor({
 
       <div className="city-placement-editor__map-frame">
         <div ref={mapContainerRef} className="city-placement-editor__map-canvas" />
-      </div>
-
-      <div className="city-placement-editor__hint-row">
-        <div className="city-placement-editor__hint">
-          <Crosshair className="size-4" />
-          {selectedDistrict
-            ? importModeArmed
-              ? "Click the map to import a reviewed anchor for the selected district."
-              : "Hover markers to find districts. Click a marker to select it."
-            : "Hover or click district markers to find the matching district entry."}
-        </div>
-        <div className="city-placement-editor__coordinates">
-          {highlightedDistrict && highlightedDistrict.id !== selectedDistrict?.id ? (
-            <Badge variant="outline">Highlight {highlightedDistrict.name}</Badge>
-          ) : null}
-          {selectedDistrict?.mapAnchor ? (
-            <>
-              <Badge variant="outline">
-                Lon {selectedDistrict.mapAnchor.longitude.toFixed(5)}
-              </Badge>
-              <Badge variant="outline">
-                Lat {selectedDistrict.mapAnchor.latitude.toFixed(5)}
-              </Badge>
-            </>
-          ) : (
-            <Badge variant="outline">Using generated placement</Badge>
-          )}
-        </div>
       </div>
     </div>
   );

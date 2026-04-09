@@ -12,7 +12,6 @@ import {
   getActiveCityMapLocation,
   type MapViewMode
 } from "./cityMapShared";
-import { createCityMapProposalGeoJson, getCityMapProposalBounds } from "./cityMapPlanning";
 
 type CityMapLibrePanelProps = {
   cityBoard: CityBoard;
@@ -26,9 +25,6 @@ const districtMarkerSourceId = "district-markers";
 const districtMarkerLayerId = "district-markers-layer";
 const districtMarkerActiveLayerId = "district-markers-active-layer";
 const districtMarkerLabelLayerId = "district-markers-label-layer";
-const proposalMarkerSourceId = "proposal-markers";
-const proposalMarkerLayerId = "proposal-markers-layer";
-const proposalLabelLayerId = "proposal-markers-label-layer";
 
 function syncDistrictMarkerLayers(map: MapLibreMap, cityBoard: CityBoard, activeSquare: string | null) {
   const markerData = createDistrictMarkerGeoJson({
@@ -112,77 +108,6 @@ function syncDistrictMarkerLayers(map: MapLibreMap, cityBoard: CityBoard, active
   });
 }
 
-function syncProposalMarkerLayers(map: MapLibreMap, cityBoard: CityBoard) {
-  const proposalData = createCityMapProposalGeoJson(cityBoard);
-  const existingSource = map.getSource(proposalMarkerSourceId) as GeoJSONSource | undefined;
-
-  if (existingSource) {
-    existingSource.setData(proposalData);
-    return;
-  }
-
-  map.addSource(proposalMarkerSourceId, {
-    type: "geojson",
-    data: proposalData
-  });
-
-  map.addLayer({
-    id: proposalMarkerLayerId,
-    type: "circle",
-    source: proposalMarkerSourceId,
-    paint: {
-      "circle-radius": [
-        "interpolate",
-        ["linear"],
-        ["zoom"],
-        10,
-        4,
-        14,
-        6
-      ],
-      "circle-color": "#7c3aed",
-      "circle-stroke-width": 1.5,
-      "circle-stroke-color": "#ffffff",
-      "circle-opacity": 0.95
-    }
-  });
-
-  map.addLayer({
-    id: proposalLabelLayerId,
-    type: "symbol",
-    source: proposalMarkerSourceId,
-    layout: {
-      "text-field": ["get", "label"],
-      "text-size": 10,
-      "text-font": ["Arial Unicode MS Regular"],
-      "text-offset": [0, -1.35],
-      "text-anchor": "bottom",
-      "text-allow-overlap": false,
-      "text-ignore-placement": false
-    },
-    paint: {
-      "text-color": "#111827",
-      "text-halo-color": "rgba(255,255,255,0.95)",
-      "text-halo-width": 1.25
-    },
-    minzoom: 11.5
-  });
-}
-
-function mergeBounds(
-  boundsA: [[number, number], [number, number]],
-  boundsB: [[number, number], [number, number]] | null
-) {
-  if (!boundsB) {
-    return boundsA;
-  }
-
-  return [
-    [Math.min(boundsA[0][0], boundsB[0][0]), Math.min(boundsA[0][1], boundsB[0][1])],
-    [Math.max(boundsA[1][0], boundsB[1][0]), Math.max(boundsA[1][1], boundsB[1][1])]
-  ] as [[number, number], [number, number]];
-}
-
 export function CityMapLibrePanel({
   cityBoard,
   selectedDistrict,
@@ -208,11 +133,6 @@ export function CityMapLibrePanel({
   const highlightedSquare = hoveredDistrict?.square ?? selectedDistrict?.square ?? lastMove?.to ?? null;
   const cameraSquare = selectedDistrict?.square ?? null;
   const cityBoardBounds = useMemo(() => getCityBoardMarkerBounds(cityBoard), [cityBoard]);
-  const proposalBounds = useMemo(() => getCityMapProposalBounds(cityBoard), [cityBoard]);
-  const mapFrameBounds = useMemo(
-    () => mergeBounds(cityBoardBounds, proposalBounds),
-    [cityBoardBounds, proposalBounds]
-  );
   const openUrl = useMemo(
     () => buildOpenStreetMapUrl(activeLocation.center, Math.round(activeLocation.zoom)),
     [activeLocation.center, activeLocation.zoom]
@@ -235,7 +155,6 @@ export function CityMapLibrePanel({
     map.touchZoomRotate.disableRotation();
     map.on("load", () => {
       syncDistrictMarkerLayers(map, cityBoard, highlightedSquare);
-      syncProposalMarkerLayers(map, cityBoard);
     });
     mapRef.current = map;
     hasHydratedCamera.current = false;
@@ -256,7 +175,6 @@ export function CityMapLibrePanel({
     map.setStyle(createMapLibreRasterStyle(viewMode));
     map.once("styledata", () => {
       syncDistrictMarkerLayers(map, cityBoard, highlightedSquare);
-      syncProposalMarkerLayers(map, cityBoard);
       map.resize();
     });
   }, [cityBoard, highlightedSquare, viewMode]);
@@ -268,7 +186,6 @@ export function CityMapLibrePanel({
     }
 
     syncDistrictMarkerLayers(map, cityBoard, highlightedSquare);
-    syncProposalMarkerLayers(map, cityBoard);
   }, [cityBoard, highlightedSquare]);
 
   useEffect(() => {
@@ -284,7 +201,7 @@ export function CityMapLibrePanel({
           zoom: activeLocation.zoom
         });
       } else {
-        map.fitBounds(mapFrameBounds, {
+        map.fitBounds(cityBoardBounds, {
           padding: 40,
           duration: 0,
           maxZoom: 12.25
@@ -308,13 +225,13 @@ export function CityMapLibrePanel({
       return;
     }
 
-    map.fitBounds(mapFrameBounds, {
+    map.fitBounds(cityBoardBounds, {
       padding: 40,
       duration: 500,
       essential: true,
       maxZoom: 12.25
     });
-  }, [activeLocation.center, activeLocation.zoom, cameraSquare, mapFrameBounds]);
+  }, [activeLocation.center, activeLocation.zoom, cameraSquare, cityBoardBounds]);
 
   useEffect(() => {
     const map = mapRef.current;

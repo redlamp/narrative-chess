@@ -32,6 +32,7 @@ type BoardProps = {
   districtsBySquare: Map<Square, DistrictCell>;
   showCoordinates: boolean;
   showDistrictLabels: boolean;
+  showActiveSquareLabel?: boolean;
   showPieces?: boolean;
   onSquareClick: (square: Square) => void;
   onSquareHover: (square: Square) => void;
@@ -67,6 +68,7 @@ export function Board({
   districtsBySquare,
   showCoordinates,
   showDistrictLabels,
+  showActiveSquareLabel = false,
   showPieces = true,
   onSquareClick,
   onSquareHover,
@@ -173,6 +175,7 @@ export function Board({
             const isHovered = hoveredSquare === square;
             const isInspected = inspectedSquare === square;
             const isLegalTarget = legalMoves.includes(square);
+            const showSquareLabel = showActiveSquareLabel && (isSelected || isHovered || isInspected);
 
             return (
               <button
@@ -213,6 +216,9 @@ export function Board({
                   buttonRefs.current.set(square, node);
                 }}
               >
+                {showSquareLabel ? (
+                  <span className="board-square__square-label">{square}</span>
+                ) : null}
                 {showCoordinates ? (
                   <>
                     <span className="board-square__coordinate board-square__coordinate--top">

@@ -1,14 +1,29 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent
+} from "react";
 import type { CityBoard, DistrictCell, Square } from "@narrative-chess/content-schema";
 import {
+  ArrowDownAZ,
+  ArrowDownZA,
   ArrowUpDown,
+  BadgeCheck,
+  Check,
+  ChevronDown,
   Crosshair,
   Download,
+  FilePenLine,
   Folder,
   FolderOpen,
-  RefreshCw,
+  OctagonAlert,
+  Bot,
   RotateCcw,
-  Save
+  Save,
+  type LucideIcon
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +34,14 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -37,7 +60,6 @@ import {
 } from "../cityReviewState";
 import {
   connectCityReviewDirectory,
-  getConnectedCityReviewDirectoryName,
   loadCityDraftFromDirectory,
   saveCityDraftToDirectory,
   supportsLocalContentDirectory
@@ -69,7 +91,8 @@ type TrackedCity = {
 
 const cityOverviewId = "city-overview";
 const statusOptions = ["empty", "procedural", "authored"] as const;
-const reviewOptions = ["empty", "needs review", "reviewed", "approved"] as const;
+const reviewStatusSortOrder = ["empty", "needs review", "reviewed", "approved"] as const;
+const reviewOptions = ["needs review", "reviewed", "approved"] as const;
 const districtSortOptions = [
   { value: "name", label: "Name" },
   { value: "square", label: "Square" },
@@ -79,6 +102,15 @@ const districtSortOptions = [
 ] as const;
 
 type DistrictSortMode = (typeof districtSortOptions)[number]["value"];
+type DistrictSortDirection = "asc" | "desc";
+type CityEditorTab = "basics" | "narrative" | "info";
+type DistrictEditorTab = "basics" | "narrative" | "location";
+type StatusTone = "empty" | "procedural" | "authored" | "needs-review" | "reviewed" | "approved";
+type StatusMeta = {
+  label: string;
+  icon: LucideIcon;
+  toneClassName: `status-tone--${StatusTone}`;
+};
 
 const initialCityDefinition = cityBoardDefinitions[0] ?? null;
 const initialCityId = initialCityDefinition?.id ?? "edinburgh";
@@ -102,6 +134,64 @@ function parseListValue(value: string) {
     .split(/\r?\n|,/)
     .map((entry) => entry.trim())
     .filter(Boolean);
+}
+
+function getContiguousSelection(input: {
+  orderedIds: string[];
+  anchorId: string | null;
+  targetId: string;
+}) {
+  const anchorId = input.anchorId ?? input.targetId;
+  const anchorIndex = input.orderedIds.indexOf(anchorId);
+  const targetIndex = input.orderedIds.indexOf(input.targetId);
+
+  if (anchorIndex === -1 || targetIndex === -1) {
+    return [input.targetId];
+  }
+
+  const start = Math.min(anchorIndex, targetIndex);
+  const end = Math.max(anchorIndex, targetIndex);
+  return input.orderedIds.slice(start, end + 1);
+}
+
+function getNextMultiSelection(input: {
+  orderedIds: string[];
+  currentIds: string[];
+  anchorId: string | null;
+  targetId: string;
+  shiftKey: boolean;
+  toggleKey: boolean;
+  allowEmpty?: boolean;
+}) {
+  if (input.shiftKey) {
+    return {
+      selectedIds: getContiguousSelection(input),
+      anchorId: input.anchorId ?? input.targetId
+    };
+  }
+
+  if (input.toggleKey) {
+    const nextSelection = input.currentIds.includes(input.targetId)
+      ? input.currentIds.filter((id) => id !== input.targetId)
+      : input.orderedIds.filter((id) => [...input.currentIds, input.targetId].includes(id));
+
+    if (!input.allowEmpty && nextSelection.length === 0) {
+      return {
+        selectedIds: [input.targetId],
+        anchorId: input.targetId
+      };
+    }
+
+    return {
+      selectedIds: nextSelection,
+      anchorId: input.targetId
+    };
+  }
+
+  return {
+    selectedIds: [input.targetId],
+    anchorId: input.targetId
+  };
 }
 
 function updateDistrictMapAnchorFromParts(input: {
@@ -153,16 +243,6 @@ function downloadDraft(board: CityBoard) {
   anchor.download = `${board.id}-board.local.json`;
   anchor.click();
   URL.revokeObjectURL(objectUrl);
-}
-
-function countByLocality(board: CityBoard) {
-  const localityCounts = new Map<string, number>();
-
-  board.districts.forEach((district) => {
-    localityCounts.set(district.locality, (localityCounts.get(district.locality) ?? 0) + 1);
-  });
-
-  return [...localityCounts.entries()].sort((left, right) => right[1] - left[1]);
 }
 
 function updateDistrict(
@@ -243,7 +323,7 @@ function compareDistricts(left: DistrictCell, right: DistrictCell, sortMode: Dis
   }
 
   if (sortMode === "review-status") {
-    const reviewOrder = new Map(reviewOptions.map((status, index) => [status, index] as const));
+    const reviewOrder = new Map(reviewStatusSortOrder.map((status, index) => [status, index] as const));
     const reviewDelta =
       (reviewOrder.get(left.reviewStatus) ?? 0) - (reviewOrder.get(right.reviewStatus) ?? 0);
     if (reviewDelta !== 0) {
@@ -262,12 +342,119 @@ function compareDistricts(left: DistrictCell, right: DistrictCell, sortMode: Dis
   return left.name.localeCompare(right.name);
 }
 
+function getContentStatusMeta(status: DistrictCell["contentStatus"] | CityBoard["contentStatus"]): StatusMeta {
+  switch (status) {
+    case "authored":
+      return {
+        label: "Authored",
+        icon: FilePenLine,
+        toneClassName: "status-tone--authored"
+      };
+    case "procedural":
+      return {
+        label: "Procedural",
+        icon: Bot,
+        toneClassName: "status-tone--procedural"
+      };
+    default:
+      return {
+        label: "Empty",
+        icon: OctagonAlert,
+        toneClassName: "status-tone--empty"
+      };
+  }
+}
+
+function getReviewStatusMeta(status: DistrictCell["reviewStatus"] | CityBoard["reviewStatus"]): StatusMeta {
+  switch (status) {
+    case "approved":
+      return {
+        label: "Approved",
+        icon: BadgeCheck,
+        toneClassName: "status-tone--approved"
+      };
+    case "reviewed":
+      return {
+        label: "Reviewed",
+        icon: Check,
+        toneClassName: "status-tone--reviewed"
+      };
+    case "needs review":
+      return {
+        label: "Needs review",
+        icon: OctagonAlert,
+        toneClassName: "status-tone--needs-review"
+      };
+    default:
+      return {
+        label: "Empty",
+        icon: OctagonAlert,
+        toneClassName: "status-tone--empty"
+      };
+  }
+}
+
+type StatusDropdownFieldProps<Value extends string> = {
+  label: string;
+  value: Value;
+  options: readonly Value[];
+  getMeta: (value: Value) => StatusMeta;
+  onChange: (value: Value) => void;
+};
+
+function StatusDropdownField<Value extends string>({
+  label,
+  value,
+  options,
+  getMeta,
+  onChange
+}: StatusDropdownFieldProps<Value>) {
+  const activeMeta = getMeta(value);
+  const ActiveIcon = activeMeta.icon;
+
+  return (
+    <label className="grid gap-2">
+      <span className="text-sm font-medium">{label}</span>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" variant="outline" className="field-select status-menu-trigger">
+            <span className="status-menu-trigger__value">
+              <ActiveIcon className={activeMeta.toneClassName} />
+              <span>{activeMeta.label}</span>
+            </span>
+            <ChevronDown />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuLabel>{label}</DropdownMenuLabel>
+          <DropdownMenuRadioGroup value={value} onValueChange={(nextValue) => onChange(nextValue as Value)}>
+            {options.map((option) => {
+              const optionMeta = getMeta(option);
+              const OptionIcon = optionMeta.icon;
+
+              return (
+                <DropdownMenuRadioItem key={option} value={option}>
+                  <span className="status-menu-item">
+                    <OptionIcon className={optionMeta.toneClassName} />
+                    <span>{optionMeta.label}</span>
+                  </span>
+                </DropdownMenuRadioItem>
+              );
+            })}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </label>
+  );
+}
+
 type CoordinateStepperFieldProps = {
   label: string;
   value: number;
   min: number;
   max: number;
   step: number;
+  disabled?: boolean;
   onChange: (valueText: string) => void;
 };
 
@@ -277,6 +464,7 @@ function CoordinateStepperField({
   min,
   max,
   step,
+  disabled = false,
   onChange
 }: CoordinateStepperFieldProps) {
   const dragStartRef = useRef<{
@@ -285,6 +473,10 @@ function CoordinateStepperField({
   } | null>(null);
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (disabled) {
+      return;
+    }
+
     event.preventDefault();
     dragStartRef.current = {
       startY: event.clientY,
@@ -321,19 +513,21 @@ function CoordinateStepperField({
         <Input
           name={`district-map-${label.toLowerCase()}`}
           autoComplete="off"
-          type="number"
-          step={step}
-          min={min}
-          max={max}
-          value={value.toFixed(6)}
-          onChange={(event) => onChange(event.currentTarget.value)}
-        />
+        type="number"
+        step={step}
+        min={min}
+        max={max}
+        disabled={disabled}
+        value={value.toFixed(6)}
+        onChange={(event) => onChange(event.currentTarget.value)}
+      />
         <Button
           type="button"
           size="icon-sm"
           variant="outline"
           className="coordinate-stepper__drag"
           aria-label={`Drag to adjust ${label.toLowerCase()}`}
+          disabled={disabled}
           onPointerDown={handlePointerDown}
         >
           <ArrowUpDown />
@@ -357,21 +551,25 @@ export function EdinburghReviewPage({
   onToggleLayoutGrid
 }: EdinburghReviewPageProps) {
   const [selectedCityId, setSelectedCityId] = useState(initialCityId);
+  const [selectedCityIds, setSelectedCityIds] = useState<string[]>([initialCityId]);
+  const [citySelectionAnchorId, setCitySelectionAnchorId] = useState<string | null>(initialCityId);
   const [draft, setDraft] = useState<CityBoard>(() => createInitialCityDraft());
   const cityDraftsRef = useRef<Record<string, CityBoard>>({
     [initialCityId]: createInitialCityDraft()
   });
   const [selectedRecordId, setSelectedRecordId] = useState(cityOverviewId);
+  const [selectedDistrictIds, setSelectedDistrictIds] = useState<string[]>([]);
+  const [districtSelectionAnchorId, setDistrictSelectionAnchorId] = useState<string | null>(null);
   const [hoveredDistrictId, setHoveredDistrictId] = useState<string | null>(null);
   const [hoveredBoardSquare, setHoveredBoardSquare] = useState<Square | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [districtSortMode, setDistrictSortMode] = useState<DistrictSortMode>("name");
-  const [directoryName, setDirectoryName] = useState<string | null>(null);
+  const [districtSortDirection, setDistrictSortDirection] = useState<DistrictSortDirection>("asc");
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState<SaveNotice | null>(null);
   const [isDirectorySupported, setIsDirectorySupported] = useState(false);
-  const [selectedCityTab, setSelectedCityTab] = useState("basics");
-  const [selectedDistrictTab, setSelectedDistrictTab] = useState("basics");
+  const [selectedCityTab, setSelectedCityTabState] = useState<CityEditorTab>("basics");
+  const [selectedDistrictTab, setSelectedDistrictTabState] = useState<DistrictEditorTab>("basics");
   const [isMapImportArmed, setIsMapImportArmed] = useState(false);
   const selectedCityDefinition =
     getCityBoardDefinition(selectedCityId) ?? initialCityDefinition ?? cityBoardDefinitions[0] ?? null;
@@ -379,7 +577,10 @@ export function EdinburghReviewPage({
   const trackedCities = useMemo<TrackedCity[]>(
     () =>
       cityBoardDefinitions.map((definition) => {
-        const board = definition.id === draft.id ? draft : listCityBoardDraft(definition.id, definition.board);
+        const board =
+          definition.id === draft.id
+            ? draft
+            : cityDraftsRef.current[definition.id] ?? listCityBoardDraft(definition.id, definition.board);
 
         return {
           id: board.id,
@@ -397,18 +598,6 @@ export function EdinburghReviewPage({
 
   useEffect(() => {
     setIsDirectorySupported(supportsLocalContentDirectory());
-
-    let cancelled = false;
-
-    void getConnectedCityReviewDirectoryName().then((name) => {
-      if (!cancelled) {
-        setDirectoryName(name);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   useEffect(() => {
@@ -429,7 +618,8 @@ export function EdinburghReviewPage({
     cityDraftsRef.current[selectedCityDefinition.id] = nextDraft;
     setDraft(nextDraft);
     setSelectedRecordId(cityOverviewId);
-    setSelectedCityTab("basics");
+    setSelectedDistrictIds([]);
+    setDistrictSelectionAnchorId(null);
     setIsMapImportArmed(false);
     setHoveredDistrictId(null);
     setHoveredBoardSquare(null);
@@ -440,26 +630,35 @@ export function EdinburghReviewPage({
   }, [draft]);
 
   useEffect(() => {
-    if (
-      selectedRecordId !== cityOverviewId &&
-      !draft.districts.some((district) => district.id === selectedRecordId)
-    ) {
-      setSelectedRecordId(cityOverviewId);
+    const validDistrictIds = new Set(draft.districts.map((district) => district.id));
+    const nextSelectedDistrictIds = selectedDistrictIds.filter((districtId) => validDistrictIds.has(districtId));
+
+    if (nextSelectedDistrictIds.length !== selectedDistrictIds.length) {
+      setSelectedDistrictIds(nextSelectedDistrictIds);
     }
-  }, [draft, selectedRecordId]);
+
+    if (selectedRecordId !== cityOverviewId && !validDistrictIds.has(selectedRecordId)) {
+      setSelectedRecordId(nextSelectedDistrictIds[0] ?? cityOverviewId);
+    }
+  }, [draft, selectedDistrictIds, selectedRecordId]);
   const filteredDistricts = useMemo(
-    () =>
-      [...draft.districts.filter((district) => districtMatchesSearch(district, searchQuery))].sort(
+    () => {
+      const sortedDistricts = [...draft.districts.filter((district) => districtMatchesSearch(district, searchQuery))].sort(
         (left, right) => compareDistricts(left, right, districtSortMode)
-      ),
-    [draft.districts, districtSortMode, searchQuery]
+      );
+
+      return districtSortDirection === "desc" ? sortedDistricts.reverse() : sortedDistricts;
+    },
+    [draft.districts, districtSortDirection, districtSortMode, searchQuery]
   );
+  const selectedDistrictIdSet = useMemo(() => new Set(selectedDistrictIds), [selectedDistrictIds]);
   const selectedDistrict =
-    selectedRecordId === cityOverviewId
+    selectedDistrictIds.length === 0
       ? null
-      : draft.districts.find((district) => district.id === selectedRecordId) ??
-        filteredDistricts[0] ??
-        draft.districts[0] ??
+      : draft.districts.find(
+          (district) => district.id === selectedRecordId && selectedDistrictIdSet.has(district.id)
+        ) ??
+        draft.districts.find((district) => selectedDistrictIdSet.has(district.id)) ??
         null;
   const hoveredDistrictFromList = hoveredDistrictId
     ? draft.districts.find((district) => district.id === hoveredDistrictId) ?? null
@@ -468,6 +667,10 @@ export function EdinburghReviewPage({
     ? draft.districts.find((district) => district.square === hoveredBoardSquare) ?? null
     : null;
   const highlightedDistrict = hoveredDistrictFromList ?? hoveredDistrictFromBoard ?? null;
+  const cityContentStatusMeta = getContentStatusMeta(draft.contentStatus);
+  const cityReviewStatusMeta = getReviewStatusMeta(draft.reviewStatus);
+  const CityContentStatusIcon = cityContentStatusMeta.icon;
+  const CityReviewStatusIcon = cityReviewStatusMeta.icon;
   const selectedDistrictEffectiveMapAnchor = useMemo(() => {
     if (!selectedDistrict) {
       return null;
@@ -479,32 +682,82 @@ export function EdinburghReviewPage({
       latitude
     };
   }, [draft, selectedDistrict]);
-  const localityCounts = useMemo(() => countByLocality(draft), [draft]);
-  const reviewedDistrictCount = draft.districts.filter(
-    (district) => district.reviewStatus === "reviewed" || district.reviewStatus === "approved"
-  ).length;
-
+  const isBulkCitySelection = selectedCityIds.length > 1;
+  const isBulkDistrictSelection = selectedDistrictIds.length > 1;
+  const setSelectedCityTab = (nextTab: CityEditorTab) => {
+    setSelectedCityTabState(nextTab);
+    setSelectedDistrictTabState(nextTab === "info" ? "location" : nextTab);
+  };
+  const setSelectedDistrictTab = (nextTab: DistrictEditorTab) => {
+    setSelectedDistrictTabState(nextTab);
+    setSelectedCityTabState(nextTab === "location" ? "info" : nextTab);
+  };
   const selectDistrictById = (districtId: string) => {
+    setSelectedDistrictIds([districtId]);
+    setDistrictSelectionAnchorId(districtId);
     setSelectedRecordId(districtId);
-    setSelectedDistrictTab("basics");
     setIsMapImportArmed(false);
     setHoveredDistrictId(null);
     setHoveredBoardSquare(null);
   };
 
+  const applyToSelectedCities = (updater: (board: CityBoard) => CityBoard) => {
+    const targetCityIds = selectedCityIds.length ? selectedCityIds : [selectedCityId];
+
+    setDraft((currentDraft) => {
+      let nextCurrentDraft = currentDraft;
+
+      for (const cityId of targetCityIds) {
+        const cityDefinition = getCityBoardDefinition(cityId);
+        if (!cityDefinition) {
+          continue;
+        }
+
+        const baseBoard =
+          cityId === currentDraft.id
+            ? currentDraft
+            : cityDraftsRef.current[cityId] ?? listCityBoardDraft(cityId, cityDefinition.board);
+        const nextBoard = updater(baseBoard);
+        cityDraftsRef.current[cityId] = nextBoard;
+
+        if (cityId === currentDraft.id) {
+          nextCurrentDraft = nextBoard;
+          continue;
+        }
+
+        try {
+          saveCityBoardDraft(nextBoard);
+        } catch {
+          // Keep the updated board in memory even if the draft is temporarily invalid.
+        }
+      }
+
+      return nextCurrentDraft;
+    });
+  };
+
   const setCityField = <Field extends keyof CityBoard>(field: Field, value: CityBoard[Field]) => {
-    setDraft((current) => ({
-      ...current,
+    applyToSelectedCities((board) => ({
+      ...board,
       [field]: value
     }));
   };
 
-  const updateSelectedDistrict = (updater: (district: DistrictCell) => DistrictCell) => {
-    if (!selectedDistrict) {
+  const updateSelectedDistricts = (updater: (district: DistrictCell) => DistrictCell) => {
+    const targetDistrictIds =
+      selectedDistrictIds.length > 0 ? selectedDistrictIds : selectedDistrict ? [selectedDistrict.id] : [];
+
+    if (!targetDistrictIds.length) {
       return;
     }
 
-    setDraft((current) => updateDistrict(current, selectedDistrict.id, updater));
+    const targetDistrictIdSet = new Set(targetDistrictIds);
+    setDraft((current) => ({
+      ...current,
+      districts: current.districts.map((district) =>
+        targetDistrictIdSet.has(district.id) ? updater(district) : district
+      )
+    }));
   };
 
   const runDirectoryAction = async (actionName: string, action: () => Promise<void>) => {
@@ -521,6 +774,60 @@ export function EdinburghReviewPage({
     } finally {
       setBusyAction(null);
     }
+  };
+
+  const handleCityListItemClick = (cityId: string, event: ReactMouseEvent<HTMLButtonElement>) => {
+    const nextSelection = getNextMultiSelection({
+      orderedIds: trackedCities.map((city) => city.id),
+      currentIds: selectedCityIds,
+      anchorId: citySelectionAnchorId,
+      targetId: cityId,
+      shiftKey: event.shiftKey,
+      toggleKey: event.ctrlKey || event.metaKey
+    });
+    const nextPrimaryCityId = nextSelection.selectedIds.includes(cityId)
+      ? cityId
+      : nextSelection.selectedIds[nextSelection.selectedIds.length - 1] ?? cityId;
+    const nextCityDefinition = getCityBoardDefinition(nextPrimaryCityId);
+
+    if (nextCityDefinition) {
+      const nextDraft =
+        cityDraftsRef.current[nextPrimaryCityId] ??
+        listCityBoardDraft(nextPrimaryCityId, nextCityDefinition.board);
+      cityDraftsRef.current[nextPrimaryCityId] = nextDraft;
+      setDraft(nextDraft);
+    }
+
+    setSelectedCityIds(nextSelection.selectedIds);
+    setCitySelectionAnchorId(nextSelection.anchorId);
+    setSelectedCityId(nextPrimaryCityId);
+    setSelectedRecordId(cityOverviewId);
+    setSelectedDistrictIds([]);
+    setDistrictSelectionAnchorId(null);
+    setHoveredDistrictId(null);
+    setHoveredBoardSquare(null);
+  };
+
+  const handleDistrictListItemClick = (districtId: string, event: ReactMouseEvent<HTMLButtonElement>) => {
+    const nextSelection = getNextMultiSelection({
+      orderedIds: filteredDistricts.map((district) => district.id),
+      currentIds: selectedDistrictIds,
+      anchorId: districtSelectionAnchorId,
+      targetId: districtId,
+      shiftKey: event.shiftKey,
+      toggleKey: event.ctrlKey || event.metaKey,
+      allowEmpty: true
+    });
+    const nextPrimaryDistrictId = nextSelection.selectedIds.includes(districtId)
+      ? districtId
+      : nextSelection.selectedIds[0] ?? cityOverviewId;
+
+    setSelectedDistrictIds(nextSelection.selectedIds);
+    setDistrictSelectionAnchorId(nextSelection.anchorId);
+    setSelectedRecordId(nextPrimaryDistrictId);
+    setIsMapImportArmed(false);
+    setHoveredDistrictId(null);
+    setHoveredBoardSquare(null);
   };
 
   return (
@@ -543,179 +850,150 @@ export function EdinburghReviewPage({
       onToggleLayoutGrid={onToggleLayoutGrid}
       intro={
         <WorkspaceIntroCard
-        badgeRow={
-          <>
-            <Badge variant="outline">{trackedCities.length} tracked cities</Badge>
-            <Badge variant="outline">{draft.districts.length} mapped districts</Badge>
-            <Badge variant="outline">{reviewedDistrictCount} reviewed</Badge>
-            <Badge variant={validation.isValid ? "outline" : "destructive"}>
-              {validation.isValid ? "Schema valid" : `${validation.issues.length} validation issues`}
-            </Badge>
-            {directoryName ? <Badge variant="outline">Connected: {directoryName}</Badge> : null}
-          </>
-        }
-        title="Cities"
-        actions={
-          <TooltipProvider delayDuration={150}>
-            <div className="flex flex-wrap gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    size="icon-sm"
-                    variant="outline"
-                    onClick={() =>
-                      runDirectoryAction("connect-directory", async () => {
-                        const result = await connectCityReviewDirectory();
-                        setDirectoryName(result.directoryName);
-                        setSaveNotice({
-                          tone: "success",
-                          text: `Connected to ${result.directoryName}.`
-                        });
-                      })
-                    }
-                    disabled={!isDirectorySupported || busyAction !== null}
-                    aria-label="Connect folder"
-                  >
-                    <Folder />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Connect folder</TooltipContent>
-              </Tooltip>
+        title={
+          <div className="cities-overview-intro">
+            <span>Cities</span>
+            <TooltipProvider delayDuration={150}>
+              <div className="cities-overview-intro__actions">
+                <div className="cities-overview-intro__actions-group">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="outline"
+                        onClick={() =>
+                          runDirectoryAction("connect-directory", async () => {
+                            const result = await connectCityReviewDirectory();
+                            setSaveNotice({
+                              tone: "success",
+                              text: `Connected to ${result.directoryName}.`
+                            });
+                          })
+                        }
+                        disabled={!isDirectorySupported || busyAction !== null}
+                        aria-label="Connect folder"
+                      >
+                        <Folder />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Connect folder</TooltipContent>
+                  </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    size="icon-sm"
-                    variant="outline"
-                    onClick={() =>
-                      runDirectoryAction("load-directory-draft", async () => {
-                        const fallback = selectedCityDefinition?.board ?? createInitialCityDraft();
-                        const result = await loadCityDraftFromDirectory(fallback);
-                        if (!result) {
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="outline"
+                        onClick={() =>
+                          runDirectoryAction("load-directory-draft", async () => {
+                            const fallback = selectedCityDefinition?.board ?? createInitialCityDraft();
+                            const result = await loadCityDraftFromDirectory(fallback);
+                            if (!result) {
+                              setSaveNotice({
+                                tone: "neutral",
+                                text: "No local city draft or canonical board file was found in the connected directory."
+                              });
+                              return;
+                            }
+
+                            const nextDraft = saveCityBoardDraft(result.board);
+                            cityDraftsRef.current[nextDraft.id] = nextDraft;
+                            setDraft(nextDraft);
+                            setSelectedCityId(result.board.id);
+                            setSelectedRecordId(cityOverviewId);
+                            setSaveNotice({
+                              tone: "success",
+                              text: `Loaded ${result.sourceKind} data from ${result.relativePath}.`
+                            });
+                          })
+                        }
+                        disabled={busyAction !== null}
+                        aria-label="Load file"
+                      >
+                        <FolderOpen />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Load file</TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="outline"
+                        onClick={() => {
+                          downloadDraft(draft);
                           setSaveNotice({
                             tone: "neutral",
-                            text: "No local city draft or canonical board file was found in the connected directory."
+                            text: `Downloaded ${draft.id}-board.local.json.`
                           });
-                          return;
-                        }
+                        }}
+                        disabled={busyAction !== null}
+                        aria-label="Download JSON"
+                      >
+                        <Download />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Download JSON</TooltipContent>
+                  </Tooltip>
 
-                  const nextDraft = saveCityBoardDraft(result.board);
-                  cityDraftsRef.current[nextDraft.id] = nextDraft;
-                  setDraft(nextDraft);
-                  setSelectedCityId(result.board.id);
-                  setSelectedRecordId(cityOverviewId);
-                  setSelectedCityTab("basics");
-                  setSaveNotice({
-                    tone: "success",
-                    text: `Loaded ${result.sourceKind} data from ${result.relativePath}.`
-                  });
-                      })
-                    }
-                    disabled={busyAction !== null}
-                    aria-label="Load file"
-                  >
-                    <FolderOpen />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Load file</TooltipContent>
-              </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="outline"
+                        className="cities-overview-intro__reset-button"
+                        onClick={() => {
+                          const fallback = selectedCityDefinition?.board ?? createInitialCityDraft();
+                          const nextDraft = resetCityBoardDraft(selectedCityId, fallback);
+                          setDraft(nextDraft);
+                          setSelectedCityId(nextDraft.id);
+                          setSelectedRecordId(cityOverviewId);
+                          setSaveNotice({
+                            tone: "neutral",
+                            text: `Reset the working draft back to the bundled ${nextDraft.name} board.`
+                          });
+                        }}
+                        aria-label="Reset draft"
+                      >
+                        <RotateCcw />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Reset draft</TooltipContent>
+                  </Tooltip>
+                </div>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    size="icon-sm"
-                    variant="outline"
-                    onClick={() =>
-                      runDirectoryAction("save-directory-draft", async () => {
-                        const result = await saveCityDraftToDirectory(draft);
-                        setSaveNotice({
-                          tone: "success",
-                          text: `Saved the current draft to ${result.relativePath} inside ${result.directoryName}.`
-                        });
-                      })
-                    }
-                    disabled={busyAction !== null}
-                    aria-label="Save draft file"
-                  >
-                    <Save />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Save draft file</TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    size="icon-sm"
-                    variant="outline"
-                    onClick={() => {
-                      downloadDraft(draft);
-                      setSaveNotice({
-                        tone: "neutral",
-                        text: `Downloaded ${draft.id}-board.local.json.`
-                      });
-                    }}
-                    disabled={busyAction !== null}
-                    aria-label="Download JSON"
-                  >
-                    <Download />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Download JSON</TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    size="icon-sm"
-                    variant="outline"
-                    onClick={() => {
-                      const fallback = selectedCityDefinition?.board ?? createInitialCityDraft();
-                      const nextDraft = resetCityBoardDraft(selectedCityId, fallback);
-                      setDraft(nextDraft);
-                      setSelectedCityId(nextDraft.id);
-                      setSelectedRecordId(cityOverviewId);
-                      setSelectedCityTab("basics");
-                      setSaveNotice({
-                        tone: "neutral",
-                        text: `Reset the working draft back to the bundled ${nextDraft.name} board.`
-                      });
-                    }}
-                    aria-label="Reset draft"
-                  >
-                    <RotateCcw />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Reset draft</TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    size="icon-sm"
-                    variant="outline"
-                    onClick={() => {
-                      setDraft(saveCityBoardDraft(draft));
-                      setSaveNotice({
-                        tone: "success",
-                        text: "Re-saved the current browser draft."
-                      });
-                    }}
-                    aria-label="Re-save draft"
-                  >
-                    <RefreshCw />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Re-save draft</TooltipContent>
-              </Tooltip>
-            </div>
-          </TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      size="icon-sm"
+                      variant="outline"
+                      className="cities-overview-intro__save-button"
+                      onClick={() =>
+                        runDirectoryAction("save-directory-draft", async () => {
+                          const result = await saveCityDraftToDirectory(draft);
+                          setSaveNotice({
+                            tone: "success",
+                            text: `Saved the current draft to ${result.relativePath} inside ${result.directoryName}.`
+                          });
+                        })
+                      }
+                      disabled={busyAction !== null}
+                      aria-label="Save draft file"
+                    >
+                      <Save />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Save draft file</TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
+          </div>
         }
         status={saveNotice}
       >
@@ -741,42 +1019,45 @@ export function EdinburghReviewPage({
           </CardHeader>
           <CardContent className="page-card__content page-card__content--scroll pt-0">
             <div className="cities-page__list">
-              {trackedCities.map((city) => (
-                <WorkspaceListItem
-                  key={city.id}
-                  type="button"
-                  onClick={() => {
-                    const nextCityDefinition = getCityBoardDefinition(city.id);
-                    if (nextCityDefinition) {
-                      setDraft(listCityBoardDraft(nextCityDefinition.id, nextCityDefinition.board));
+              {trackedCities.map((city) => {
+                const contentStatusMeta = getContentStatusMeta(city.contentStatus);
+                const reviewStatusMeta = getReviewStatusMeta(city.reviewStatus);
+                const ContentStatusIcon = contentStatusMeta.icon;
+                const ReviewStatusIcon = reviewStatusMeta.icon;
+
+                return (
+                  <WorkspaceListItem
+                    key={city.id}
+                    type="button"
+                    onClick={(event) => handleCityListItemClick(city.id, event)}
+                    selected={selectedCityIds.includes(city.id)}
+                    title={
+                      <div className="cities-page__city-list-title">
+                        <h4 className="cities-page__district-title">{city.name}</h4>
+                        <Badge variant="outline">{city.districtCount} districts</Badge>
+                      </div>
                     }
-                    setSelectedCityId(city.id);
-                    setSelectedRecordId(cityOverviewId);
-                    setSelectedCityTab("basics");
-                    setHoveredDistrictId(null);
-                    setHoveredBoardSquare(null);
-                  }}
-                  selected={city.id === selectedCity?.id}
-                  title={city.name}
-                  meta={
-                    <>
-                      <Badge variant="outline">{city.districtCount} districts</Badge>
-                      <Badge
-                        variant={
-                          city.contentStatus === "authored" ? "secondary" : "outline"
-                        }
-                      >
-                        {city.contentStatus}
-                      </Badge>
-                      <Badge
-                        variant={city.reviewStatus === "approved" || city.reviewStatus === "reviewed" ? "secondary" : "outline"}
-                      >
-                        {city.reviewStatus}
-                      </Badge>
-                    </>
-                  }
-                />
-              ))}
+                    meta={
+                      <>
+                        <span
+                          className={`cities-page__status-indicator ${contentStatusMeta.toneClassName}`}
+                          aria-label={`Content status: ${contentStatusMeta.label}`}
+                          title={`Content status: ${contentStatusMeta.label}`}
+                        >
+                          <ContentStatusIcon />
+                        </span>
+                        <span
+                          className={`cities-page__status-indicator ${reviewStatusMeta.toneClassName}`}
+                          aria-label={`Review status: ${reviewStatusMeta.label}`}
+                          title={`Review status: ${reviewStatusMeta.label}`}
+                        >
+                          <ReviewStatusIcon />
+                        </span>
+                      </>
+                    }
+                  />
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -785,80 +1066,143 @@ export function EdinburghReviewPage({
         <Card className="page-card page-card--index page-card--secondary-index">
           <CardHeader className="gap-4">
             <div className="grid gap-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <CardTitle>Districts</CardTitle>
-                {selectedCity ? <Badge variant="outline">{selectedCity.name}</Badge> : null}
-              </div>
+              <CardTitle>City</CardTitle>
             </div>
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_11rem]">
+            <WorkspaceListItem
+              type="button"
+              onClick={() => {
+                setSelectedRecordId(cityOverviewId);
+                setSelectedDistrictIds([]);
+                setDistrictSelectionAnchorId(null);
+                setHoveredDistrictId(null);
+                setHoveredBoardSquare(null);
+              }}
+              selected={selectedDistrictIds.length === 0}
+              className="workspace-list-item--overview cities-page__overview-item"
+              title={
+                <div className="cities-page__overview-title">
+                  <h4 className="cities-page__district-title">{draft.name}</h4>
+                  <Badge variant="secondary" className="cities-page__overview-pill">City Overview</Badge>
+                </div>
+              }
+              meta={
+                <>
+                  <span
+                    className={`cities-page__status-indicator ${cityContentStatusMeta.toneClassName}`}
+                    aria-label={`Content status: ${cityContentStatusMeta.label}`}
+                    title={`Content status: ${cityContentStatusMeta.label}`}
+                  >
+                    <CityContentStatusIcon />
+                  </span>
+                  <span
+                    className={`cities-page__status-indicator ${cityReviewStatusMeta.toneClassName}`}
+                    aria-label={`Review status: ${cityReviewStatusMeta.label}`}
+                    title={`Review status: ${cityReviewStatusMeta.label}`}
+                  >
+                    <CityReviewStatusIcon />
+                  </span>
+                </>
+              }
+            />
+            <hr className="cities-districts-divider" />
+            <div className="grid gap-3">
+              <div className="cities-districts-section-header">
+                <h3>Districts</h3>
+              </div>
               <ClearableSearchField
-                label="Search districts"
+                label={null}
                 name="district-search"
                 value={searchQuery}
                 onChange={setSearchQuery}
-                placeholder="Search by square, name, locality, or descriptor"
+                placeholder="Search Districts"
                 ariaLabel="Search city districts"
               />
-              <label className="grid gap-2">
-                <span className="text-sm font-medium">Sort by</span>
-                <select
-                  name="district-sort"
-                  className="field-select"
-                  value={districtSortMode}
-                  onChange={(event) => setDistrictSortMode(event.currentTarget.value as DistrictSortMode)}
-                >
-                  {districtSortOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {localityCounts.slice(0, 8).map(([locality, count]) => (
-                <Badge key={locality} variant="outline">
-                  {locality}: {count}
-                </Badge>
-              ))}
+            <div className="cities-districts-sort-row">
+              <div className="cities-districts-sort-row__select">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button type="button" variant="outline" className="field-select cities-districts-sort-trigger">
+                      <span>{districtSortOptions.find((option) => option.value === districtSortMode)?.label ?? "Name"}</span>
+                      <ChevronDown />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                    <DropdownMenuRadioGroup
+                      value={districtSortMode}
+                      onValueChange={(value) => setDistrictSortMode(value as DistrictSortMode)}
+                    >
+                      {districtSortOptions.map((option) => (
+                        <DropdownMenuRadioItem key={option.value} value={option.value}>
+                          {option.label}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <div className="cities-districts-sort-row__actions">
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="outline"
+                  onClick={() =>
+                    setDistrictSortDirection((current) => (current === "asc" ? "desc" : "asc"))
+                  }
+                  aria-label={districtSortDirection === "asc" ? "Sort ascending" : "Sort descending"}
+                  title={districtSortDirection === "asc" ? "Sort ascending" : "Sort descending"}
+                >
+                  {districtSortDirection === "asc" ? <ArrowDownAZ /> : <ArrowDownZA />}
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="page-card__content page-card__content--scroll pt-0">
-            <div className="cities-page__list rounded-lg border p-3">
-              <WorkspaceListItem
-                type="button"
-                onClick={() => {
-                  setSelectedRecordId(cityOverviewId);
-                  setSelectedCityTab("basics");
-                  setHoveredDistrictId(null);
-                  setHoveredBoardSquare(null);
-                }}
-                selected={selectedRecordId === cityOverviewId}
-                className="workspace-list-item--overview"
-                leading={<Badge variant="secondary">Overview</Badge>}
-                title={draft.name}
-                meta={<Badge variant="secondary">City overview</Badge>}
-              />
+            <div className="cities-page__list">
               {filteredDistricts.map((district) => (
-                <WorkspaceListItem
-                  key={district.id}
-                  type="button"
-                  onClick={() => selectDistrictById(district.id)}
-                  onMouseEnter={() => setHoveredDistrictId(district.id)}
-                  onMouseLeave={() => setHoveredDistrictId(null)}
-                  onFocus={() => setHoveredDistrictId(district.id)}
-                  onBlur={() => setHoveredDistrictId(null)}
-                  selected={district.id === selectedDistrict?.id}
-                  className={highlightedDistrict?.id === district.id ? "cities-page__list-item--hovered" : undefined}
-                  title={district.name}
-                  description={district.locality}
-                  meta={
-                    <>
-                      <Badge variant="outline">{district.square}</Badge>
-                      <Badge variant="secondary">{district.reviewStatus}</Badge>
-                    </>
-                  }
-                />
+                (() => {
+                  const contentStatusMeta = getContentStatusMeta(district.contentStatus);
+                  const reviewStatusMeta = getReviewStatusMeta(district.reviewStatus);
+                  const ContentStatusIcon = contentStatusMeta.icon;
+                  const ReviewStatusIcon = reviewStatusMeta.icon;
+
+                  return (
+                    <WorkspaceListItem
+                      key={district.id}
+                      type="button"
+                      onClick={(event) => handleDistrictListItemClick(district.id, event)}
+                      onMouseEnter={() => setHoveredDistrictId(district.id)}
+                      onMouseLeave={() => setHoveredDistrictId(null)}
+                      onFocus={() => setHoveredDistrictId(district.id)}
+                      onBlur={() => setHoveredDistrictId(null)}
+                      selected={selectedDistrictIdSet.has(district.id)}
+                      className={highlightedDistrict?.id === district.id ? "cities-page__list-item--hovered" : undefined}
+                      title={<h4 className="cities-page__district-title">{district.name}</h4>}
+                      meta={
+                        <>
+                          <Badge variant="outline" className="cities-page__district-square-badge">
+                            {district.square}
+                          </Badge>
+                          <span
+                            className={`cities-page__status-indicator ${contentStatusMeta.toneClassName}`}
+                            aria-label={`Content status: ${contentStatusMeta.label}`}
+                            title={`Content status: ${contentStatusMeta.label}`}
+                          >
+                            <ContentStatusIcon />
+                          </span>
+                          <span
+                            className={`cities-page__status-indicator ${reviewStatusMeta.toneClassName}`}
+                            aria-label={`Review status: ${reviewStatusMeta.label}`}
+                            title={`Review status: ${reviewStatusMeta.label}`}
+                          >
+                            <ReviewStatusIcon />
+                          </span>
+                        </>
+                      }
+                    />
+                  );
+                })()
               ))}
               {!filteredDistricts.length ? (
                 <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
@@ -871,20 +1215,24 @@ export function EdinburghReviewPage({
       }
       detail={
         <div className="page-card-stack">
-          {selectedRecordId === cityOverviewId ? (
+          {selectedDistrictIds.length === 0 ? (
           <Card className="page-card page-card--detail">
             <CardHeader className="gap-2">
               <div className="flex flex-wrap items-center gap-2">
                 <CardTitle>City detail editor</CardTitle>
-                {selectedCity ? <Badge variant="outline">{selectedCity.name}</Badge> : null}
+                {isBulkCitySelection ? (
+                  <Badge variant="secondary">{selectedCityIds.length} selected</Badge>
+                ) : selectedCity ? (
+                  <Badge variant="outline">{selectedCity.name}</Badge>
+                ) : null}
               </div>
             </CardHeader>
             <CardContent className="page-card__content grid gap-4">
-              <Tabs value={selectedCityTab} onValueChange={setSelectedCityTab}>
+              <Tabs value={selectedCityTab} onValueChange={(value) => setSelectedCityTab(value as CityEditorTab)}>
                 <TabsList className="detail-editor-tabs-list">
                   <TabsTrigger value="basics">Basics</TabsTrigger>
                   <TabsTrigger value="narrative">Narrative</TabsTrigger>
-                  <TabsTrigger value="provenance">Provenance</TabsTrigger>
+                  <TabsTrigger value="info">Info</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="basics" className="grid gap-4 pt-2">
@@ -898,40 +1246,20 @@ export function EdinburghReviewPage({
                         onChange={(event) => setCityField("name", event.currentTarget.value)}
                       />
                     </label>
-                    <label className="grid gap-2">
-                      <span className="text-sm font-medium">Content status</span>
-                      <select
-                        name="city-content-status"
-                        className="field-select"
-                        value={draft.contentStatus}
-                        onChange={(event) =>
-                          setCityField("contentStatus", event.currentTarget.value as CityBoard["contentStatus"])
-                        }
-                      >
-                        {statusOptions.map((status) => (
-                          <option key={status} value={status}>
-                            {status}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="grid gap-2">
-                      <span className="text-sm font-medium">Review status</span>
-                      <select
-                        name="city-review-status"
-                        className="field-select"
-                        value={draft.reviewStatus}
-                        onChange={(event) =>
-                          setCityField("reviewStatus", event.currentTarget.value as CityBoard["reviewStatus"])
-                        }
-                      >
-                        {reviewOptions.map((status) => (
-                          <option key={status} value={status}>
-                            {status}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    <StatusDropdownField
+                      label="Content status"
+                      value={draft.contentStatus}
+                      options={statusOptions}
+                      getMeta={getContentStatusMeta}
+                      onChange={(value) => setCityField("contentStatus", value as CityBoard["contentStatus"])}
+                    />
+                    <StatusDropdownField
+                      label="Review status"
+                      value={draft.reviewStatus}
+                      options={reviewOptions}
+                      getMeta={getReviewStatusMeta}
+                      onChange={(value) => setCityField("reviewStatus", value as CityBoard["reviewStatus"])}
+                    />
                     <label className="grid gap-2">
                       <span className="text-sm font-medium">Last reviewed</span>
                       <Input
@@ -980,7 +1308,7 @@ export function EdinburghReviewPage({
                   </div>
                 </TabsContent>
 
-                <TabsContent value="provenance" className="grid gap-4 pt-2">
+                <TabsContent value="info" className="grid gap-4 pt-2">
                   <div className="grid gap-4 lg:grid-cols-2">
                     <label className="grid gap-2">
                       <span className="text-sm font-medium">Country / region</span>
@@ -1025,12 +1353,18 @@ export function EdinburghReviewPage({
                 <div className="flex flex-wrap items-center gap-2">
                   <CardTitle>District detail editor</CardTitle>
                   {selectedCity ? <Badge variant="outline">{selectedCity.name}</Badge> : null}
-                  <Badge variant="secondary">{selectedDistrict.name}</Badge>
-                  <Badge variant="outline">{selectedDistrict.square}</Badge>
+                  {isBulkDistrictSelection ? (
+                    <Badge variant="secondary">{selectedDistrictIds.length} selected</Badge>
+                  ) : (
+                    <>
+                      <Badge variant="secondary">{selectedDistrict.name}</Badge>
+                      <Badge variant="outline">{selectedDistrict.square}</Badge>
+                    </>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="page-card__content grid gap-4">
-                <Tabs value={selectedDistrictTab} onValueChange={setSelectedDistrictTab}>
+                <Tabs value={selectedDistrictTab} onValueChange={(value) => setSelectedDistrictTab(value as DistrictEditorTab)}>
                   <TabsList className="detail-editor-tabs-list">
                     <TabsTrigger value="basics">Basics</TabsTrigger>
                     <TabsTrigger value="narrative">Narrative</TabsTrigger>
@@ -1046,53 +1380,37 @@ export function EdinburghReviewPage({
                           autoComplete="off"
                           value={selectedDistrict.name}
                           onChange={(event) =>
-                            updateSelectedDistrict((district) => ({
+                            updateSelectedDistricts((district) => ({
                               ...district,
                               name: event.currentTarget.value
                             }))
                           }
                         />
                       </label>
-                      <label className="grid gap-2">
-                        <span className="text-sm font-medium">Content status</span>
-                        <select
-                          name="district-content-status"
-                          className="field-select"
-                          value={selectedDistrict.contentStatus}
-                          onChange={(event) =>
-                            updateSelectedDistrict((district) => ({
-                              ...district,
-                              contentStatus: event.currentTarget.value as DistrictCell["contentStatus"]
-                            }))
-                          }
-                        >
-                          {statusOptions.map((status) => (
-                            <option key={status} value={status}>
-                              {status}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="grid gap-2">
-                        <span className="text-sm font-medium">Review status</span>
-                        <select
-                          name="district-review-status"
-                          className="field-select"
-                          value={selectedDistrict.reviewStatus}
-                          onChange={(event) =>
-                            updateSelectedDistrict((district) => ({
-                              ...district,
-                              reviewStatus: event.currentTarget.value as DistrictCell["reviewStatus"]
-                            }))
-                          }
-                        >
-                          {reviewOptions.map((status) => (
-                            <option key={status} value={status}>
-                              {status}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                      <StatusDropdownField
+                        label="Content status"
+                        value={selectedDistrict.contentStatus}
+                        options={statusOptions}
+                        getMeta={getContentStatusMeta}
+                        onChange={(value) =>
+                          updateSelectedDistricts((district) => ({
+                            ...district,
+                            contentStatus: value as DistrictCell["contentStatus"]
+                          }))
+                        }
+                      />
+                      <StatusDropdownField
+                        label="Review status"
+                        value={selectedDistrict.reviewStatus}
+                        options={reviewOptions}
+                        getMeta={getReviewStatusMeta}
+                        onChange={(value) =>
+                          updateSelectedDistricts((district) => ({
+                            ...district,
+                            reviewStatus: value as DistrictCell["reviewStatus"]
+                          }))
+                        }
+                      />
                       <label className="grid gap-2">
                         <span className="text-sm font-medium">Last reviewed</span>
                         <Input
@@ -1101,7 +1419,7 @@ export function EdinburghReviewPage({
                           type="date"
                           value={selectedDistrict.lastReviewedAt ?? ""}
                           onChange={(event) =>
-                            updateSelectedDistrict((district) => ({
+                            updateSelectedDistricts((district) => ({
                               ...district,
                               lastReviewedAt: event.currentTarget.value || null
                             }))
@@ -1115,7 +1433,7 @@ export function EdinburghReviewPage({
                           autoComplete="off"
                           value={selectedDistrict.reviewNotes ?? ""}
                           onChange={(event) =>
-                            updateSelectedDistrict((district) => ({
+                            updateSelectedDistricts((district) => ({
                               ...district,
                               reviewNotes: event.currentTarget.value || null
                             }))
@@ -1135,7 +1453,7 @@ export function EdinburghReviewPage({
                           autoComplete="off"
                           value={selectedDistrict.dayProfile}
                           onChange={(event) =>
-                            updateSelectedDistrict((district) => ({
+                            updateSelectedDistricts((district) => ({
                               ...district,
                               dayProfile: event.currentTarget.value
                             }))
@@ -1150,7 +1468,7 @@ export function EdinburghReviewPage({
                           autoComplete="off"
                           value={selectedDistrict.nightProfile}
                           onChange={(event) =>
-                            updateSelectedDistrict((district) => ({
+                            updateSelectedDistricts((district) => ({
                               ...district,
                               nightProfile: event.currentTarget.value
                             }))
@@ -1165,7 +1483,7 @@ export function EdinburghReviewPage({
                           autoComplete="off"
                           value={formatListValue(selectedDistrict.descriptors)}
                           onChange={(event) =>
-                            updateSelectedDistrict((district) => ({
+                            updateSelectedDistricts((district) => ({
                               ...district,
                               descriptors: parseListValue(event.currentTarget.value)
                             }))
@@ -1180,7 +1498,7 @@ export function EdinburghReviewPage({
                           autoComplete="off"
                           value={formatListValue(selectedDistrict.toneCues)}
                           onChange={(event) =>
-                            updateSelectedDistrict((district) => ({
+                            updateSelectedDistricts((district) => ({
                               ...district,
                               toneCues: parseListValue(event.currentTarget.value)
                             }))
@@ -1198,6 +1516,7 @@ export function EdinburghReviewPage({
                         <select
                           name="district-square"
                           className="field-select"
+                          disabled={isBulkDistrictSelection}
                           value={selectedDistrict.square}
                           onChange={(event) =>
                             setDraft((current) =>
@@ -1223,7 +1542,7 @@ export function EdinburghReviewPage({
                           autoComplete="off"
                           value={selectedDistrict.locality}
                           onChange={(event) =>
-                            updateSelectedDistrict((district) => ({
+                            updateSelectedDistricts((district) => ({
                               ...district,
                               locality: event.currentTarget.value
                             }))
@@ -1237,7 +1556,7 @@ export function EdinburghReviewPage({
                           autoComplete="off"
                           value={formatListValue(selectedDistrict.landmarks)}
                           onChange={(event) =>
-                            updateSelectedDistrict((district) => ({
+                            updateSelectedDistricts((district) => ({
                               ...district,
                               landmarks: parseListValue(event.currentTarget.value)
                             }))
@@ -1256,6 +1575,7 @@ export function EdinburghReviewPage({
                                   size="icon-sm"
                                   variant={isMapImportArmed ? "secondary" : "outline"}
                                   className="mt-auto"
+                                  disabled={isBulkDistrictSelection}
                                   onClick={() => setIsMapImportArmed((current) => !current)}
                                   aria-label="Import coordinates from map placement"
                                 >
@@ -1272,8 +1592,9 @@ export function EdinburghReviewPage({
                           min={-180}
                           max={180}
                           step={0.00001}
+                          disabled={isBulkDistrictSelection}
                           onChange={(valueText) =>
-                            updateSelectedDistrict((district) =>
+                            updateSelectedDistricts((district) =>
                               updateDistrictMapAnchorFromParts({
                                 district,
                                 fallbackAnchor: selectedDistrictEffectiveMapAnchor ?? { longitude: 0, latitude: 0 },
@@ -1288,8 +1609,9 @@ export function EdinburghReviewPage({
                           min={-90}
                           max={90}
                           step={0.00001}
+                          disabled={isBulkDistrictSelection}
                           onChange={(valueText) =>
-                            updateSelectedDistrict((district) =>
+                            updateSelectedDistricts((district) =>
                               updateDistrictMapAnchorFromParts({
                                 district,
                                 fallbackAnchor: selectedDistrictEffectiveMapAnchor ?? { longitude: 0, latitude: 0 },
@@ -1313,7 +1635,9 @@ export function EdinburghReviewPage({
           <CardHeader className="gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <CardTitle>Board placement</CardTitle>
-              {selectedDistrict ? <Badge variant="secondary">{selectedDistrict.square}</Badge> : null}
+              {selectedDistrict && !isBulkDistrictSelection ? (
+                <Badge variant="secondary">{selectedDistrict.square}</Badge>
+              ) : null}
             </div>
           </CardHeader>
           <CardContent className="page-card__content grid gap-4">
@@ -1366,10 +1690,12 @@ export function EdinburghReviewPage({
                 importModeArmed={isMapImportArmed}
                 onImportModeConsumed={() => setIsMapImportArmed(false)}
                 onMapAnchorChange={(mapAnchor) =>
-                  updateSelectedDistrict((district) => ({
-                    ...district,
-                    mapAnchor
-                  }))
+                  setDraft((current) =>
+                    updateDistrict(current, selectedDistrict.id, (district) => ({
+                      ...district,
+                      mapAnchor
+                    }))
+                  )
                 }
               />
             ) : (

@@ -112,4 +112,68 @@ describe("pageLayoutState", () => {
       })
     ).toBeLessThan(39);
   });
+
+  it("can size to active content when a lower minimum row floor is requested", () => {
+    let compactLayout = getDefaultPageLayoutState("three-pane");
+
+    compactLayout = updatePageLayoutPanelRect({
+      layoutState: compactLayout,
+      panelIds: ["intro", "index", "secondary", "detail"],
+      panelId: "intro",
+      variant: "three-pane",
+      nextRect: {
+        x: 1,
+        y: 1,
+        w: 12,
+        h: 3
+      }
+    });
+
+    compactLayout = updatePageLayoutPanelRect({
+      layoutState: compactLayout,
+      panelIds: ["intro", "index", "secondary", "detail"],
+      panelId: "index",
+      variant: "three-pane",
+      nextRect: {
+        x: 1,
+        y: 4,
+        w: 3,
+        h: 6
+      }
+    });
+
+    compactLayout = updatePageLayoutPanelRect({
+      layoutState: compactLayout,
+      panelIds: ["intro", "index", "secondary", "detail"],
+      panelId: "secondary",
+      variant: "three-pane",
+      nextRect: {
+        x: 4,
+        y: 4,
+        w: 3,
+        h: 6
+      }
+    });
+
+    compactLayout = updatePageLayoutPanelRect({
+      layoutState: compactLayout,
+      panelIds: ["intro", "index", "secondary", "detail"],
+      panelId: "detail",
+      variant: "three-pane",
+      nextRect: {
+        x: 7,
+        y: 4,
+        w: 6,
+        h: 6
+      }
+    });
+
+    expect(
+      getPageLayoutRowCount({
+        layoutState: compactLayout,
+        panelIds: ["intro", "index", "secondary", "detail"],
+        minimumRows: 1
+      })
+    ).toBe(9);
+  });
 });
