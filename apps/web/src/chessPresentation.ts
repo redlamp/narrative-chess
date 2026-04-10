@@ -60,7 +60,7 @@ export function getPieceAssetPath(input: {
   kind: PieceKind;
 }) {
   const sideFolder = input.side === "white" ? "white" : "black";
-  return `${import.meta.env.BASE_URL}pieces/custom/${sideFolder}/${getPieceFileCode(input)}.png`;
+  return `${import.meta.env.BASE_URL}pieces/cburnett/${sideFolder}/${getPieceFileCode(input)}.svg`;
 }
 
 export function getPieceKindLabel(kind: PieceKind) {

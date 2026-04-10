@@ -246,6 +246,7 @@ export const districtCellSchema = z.object({
   nightProfile: z.string(),
   toneCues: z.array(z.string()).min(1),
   mapAnchor: mapAnchorSchema.optional(),
+  radiusMeters: z.number().min(25).max(10000).optional(),
   contentStatus: contentStatusSchema,
   reviewStatus: reviewStatusSchema,
   reviewNotes: z.string().nullable(),

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import maplibregl, {
-  type DataDrivenPropertyValueSpecification,
   type GeoJSONSource,
   type Map as MapLibreMap
 } from "maplibre-gl";
@@ -8,132 +7,186 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { ExternalLink, Map as MapIcon, Satellite } from "lucide-react";
 import type { CityBoard, DistrictCell, MoveRecord, PieceState } from "@narrative-chess/content-schema";
 import { Button } from "@/components/ui/button";
-import { getPieceAssetPath } from "@/chessPresentation";
+import type { AnimatedPieceFrame } from "@/chessMotion";
+import { useCaptureImpact } from "@/hooks/useCaptureImpact";
+import { PieceArt } from "./PieceArt";
 import {
   buildOpenStreetMapUrl,
+  createDistrictRadiusGeoJson,
   createDistrictMarkerGeoJson,
   createMapLibreRasterStyle,
   getActiveCityMapLocation,
   getCityBoardMarkerBounds,
+  getDistanceMeters,
   getDistrictMapCenter,
+  getDistrictRadiusMeters,
   type MapViewMode
 } from "./cityMapShared";
 
 type CityMapLibrePanelProps = {
   cityBoard: CityBoard;
-  pieces: PieceState[];
+  pieces: AnimatedPieceFrame[];
   selectedDistrict: DistrictCell | null;
   hoveredDistrict: DistrictCell | null;
   lastMoveDistrict: DistrictCell | null;
   lastMove: MoveRecord | null;
+  onPieceSquareHover?: (square: PieceState["square"] | null) => void;
 };
 
+type ProjectedPieceMarker = {
+  pieceId: string;
+  side: PieceState["side"];
+  kind: AnimatedPieceFrame["kind"];
+  square: PieceState["square"];
+  x: number;
+  y: number;
+  size: number;
+  opacity: number;
+  zIndex: number;
+  isActive: boolean;
+  isAttackingPiece: boolean;
+  isKingCheck: boolean;
+  isKingCheckmate: boolean;
+};
+
+const districtRadiusSourceId = "district-radius";
+const districtRadiusFillLayerId = "district-radius-fill-layer";
+const districtRadiusStrokeLayerId = "district-radius-stroke-layer";
+const districtRadiusStrokeColor = "#4b5563";
 const districtMarkerSourceId = "district-markers";
 const districtMarkerLayerId = "district-markers-layer";
 const districtMarkerActiveLayerId = "district-markers-active-layer";
 const districtMarkerLabelLayerId = "district-markers-label-layer";
-const occupiedPieceSourceId = "district-piece-markers";
-const occupiedPieceBackgroundLayerId = "district-piece-markers-background-layer";
-const occupiedPieceLayerId = "district-piece-markers-layer";
-const occupiedPieceBackgroundColor = "#BFBFBF";
-const mapMarkerColors = {
-  kingCheck: "#fbbf24",
-  kingCheckmate: "#f87171",
-  pieceAttacked: "#dc2626"
-} as const;
-const occupiedPieceBackgroundColorExpression: DataDrivenPropertyValueSpecification<string> = [
-  "case",
-  ["==", ["get", "isKingCheckmate"], 1],
-  mapMarkerColors.kingCheckmate,
-  ["==", ["get", "isKingCheck"], 1],
-  mapMarkerColors.kingCheck,
-  occupiedPieceBackgroundColor
-];
-const occupiedPieceStrokeColorExpression: DataDrivenPropertyValueSpecification<string> = [
-  "case",
-  ["==", ["get", "isAttackingPiece"], 1],
-  mapMarkerColors.pieceAttacked,
-  ["==", ["get", "isActive"], 1],
-  "#111827",
-  "rgba(17,24,39,0.28)"
-];
 
-const pieceIconDefinitions = [
-  { side: "white", kind: "pawn" },
-  { side: "white", kind: "rook" },
-  { side: "white", kind: "knight" },
-  { side: "white", kind: "bishop" },
-  { side: "white", kind: "queen" },
-  { side: "white", kind: "king" },
-  { side: "black", kind: "pawn" },
-  { side: "black", kind: "rook" },
-  { side: "black", kind: "knight" },
-  { side: "black", kind: "bishop" },
-  { side: "black", kind: "queen" },
-  { side: "black", kind: "king" }
-] satisfies Array<{
-  side: PieceState["side"];
-  kind: PieceState["kind"];
-}>;
-
-function getPieceIconId(input: {
-  side: PieceState["side"];
-  kind: PieceState["kind"];
-}) {
-  return `map-piece-${input.side}-${input.kind}`;
+function interpolateCoordinate(
+  start: [number, number],
+  end: [number, number],
+  progress: number
+): [number, number] {
+  return [
+    start[0] + (end[0] - start[0]) * progress,
+    start[1] + (end[1] - start[1]) * progress
+  ];
 }
 
-function createOccupiedPieceGeoJson(input: {
+function interpolateLinear(
+  value: number,
+  minValue: number,
+  maxValue: number,
+  minResult: number,
+  maxResult: number
+) {
+  if (value <= minValue) {
+    return minResult;
+  }
+
+  if (value >= maxValue) {
+    return maxResult;
+  }
+
+  const progress = (value - minValue) / (maxValue - minValue);
+  return minResult + (maxResult - minResult) * progress;
+}
+
+function createProjectedPieceMarkers(input: {
+  map: MapLibreMap;
   cityBoard: CityBoard;
-  pieces: PieceState[];
-  activeSquare: string | null;
+  pieces: AnimatedPieceFrame[];
+  activeDistrict: DistrictCell | null;
   lastMove: MoveRecord | null;
 }) {
-  const { cityBoard, pieces, activeSquare, lastMove } = input;
+  const { map, cityBoard, pieces, activeDistrict, lastMove } = input;
+  const activeSquare = activeDistrict?.square ?? null;
+  const activeCenter = activeDistrict ? getDistrictMapCenter(cityBoard, activeDistrict) : null;
+  const activeRadiusMeters = activeDistrict ? getDistrictRadiusMeters(activeDistrict) : 0;
   const threatenedKingSide = lastMove?.isCheck || lastMove?.isCheckmate
     ? lastMove.side === "white" ? "black" : "white"
     : null;
+  const markerSize = interpolateLinear(map.getZoom(), 10, 14, 34, 48);
 
-  return {
-    type: "FeatureCollection" as const,
-    features: pieces.flatMap((piece) => {
-      if (!piece.square) {
+  return pieces
+    .flatMap((piece) => {
+      const fromDistrict = piece.fromSquare
+        ? cityBoard.districts.find((candidate) => candidate.square === piece.fromSquare) ?? null
+        : null;
+      const toDistrict = piece.toSquare
+        ? cityBoard.districts.find((candidate) => candidate.square === piece.toSquare) ?? null
+        : null;
+
+      if (!fromDistrict && !toDistrict) {
         return [];
       }
 
-      const district = cityBoard.districts.find((candidate) => candidate.square === piece.square);
-      if (!district) {
-        return [];
-      }
+      const fromCoordinates = fromDistrict ? getDistrictMapCenter(cityBoard, fromDistrict) : null;
+      const toCoordinates = toDistrict ? getDistrictMapCenter(cityBoard, toDistrict) : null;
+      const coordinates =
+        fromCoordinates && toCoordinates
+          ? interpolateCoordinate(fromCoordinates, toCoordinates, piece.progress)
+          : (toCoordinates ?? fromCoordinates)!;
+      const projected = map.project(coordinates);
+      const isWithinActiveRadius =
+        activeCenter !== null &&
+        getDistanceMeters(activeCenter, coordinates) <= activeRadiusMeters;
 
-      const [longitude, latitude] = getDistrictMapCenter(cityBoard, district);
-
-      return [
-        {
-          type: "Feature" as const,
-          geometry: {
-            type: "Point" as const,
-            coordinates: [longitude, latitude] as [number, number]
-          },
-          properties: {
-            id: piece.pieceId,
-            square: piece.square,
-            isActive: piece.square === activeSquare ? 1 : 0,
-            isAttackingPiece: lastMove?.capturedPieceId && piece.pieceId === lastMove.pieceId ? 1 : 0,
-            isKingCheck: threatenedKingSide === piece.side && piece.kind === "king" && lastMove?.isCheck ? 1 : 0,
-            isKingCheckmate: threatenedKingSide === piece.side && piece.kind === "king" && lastMove?.isCheckmate ? 1 : 0,
-            iconId: getPieceIconId({
-              side: piece.side,
-              kind: piece.promotedTo ?? piece.kind
-            })
-          }
-        }
-      ];
+      return [{
+        pieceId: piece.pieceId,
+        side: piece.side,
+        kind: piece.kind,
+        square: piece.displaySquare ?? piece.toSquare ?? piece.fromSquare,
+        x: projected.x,
+        y: projected.y,
+        size: markerSize,
+        opacity: piece.opacity,
+        zIndex: piece.zIndex,
+        isActive: piece.displaySquare === activeSquare || isWithinActiveRadius,
+        isAttackingPiece: Boolean(lastMove?.capturedPieceId && piece.pieceId === lastMove.pieceId),
+        isKingCheck: Boolean(threatenedKingSide === piece.side && piece.kind === "king" && lastMove?.isCheck),
+        isKingCheckmate: Boolean(
+          threatenedKingSide === piece.side && piece.kind === "king" && lastMove?.isCheckmate
+        )
+      } satisfies ProjectedPieceMarker];
     })
-  };
+    .filter((piece): piece is ProjectedPieceMarker => piece.square !== null);
 }
 
 function ensureDistrictMarkerLayers(map: MapLibreMap, cityBoard: CityBoard, activeSquare: string | null) {
+  const activeDistrict = cityBoard.districts.find((district) => district.square === activeSquare) ?? null;
+  const radiusData = createDistrictRadiusGeoJson({
+    cityBoard,
+    districts: activeDistrict ? [activeDistrict] : []
+  });
+  const existingRadiusSource = map.getSource(districtRadiusSourceId) as GeoJSONSource | undefined;
+
+  if (existingRadiusSource) {
+    existingRadiusSource.setData(radiusData);
+  } else {
+    map.addSource(districtRadiusSourceId, {
+      type: "geojson",
+      data: radiusData
+    });
+
+    map.addLayer({
+      id: districtRadiusFillLayerId,
+      type: "fill",
+      source: districtRadiusSourceId,
+      paint: {
+        "fill-color": "#f0abfc",
+        "fill-opacity": 0.16
+      }
+    });
+
+    map.addLayer({
+      id: districtRadiusStrokeLayerId,
+      type: "line",
+      source: districtRadiusSourceId,
+      paint: {
+        "line-color": districtRadiusStrokeColor,
+        "line-opacity": 0.72,
+        "line-width": 1.5
+      }
+    });
+  }
+
   const markerData = createDistrictMarkerGeoJson({
     cityBoard,
     activeSquare
@@ -215,115 +268,22 @@ function ensureDistrictMarkerLayers(map: MapLibreMap, cityBoard: CityBoard, acti
   });
 }
 
-async function ensurePieceMarkerIcons(map: MapLibreMap) {
-  await Promise.all(
-    pieceIconDefinitions.map(async (definition) => {
-      const iconId = getPieceIconId(definition);
-      if (map.hasImage(iconId)) {
-        return;
-      }
-
-      const image = await map.loadImage(getPieceAssetPath(definition));
-      if (!map.hasImage(iconId)) {
-        map.addImage(iconId, image.data);
-      }
-    })
-  );
-}
-
-async function syncOccupiedPieceLayer(input: {
-  map: MapLibreMap;
-  cityBoard: CityBoard;
-  pieces: PieceState[];
-  activeSquare: string | null;
-  lastMove: MoveRecord | null;
-}) {
-  const { map, cityBoard, pieces, activeSquare, lastMove } = input;
-  await ensurePieceMarkerIcons(map);
-
-  const markerData = createOccupiedPieceGeoJson({
-    cityBoard,
-    pieces,
-    activeSquare,
-    lastMove
-  });
-  const existingSource = map.getSource(occupiedPieceSourceId) as GeoJSONSource | undefined;
-
-  if (existingSource) {
-    existingSource.setData(markerData);
-    if (map.getLayer(occupiedPieceBackgroundLayerId)) {
-      map.setPaintProperty(occupiedPieceBackgroundLayerId, "circle-color", occupiedPieceBackgroundColorExpression);
-      map.setPaintProperty(occupiedPieceBackgroundLayerId, "circle-stroke-color", occupiedPieceStrokeColorExpression);
-    }
-    return;
-  }
-
-  map.addSource(occupiedPieceSourceId, {
-    type: "geojson",
-    data: markerData
-  });
-
-  map.addLayer({
-    id: occupiedPieceBackgroundLayerId,
-    type: "circle",
-    source: occupiedPieceSourceId,
-    paint: {
-      "circle-radius": [
-        "interpolate",
-        ["linear"],
-        ["zoom"],
-        10,
-        10,
-        14,
-        15
-      ],
-      "circle-color": occupiedPieceBackgroundColorExpression,
-      "circle-opacity": 0.96,
-      "circle-stroke-width": [
-        "case",
-        ["==", ["get", "isActive"], 1],
-        2.5,
-        1.5
-      ],
-      "circle-stroke-color": occupiedPieceStrokeColorExpression
-    }
-  });
-
-  map.addLayer({
-    id: occupiedPieceLayerId,
-    type: "symbol",
-    source: occupiedPieceSourceId,
-    layout: {
-      "icon-image": ["get", "iconId"],
-      "icon-size": [
-        "interpolate",
-        ["linear"],
-        ["zoom"],
-        10,
-        0.12,
-        14,
-        0.2
-      ],
-      "icon-anchor": "center",
-      "icon-allow-overlap": true,
-      "icon-ignore-placement": true
-    }
-  });
-
-}
-
 export function CityMapLibrePanel({
   cityBoard,
   pieces,
   selectedDistrict,
   hoveredDistrict,
   lastMoveDistrict,
-  lastMove
+  lastMove,
+  onPieceSquareHover
 }: CityMapLibrePanelProps) {
   const [viewMode, setViewMode] = useState<MapViewMode>("map");
+  const [overlayState, setOverlayState] = useState({ revision: 0, zoom: 0 });
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const hasHydratedCamera = useRef(false);
+  const onPieceSquareHoverRef = useRef(onPieceSquareHover);
+  const overlayFrameRef = useRef<number | null>(null);
   const activeLocation = useMemo(
     () =>
       getActiveCityMapLocation({
@@ -336,17 +296,60 @@ export function CityMapLibrePanel({
     [cityBoard, hoveredDistrict, lastMove, lastMoveDistrict, selectedDistrict]
   );
   const highlightedSquare = hoveredDistrict?.square ?? selectedDistrict?.square ?? lastMove?.to ?? null;
+  const highlightedDistrict =
+    hoveredDistrict ??
+    selectedDistrict ??
+    (lastMoveDistrict?.square === highlightedSquare ? lastMoveDistrict : null) ??
+    cityBoard.districts.find((district) => district.square === highlightedSquare) ??
+    null;
   const cameraSquare = selectedDistrict?.square ?? null;
   const cityBoardBounds = useMemo(() => getCityBoardMarkerBounds(cityBoard), [cityBoard]);
   const openUrl = useMemo(
     () => buildOpenStreetMapUrl(activeLocation.center, Math.round(activeLocation.zoom)),
     [activeLocation.center, activeLocation.zoom]
   );
+  const focusedZoom = Math.max(activeLocation.zoom - 0.3, 9.5);
+  const activeCaptureImpact = useCaptureImpact({
+    pieces,
+    lastMove
+  });
+  const projectedPieces = useMemo(() => {
+    const map = mapRef.current;
+    if (!map) {
+      return [] as ProjectedPieceMarker[];
+    }
+
+    return createProjectedPieceMarkers({
+      map,
+      cityBoard,
+      pieces,
+      activeDistrict: highlightedDistrict,
+      lastMove
+    });
+  }, [cityBoard, highlightedDistrict, lastMove, overlayState.revision, overlayState.zoom, pieces]);
+
+  useEffect(() => {
+    onPieceSquareHoverRef.current = onPieceSquareHover;
+  }, [onPieceSquareHover]);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) {
       return;
     }
+
+    const scheduleOverlayUpdate = () => {
+      if (overlayFrameRef.current !== null) {
+        return;
+      }
+
+      overlayFrameRef.current = window.requestAnimationFrame(() => {
+        overlayFrameRef.current = null;
+        setOverlayState((current) => ({
+          revision: current.revision + 1,
+          zoom: map.getZoom()
+        }));
+      });
+    };
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
@@ -360,18 +363,18 @@ export function CityMapLibrePanel({
     map.touchZoomRotate.disableRotation();
     map.on("load", () => {
       ensureDistrictMarkerLayers(map, cityBoard, highlightedSquare);
-      void syncOccupiedPieceLayer({
-        map,
-        cityBoard,
-        pieces,
-        activeSquare: highlightedSquare,
-        lastMove
-      });
+      scheduleOverlayUpdate();
     });
+    map.on("move", scheduleOverlayUpdate);
+    map.on("resize", scheduleOverlayUpdate);
     mapRef.current = map;
     hasHydratedCamera.current = false;
 
     return () => {
+      if (overlayFrameRef.current !== null) {
+        window.cancelAnimationFrame(overlayFrameRef.current);
+        overlayFrameRef.current = null;
+      }
       map.remove();
       mapRef.current = null;
       hasHydratedCamera.current = false;
@@ -387,17 +390,13 @@ export function CityMapLibrePanel({
     map.setStyle(createMapLibreRasterStyle(viewMode));
     map.once("styledata", () => {
       ensureDistrictMarkerLayers(map, cityBoard, highlightedSquare);
-      void syncOccupiedPieceLayer({
-        map,
-        cityBoard,
-        pieces,
-        activeSquare: highlightedSquare,
-        lastMove
-      }).finally(() => {
-        map.resize();
-      });
+      map.resize();
+      setOverlayState((current) => ({
+        revision: current.revision + 1,
+        zoom: map.getZoom()
+      }));
     });
-  }, [cityBoard, highlightedSquare, pieces, viewMode]);
+  }, [viewMode]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -406,14 +405,7 @@ export function CityMapLibrePanel({
     }
 
     ensureDistrictMarkerLayers(map, cityBoard, highlightedSquare);
-    void syncOccupiedPieceLayer({
-      map,
-      cityBoard,
-      pieces,
-      activeSquare: highlightedSquare,
-      lastMove
-    });
-  }, [cityBoard, highlightedSquare, lastMove, pieces]);
+  }, [cityBoard, highlightedSquare]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -425,7 +417,7 @@ export function CityMapLibrePanel({
       if (cameraSquare) {
         map.jumpTo({
           center: activeLocation.center,
-          zoom: activeLocation.zoom
+          zoom: focusedZoom
         });
       } else {
         map.fitBounds(cityBoardBounds, {
@@ -435,6 +427,10 @@ export function CityMapLibrePanel({
         });
       }
       hasHydratedCamera.current = true;
+      setOverlayState((current) => ({
+        revision: current.revision + 1,
+        zoom: map.getZoom()
+      }));
       return;
     }
 
@@ -443,7 +439,7 @@ export function CityMapLibrePanel({
     if (cameraSquare) {
       map.flyTo({
         center: activeLocation.center,
-        zoom: activeLocation.zoom,
+        zoom: focusedZoom,
         duration: 1000,
         essential: true,
         curve: 0.5,
@@ -458,7 +454,7 @@ export function CityMapLibrePanel({
       essential: true,
       maxZoom: 12.25
     });
-  }, [activeLocation.center, activeLocation.zoom, cameraSquare, cityBoardBounds]);
+  }, [activeLocation.center, cameraSquare, cityBoardBounds, focusedZoom]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -469,6 +465,10 @@ export function CityMapLibrePanel({
 
     const observer = new ResizeObserver(() => {
       map.resize();
+      setOverlayState((current) => ({
+        revision: current.revision + 1,
+        zoom: map.getZoom()
+      }));
     });
     observer.observe(node);
 
@@ -491,7 +491,60 @@ export function CityMapLibrePanel({
       </div>
 
       <div className="city-map-panel__frame">
-        <div ref={mapContainerRef} className="city-maplibre-panel__canvas" />
+        <div className="city-maplibre-panel__stage">
+          <div ref={mapContainerRef} className="city-maplibre-panel__canvas" />
+          <div className="city-maplibre-panel__overlay" aria-hidden="true">
+            {projectedPieces.map((piece) => {
+              const showCaptureImpact =
+                activeCaptureImpact?.moveId === lastMove?.id &&
+                activeCaptureImpact?.pieceId === piece.pieceId;
+
+              return (
+                <button
+                  key={piece.pieceId}
+                  type="button"
+                  className={[
+                    "city-map-piece-marker",
+                    piece.isActive ? "is-active" : "",
+                    piece.isAttackingPiece ? "is-attacking" : "",
+                    piece.isKingCheck ? "is-king-check" : "",
+                    piece.isKingCheckmate ? "is-king-checkmate" : ""
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  style={{
+                    width: `${piece.size}px`,
+                    height: `${piece.size}px`,
+                    transform: `translate(${piece.x - piece.size / 2}px, ${piece.y - piece.size / 2}px)`,
+                    opacity: piece.opacity,
+                    zIndex: 10 + piece.zIndex
+                  }}
+                  tabIndex={-1}
+                  aria-label={`${piece.side} ${piece.kind} on ${piece.square}`}
+                  onMouseEnter={() => onPieceSquareHoverRef.current?.(piece.square)}
+                  onMouseLeave={() => onPieceSquareHoverRef.current?.(null)}
+                  onFocus={() => onPieceSquareHoverRef.current?.(piece.square)}
+                  onBlur={() => onPieceSquareHoverRef.current?.(null)}
+                >
+                  {showCaptureImpact ? (
+                    <span className="city-map-piece-marker__capture-cloud capture-impact-cloud">
+                      <span className="city-map-piece-marker__capture-puff city-map-piece-marker__capture-puff--left" />
+                      <span className="city-map-piece-marker__capture-puff city-map-piece-marker__capture-puff--center" />
+                      <span className="city-map-piece-marker__capture-puff city-map-piece-marker__capture-puff--right" />
+                    </span>
+                  ) : null}
+                  <span className="city-map-piece-marker__disc">
+                    <PieceArt
+                      side={piece.side}
+                      kind={piece.kind}
+                      className="city-map-piece-marker__art"
+                    />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       <div className="city-map-panel__toolbar">

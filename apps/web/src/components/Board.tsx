@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
+import { gsap } from "gsap";
 import { getPieceAtSquare } from "@narrative-chess/game-core";
 import type {
   DistrictCell,
@@ -14,6 +15,11 @@ import {
   getNextBoardFocusSquare,
   squareName
 } from "../boardNavigation";
+import { getAnimatedBoardPosition, type AnimatedPieceFrame } from "../chessMotion";
+import { useCaptureImpact } from "../hooks/useCaptureImpact";
+
+const pieceMoveAnimationDuration = 420;
+const pieceMoveAnimationEase = "power1.inOut";
 
 type BoardCell = {
   square: Square;
@@ -32,6 +38,8 @@ type BoardProps = {
   districtsBySquare: Map<Square, DistrictCell>;
   showCoordinates: boolean;
   showDistrictLabels: boolean;
+  animationResetKey?: number;
+  animatedPieces?: AnimatedPieceFrame[];
   showActiveSquareLabel?: boolean;
   showPieces?: boolean;
   onSquareClick: (square: Square) => void;
@@ -68,6 +76,8 @@ export function Board({
   districtsBySquare,
   showCoordinates,
   showDistrictLabels,
+  animationResetKey = 0,
+  animatedPieces,
   showActiveSquareLabel = false,
   showPieces = true,
   onSquareClick,
@@ -77,6 +87,8 @@ export function Board({
   const cellMap = new Map(cells.map((cell) => [cell.square, cell]));
   const shellRef = useRef<HTMLDivElement | null>(null);
   const buttonRefs = useRef(new Map<Square, HTMLButtonElement>());
+  const previousPieceRectsRef = useRef(new Map<string, DOMRect>());
+  const activePieceTweenRefs = useRef(new Map<string, gsap.core.Tween>());
   const [activeSquare, setActiveSquare] = useState<Square>(
     selectedSquare ?? hoveredSquare ?? squareName(files[0], ranks[0])
   );
@@ -117,12 +129,86 @@ export function Board({
     };
   }, []);
 
+  useEffect(() => {
+    activePieceTweenRefs.current.forEach((tween) => tween.kill());
+    activePieceTweenRefs.current.clear();
+    previousPieceRectsRef.current = new Map();
+  }, [animationResetKey]);
+
+  useLayoutEffect(() => {
+    if (animatedPieces && animatedPieces.length > 0) {
+      activePieceTweenRefs.current.forEach((tween) => tween.kill());
+      activePieceTweenRefs.current.clear();
+      previousPieceRectsRef.current = new Map();
+      return;
+    }
+
+    const shell = shellRef.current;
+    if (!shell) {
+      return;
+    }
+
+    const nextRects = new Map<string, DOMRect>();
+    const pieceNodes = shell.querySelectorAll<HTMLElement>("[data-piece-id]");
+
+    pieceNodes.forEach((node) => {
+      const pieceId = node.dataset.pieceId;
+      if (!pieceId) {
+        return;
+      }
+
+      const nextRect = node.getBoundingClientRect();
+      const previousRect = previousPieceRectsRef.current.get(pieceId);
+      nextRects.set(pieceId, nextRect);
+
+      if (!previousRect) {
+        return;
+      }
+
+      const deltaX = previousRect.left - nextRect.left;
+      const deltaY = previousRect.top - nextRect.top;
+      if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) {
+        return;
+      }
+
+      const activeTween = activePieceTweenRefs.current.get(pieceId);
+      if (activeTween && activeTween.isActive()) {
+        activeTween.timeScale(8);
+        activeTween.progress(1);
+        activeTween.kill();
+      }
+
+      const tween = gsap.fromTo(
+        node,
+        { x: deltaX, y: deltaY },
+        {
+          x: 0,
+          y: 0,
+          duration: pieceMoveAnimationDuration / 1000,
+          ease: pieceMoveAnimationEase,
+          overwrite: "auto",
+          onComplete: () => {
+            activePieceTweenRefs.current.delete(pieceId);
+          }
+        }
+      );
+      activePieceTweenRefs.current.set(pieceId, tween);
+    });
+
+    previousPieceRectsRef.current = nextRects;
+  }, [animatedPieces, snapshot.pieces]);
+
   const boardStyle: CSSProperties | undefined = boardSize
     ? {
         width: `${boardSize}px`,
         height: `${boardSize}px`
       }
     : undefined;
+  const animatedCaptureMove = animatedPieces?.length ? snapshot.moveHistory.at(-1) ?? null : null;
+  const activeCaptureImpact = useCaptureImpact({
+    pieces: animatedPieces ?? [],
+    lastMove: animatedCaptureMove
+  });
 
   const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
     const square = event.currentTarget.dataset.square as Square | undefined;
@@ -169,7 +255,8 @@ export function Board({
           files.map((file) => {
             const square = squareName(file, rank);
             const cell = cellMap.get(square);
-            const piece = showPieces ? cell?.occupant ?? getPieceAtSquare(snapshot, square) : null;
+            const labelPiece = showPieces ? cell?.occupant ?? getPieceAtSquare(snapshot, square) : null;
+            const piece = animatedPieces ? null : labelPiece;
             const district = districtsBySquare.get(square) ?? null;
             const isSelected = selectedSquare === square;
             const isHovered = hoveredSquare === square;
@@ -195,7 +282,7 @@ export function Board({
                 data-square={square}
                 aria-pressed={isSelected}
                 aria-colindex={files.indexOf(file) + 1}
-                aria-label={`${square}${piece ? `, ${getPieceDisplayName(piece)}` : ""}${district ? `, ${district.name}` : ""}`}
+                aria-label={`${square}${labelPiece ? `, ${getPieceDisplayName(labelPiece)}` : ""}${district ? `, ${district.name}` : ""}`}
                 aria-rowindex={ranks.indexOf(rank) + 1}
                 tabIndex={activeSquare === square ? 0 : -1}
                 onClick={handleClick}
@@ -240,11 +327,13 @@ export function Board({
                 ) : null}
                 <span className={`board-square__piece ${piece ? `is-${piece.side}` : "is-empty"} ${viewMode === "map" ? "is-map" : ""}`}>
                   {piece ? (
-                    <PieceArt
-                      side={piece.side}
-                      kind={piece.kind}
-                      className="board-piece-art board-piece-art--board"
-                    />
+                    <span className="board-square__piece-motion" data-piece-id={piece.pieceId}>
+                      <PieceArt
+                        side={piece.side}
+                        kind={piece.kind}
+                        className="board-piece-art board-piece-art--board"
+                      />
+                    </span>
                   ) : null}
                 </span>
                 {isLegalTarget ? <span className="board-square__target-dot" /> : null}
@@ -252,6 +341,51 @@ export function Board({
             );
           })
         )}
+        {showPieces && animatedPieces?.length ? (
+          <div className="board-animated-pieces" aria-hidden="true">
+            {animatedPieces.map((piece) => {
+              const position = getAnimatedBoardPosition(piece);
+              if (!position) {
+                return null;
+              }
+              const showCaptureImpact =
+                activeCaptureImpact?.moveId === animatedCaptureMove?.id &&
+                activeCaptureImpact?.pieceId === piece.pieceId;
+
+              return (
+                <span
+                  key={piece.pieceId}
+                  className={[
+                    "board-animated-piece",
+                    `is-${piece.side}`,
+                    viewMode === "map" ? "is-map" : ""
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  style={{
+                    left: `${(position.x / 8) * 100}%`,
+                    top: `${(position.y / 8) * 100}%`,
+                    opacity: piece.opacity,
+                    zIndex: 10 + piece.zIndex
+                  }}
+                >
+                  {showCaptureImpact ? (
+                    <span className="board-animated-piece__capture-cloud capture-impact-cloud">
+                      <span className="board-animated-piece__capture-puff board-animated-piece__capture-puff--left" />
+                      <span className="board-animated-piece__capture-puff board-animated-piece__capture-puff--center" />
+                      <span className="board-animated-piece__capture-puff board-animated-piece__capture-puff--right" />
+                    </span>
+                  ) : null}
+                  <PieceArt
+                    side={piece.side}
+                    kind={piece.kind}
+                    className="board-piece-art board-piece-art--board"
+                  />
+                </span>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
     </div>
   );

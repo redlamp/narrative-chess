@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -10,7 +11,7 @@ import {
 import { Building2, ChessPawn, Cog, LayoutDashboard, Moon, Pencil, Scroll, Sun, Telescope, UsersRound } from "lucide-react";
 import { getPieceAtSquare } from "@narrative-chess/game-core";
 import { getCharacterEventHistory } from "@narrative-chess/narrative-engine";
-import type { PieceKind, Square } from "@narrative-chess/content-schema";
+import type { CityBoard, PieceKind, Square } from "@narrative-chess/content-schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
@@ -23,7 +24,7 @@ import {
   saveAppSettings,
   type AppSettings
 } from "./appSettings";
-import { edinburghBoard, edinburghDistrictsBySquare, getDistrictForSquare } from "./edinburghBoard";
+import { edinburghBoard } from "./edinburghBoard";
 import {
   getSnappedWorkspaceColumn,
   getSnappedWorkspaceRow,
@@ -73,6 +74,7 @@ import {
 } from "./fileSystemAccess";
 import { cityBoardDefinitions } from "./cityBoards";
 import { listCityBoardDraft, saveCityBoardDraft } from "./cityReviewState";
+import { getAnimatedPieceFrames } from "./chessMotion";
 import { listPageLayoutState, savePageLayoutState, type PageLayoutPanelId, type PageLayoutVariant } from "./pageLayoutState";
 import { Board } from "./components/Board";
 import { CityMapLibrePanel } from "./components/CityMapLibrePanel";
@@ -93,6 +95,7 @@ import { StoryToneSection } from "./components/StoryToneSection";
 import { CharacterDetailPanel } from "./components/CharacterDetailPanel";
 import { RecentGamesPanel } from "./components/RecentGamesPanel";
 import { useChessMatch } from "./hooks/useChessMatch";
+import { useMovePlayhead } from "./hooks/useMovePlayhead";
 import {
   addRoleCatalogEntry,
   duplicateRoleCatalogEntry,
@@ -139,7 +142,7 @@ const panelTitles: Record<WorkspacePanelId, string> = {
   board: "Board",
   moves: "Match History (PGN)",
   "city-map": "City Map (Google)",
-  "city-map-maplibre": "City Map (MapLibre)",
+  "city-map-maplibre": "Map",
   "story-beat": "Story Beat",
   "story-tile": "City Tile",
   "story-character": "Character",
@@ -226,6 +229,18 @@ function statusLabel(isCheck: boolean, isCheckmate: boolean, isStalemate: boolea
   }
 
   return "In play";
+}
+
+function statusCardStateClassName(isCheck: boolean, isCheckmate: boolean) {
+  if (isCheckmate) {
+    return "app-header__status-card--king-checkmate";
+  }
+
+  if (isCheck) {
+    return "app-header__status-card--king-check";
+  }
+
+  return "";
 }
 
 function turnLabel(turn: "white" | "black") {
@@ -384,9 +399,19 @@ export default function App() {
   const [pieceStyleFileNotice, setPieceStyleFileNotice] = useState<LayoutFileNotice | null>(null);
   const [isPieceStyleDirectorySupported, setIsPieceStyleDirectorySupported] = useState(false);
   const [selectedSavedMatchId, setSelectedSavedMatchId] = useState<string | null>(null);
+  const [playCityBoard, setPlayCityBoard] = useState<CityBoard>(() =>
+    listCityBoardDraft(edinburghBoard.id, edinburghBoard)
+  );
+  const handleCityBoardDraftChange = useCallback((board: CityBoard) => {
+    if (board.id === edinburghBoard.id) {
+      setPlayCityBoard(board);
+    }
+  }, []);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
   const {
     snapshot,
+    timelineKey,
+    historySnapshots,
     historyMoves,
     historyEvents,
     selectedPly,
@@ -411,6 +436,15 @@ export default function App() {
   } = useChessMatch({
     roleCatalog
   });
+  const motionPlayhead = useMovePlayhead({
+    targetPly: selectedPly,
+    totalPlies,
+    resetKey: timelineKey
+  });
+  const animatedPieces = useMemo(
+    () => getAnimatedPieceFrames({ snapshots: historySnapshots, playhead: motionPlayhead }),
+    [historySnapshots, motionPlayhead]
+  );
 
   const status = snapshot.status;
   const moveHistory = historyMoves;
@@ -421,9 +455,17 @@ export default function App() {
   const selectedSavedMatch = selectedSavedMatchId
     ? savedMatches.find((savedMatch) => savedMatch.id === selectedSavedMatchId) ?? null
     : null;
-  const focusedDistrict = getDistrictForSquare(storyFocusedSquare);
-  const selectedDistrict = getDistrictForSquare(selectedSquare);
-  const lastMoveDistrict = lastMove ? getDistrictForSquare(lastMove.to) : null;
+  const playDistrictsBySquare = useMemo(
+    () => new Map<Square, CityBoard["districts"][number]>(
+      playCityBoard.districts.map((district) => [district.square, district] as const)
+    ),
+    [playCityBoard.districts]
+  );
+  const getPlayDistrictForSquare = (square: Square | null) =>
+    square ? playDistrictsBySquare.get(square) ?? null : null;
+  const focusedDistrict = getPlayDistrictForSquare(storyFocusedSquare);
+  const selectedDistrict = getPlayDistrictForSquare(selectedSquare);
+  const lastMoveDistrict = lastMove ? getPlayDistrictForSquare(lastMove.to) : null;
   const focusedPiece = storyFocusedSquare ? getPieceAtSquare(snapshot, storyFocusedSquare) : null;
   const focusedCharacter = focusedPiece ? snapshot.characters[focusedPiece.pieceId] ?? null : null;
   const focusedCharacterMoments = focusedCharacter
@@ -1628,7 +1670,14 @@ export default function App() {
                   <span className="app-header__status-label">Turn</span>
                   <strong className="app-header__status-value">{turnLabel(status.turn)}</strong>
                 </div>
-                <div className="app-header__status-card">
+                <div
+                  className={[
+                    "app-header__status-card",
+                    statusCardStateClassName(status.isCheck, status.isCheckmate)
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
                   <span className="app-header__status-label">State</span>
                   <strong className="app-header__status-value">
                     {statusLabel(status.isCheck, status.isCheckmate, status.isStalemate)}
@@ -1650,6 +1699,7 @@ export default function App() {
         <EdinburghReviewPage
           layoutMode={effectiveLayoutMode}
           showLayoutGrid={settings.showLayoutGrid}
+          onCityBoardDraftChange={handleCityBoardDraftChange}
           onToggleLayoutMode={() => setIsLayoutMode(false)}
           onToggleLayoutGrid={(checked) => handleBooleanSettingChange("showLayoutGrid", checked)}
         />
@@ -1816,9 +1866,10 @@ export default function App() {
                     inspectedSquare={inspectedSquare}
                     legalMoves={legalMoves}
                     viewMode={settings.defaultViewMode}
-                    districtsBySquare={edinburghDistrictsBySquare}
+                    districtsBySquare={playDistrictsBySquare}
                     showCoordinates={settings.showBoardCoordinates}
                     showDistrictLabels={settings.showDistrictLabels}
+                    animatedPieces={animatedPieces}
                     onSquareClick={handleSquareClick}
                     onSquareHover={setHoveredSquare}
                     onSquareLeave={() => setHoveredSquare(null)}
@@ -1889,7 +1940,7 @@ export default function App() {
                 onToggleCollapse={() => handleTogglePanelCollapse("city-map")}
               >
                 <CityMapPanel
-                  cityBoard={edinburghBoard}
+                  cityBoard={playCityBoard}
                   selectedDistrict={selectedDistrict}
                   hoveredDistrict={hoveredSquare ? focusedDistrict : null}
                   lastMoveDistrict={lastMoveDistrict}
@@ -1919,17 +1970,18 @@ export default function App() {
               )}
             >
               <Panel
-                title="City Map (MapLibre)"
+                title="Map"
                 collapsed={workspaceLayout.collapsed["city-map-maplibre"]}
                 onToggleCollapse={() => handleTogglePanelCollapse("city-map-maplibre")}
               >
                 <CityMapLibrePanel
-                  cityBoard={edinburghBoard}
-                  pieces={snapshot.pieces}
+                  cityBoard={playCityBoard}
+                  pieces={animatedPieces}
                   selectedDistrict={selectedDistrict}
                   hoveredDistrict={hoveredSquare ? focusedDistrict : null}
                   lastMoveDistrict={lastMoveDistrict}
                   lastMove={lastMove}
+                  onPieceSquareHover={setHoveredSquare}
                 />
               </Panel>
               {renderMoveSurface("city-map-maplibre")}

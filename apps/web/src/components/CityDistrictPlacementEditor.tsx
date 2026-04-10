@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Board } from "./Board";
 import {
   buildOpenStreetMapUrl,
+  createDistrictRadiusGeoJson,
   createDistrictMarkerGeoJson,
   createMapLibreRasterStyle,
   getCityBoardMarkerBounds,
   getDistrictMapCenter,
+  getDistrictRadiusMeters,
   type MapViewMode
 } from "./cityMapShared";
 
@@ -29,6 +31,10 @@ type CityDistrictMapEditorProps = {
   cityBoard: CityBoard;
   selectedDistrict: DistrictCell | null;
   highlightedDistrict: DistrictCell | null;
+  locationSearchRequest: {
+    token: number;
+    query: string;
+  } | null;
   onMapAnchorChange: (anchor: DistrictCell["mapAnchor"]) => void;
   onHighlightedDistrictChange: (districtId: string | null) => void;
   onSelectDistrict: (districtId: string) => void;
@@ -41,8 +47,125 @@ const markerSourceId = "city-review-district-markers";
 const markerLayerId = "city-review-district-markers-layer";
 const markerActiveLayerId = "city-review-district-markers-active-layer";
 const markerLabelLayerId = "city-review-district-markers-label-layer";
+const radiusSourceId = "city-review-district-radius";
+const radiusFillLayerId = "city-review-district-radius-fill";
+const radiusStrokeLayerId = "city-review-district-radius-stroke";
+const radiusStrokeColor = "#4b5563";
 
-function syncDistrictMarkerLayers(map: MapLibreMap, cityBoard: CityBoard, activeSquare: string | null) {
+type NominatimSearchResult = {
+  lat: string;
+  lon: string;
+  display_name: string;
+};
+
+async function searchLocationByName(input: {
+  query: string;
+  viewbox: [[number, number], [number, number]];
+  signal: AbortSignal;
+}) {
+  const params = new URLSearchParams({
+    q: input.query,
+    format: "jsonv2",
+    limit: "1",
+    addressdetails: "1",
+    "accept-language": "en"
+  });
+  const [[west, south], [east, north]] = input.viewbox;
+  params.set("viewbox", `${west},${south},${east},${north}`);
+
+  const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+    signal: input.signal,
+    headers: {
+      Accept: "application/json"
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Search failed with status ${response.status}`);
+  }
+
+  const results = (await response.json()) as NominatimSearchResult[];
+  const match = results[0];
+  if (!match) {
+    return null;
+  }
+
+  return {
+    center: [Number(match.lon), Number(match.lat)] as [number, number],
+    label: match.display_name
+  };
+}
+
+function getDistrictRadiusBounds(cityBoard: CityBoard, district: DistrictCell) {
+  const [longitude, latitude] = getDistrictMapCenter(cityBoard, district);
+  const radiusMeters = getDistrictRadiusMeters(district);
+  const latitudeDelta = radiusMeters / 111320;
+  const longitudeDelta = radiusMeters / (111320 * Math.max(0.01, Math.cos(latitude * Math.PI / 180)));
+
+  return new maplibregl.LngLatBounds(
+    [longitude - longitudeDelta, latitude - latitudeDelta],
+    [longitude + longitudeDelta, latitude + latitudeDelta]
+  );
+}
+
+function syncDistrictMarkerLayers(
+  map: MapLibreMap,
+  cityBoard: CityBoard,
+  activeDistrict: DistrictCell | null
+) {
+  const activeSquare = activeDistrict?.square ?? null;
+  const radiusData = createDistrictRadiusGeoJson({
+    cityBoard,
+    districts: cityBoard.districts,
+    activeDistrictId: activeDistrict?.id ?? null
+  });
+  const existingRadiusSource = map.getSource(radiusSourceId) as GeoJSONSource | undefined;
+
+  if (existingRadiusSource) {
+    existingRadiusSource.setData(radiusData);
+  } else {
+    map.addSource(radiusSourceId, {
+      type: "geojson",
+      data: radiusData
+    });
+
+    map.addLayer({
+      id: radiusFillLayerId,
+      type: "fill",
+      source: radiusSourceId,
+      paint: {
+        "fill-color": "#f0abfc",
+        "fill-opacity": [
+          "case",
+          ["==", ["get", "isActive"], 1],
+          0.22,
+          0.07
+        ]
+      }
+    });
+
+    map.addLayer({
+      id: radiusStrokeLayerId,
+      type: "line",
+      source: radiusSourceId,
+      paint: {
+        "line-color": radiusStrokeColor,
+        "line-opacity": [
+          "case",
+          ["==", ["get", "isActive"], 1],
+          0.78,
+          0.26
+        ],
+        "line-width": [
+          "case",
+          ["==", ["get", "isActive"], 1],
+          1.75,
+          1
+        ]
+      }
+    });
+  }
+
   const markerData = createDistrictMarkerGeoJson({
     cityBoard,
     activeSquare
@@ -177,6 +300,7 @@ export function CityDistrictMapEditor({
   cityBoard,
   selectedDistrict,
   highlightedDistrict,
+  locationSearchRequest,
   onMapAnchorChange,
   onHighlightedDistrictChange,
   onSelectDistrict,
@@ -186,7 +310,9 @@ export function CityDistrictMapEditor({
   const [viewMode, setViewMode] = useState<MapViewMode>("map");
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
+  const searchMarkerRef = useRef<maplibregl.Marker | null>(null);
   const hasHydratedCamera = useRef(false);
+  const lastCameraDistrictIdRef = useRef<string | null>(selectedDistrict?.id ?? null);
   const markerBounds = useMemo(() => getCityBoardMarkerBounds(cityBoard), [cityBoard]);
   const districtsBySquare = useMemo(
     () => new Map(cityBoard.districts.map((district) => [district.square, district] as const)),
@@ -210,7 +336,6 @@ export function CityDistrictMapEditor({
           ] as [number, number],
     [cityBoard, markerBounds, selectedDistrict]
   );
-  const activeSquare = activeDistrict?.square ?? null;
   const openUrl = useMemo(
     () =>
       buildOpenStreetMapUrl(
@@ -255,7 +380,7 @@ export function CityDistrictMapEditor({
     map.touchZoomRotate.disableRotation();
     map.getCanvas().style.cursor = "crosshair";
     map.on("load", () => {
-      syncDistrictMarkerLayers(map, cityBoard, activeSquare);
+      syncDistrictMarkerLayers(map, cityBoard, activeDistrict);
     });
     map.on("click", (event) => {
       const markerFeature = map
@@ -317,6 +442,8 @@ export function CityDistrictMapEditor({
     hasHydratedCamera.current = false;
 
     return () => {
+      searchMarkerRef.current?.remove();
+      searchMarkerRef.current = null;
       map.remove();
       mapRef.current = null;
       hasHydratedCamera.current = false;
@@ -331,10 +458,10 @@ export function CityDistrictMapEditor({
 
     map.setStyle(createMapLibreRasterStyle(viewMode));
     map.once("styledata", () => {
-      syncDistrictMarkerLayers(map, cityBoard, activeSquare);
+      syncDistrictMarkerLayers(map, cityBoard, activeDistrict);
       map.resize();
     });
-  }, [viewMode]);
+  }, [activeDistrict, cityBoard, viewMode]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -342,8 +469,8 @@ export function CityDistrictMapEditor({
       return;
     }
 
-    syncDistrictMarkerLayers(map, cityBoard, activeSquare);
-  }, [activeSquare, cityBoard, selectedDistrict?.mapAnchor]);
+    syncDistrictMarkerLayers(map, cityBoard, activeDistrict);
+  }, [activeDistrict, cityBoard, selectedDistrict?.mapAnchor]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -368,25 +495,136 @@ export function CityDistrictMapEditor({
       return;
     }
 
-    map.stop();
+    const selectedDistrictId = selectedDistrict?.id ?? null;
+    const previousCameraDistrictId = lastCameraDistrictIdRef.current;
+    const hasSelectionChanged = previousCameraDistrictId !== selectedDistrictId;
+    lastCameraDistrictIdRef.current = selectedDistrictId;
+
     if (selectedDistrict) {
-      map.flyTo({
-        center: cameraCenter,
-        zoom: selectedDistrict.mapAnchor ? 13.75 : 12,
-        duration: 1000,
-        essential: true,
-        curve: 0.5,
-        speed: 1
-      });
+      if (hasSelectionChanged) {
+        map.stop();
+        map.flyTo({
+          center: cameraCenter,
+          zoom: selectedDistrict.mapAnchor ? 13.75 : 12,
+          duration: 1000,
+          essential: true,
+          curve: 0.5,
+          speed: 1
+        });
+        return;
+      }
+
+      const currentBounds = map.getBounds();
+      const radiusBounds = getDistrictRadiusBounds(cityBoard, selectedDistrict);
+      const mapCanvas = map.getCanvas();
+      const centerPoint = map.project(cameraCenter);
+      const edgePadding = 48;
+      const isCenterVisible =
+        currentBounds.contains(cameraCenter) &&
+        centerPoint.x >= edgePadding &&
+        centerPoint.x <= mapCanvas.clientWidth - edgePadding &&
+        centerPoint.y >= edgePadding &&
+        centerPoint.y <= mapCanvas.clientHeight - edgePadding;
+      const isRadiusVisible =
+        currentBounds.contains(radiusBounds.getSouthWest()) &&
+        currentBounds.contains(radiusBounds.getNorthEast());
+
+      if (!isCenterVisible) {
+        map.panTo(cameraCenter, {
+          duration: 120,
+          essential: true
+        });
+        return;
+      }
+
+      if (!isRadiusVisible) {
+        map.fitBounds(radiusBounds, {
+          padding: 36,
+          duration: 250,
+          essential: true,
+          maxZoom: 13.75
+        });
+      }
       return;
     }
 
+    map.stop();
     map.fitBounds(markerBounds, {
       padding: 36,
       duration: 500,
       maxZoom: 12
     });
-  }, [cameraCenter, markerBounds, selectedDistrict]);
+  }, [cameraCenter, cityBoard, markerBounds, selectedDistrict]);
+
+  useEffect(() => {
+    if (!locationSearchRequest) {
+      return;
+    }
+
+    const map = mapRef.current;
+    if (!map) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    void (async () => {
+      try {
+        const searchResult = await searchLocationByName({
+          query: locationSearchRequest.query,
+          viewbox: markerBounds,
+          signal: controller.signal
+        });
+        if (!searchResult || controller.signal.aborted) {
+          return;
+        }
+
+        const markerElement = searchMarkerRef.current?.getElement() ?? document.createElement("div");
+        markerElement.className = "city-placement-editor__search-marker";
+
+        if (!searchMarkerRef.current) {
+          searchMarkerRef.current = new maplibregl.Marker({
+            element: markerElement,
+            anchor: "center"
+          }).addTo(map);
+        }
+
+        searchMarkerRef.current.setLngLat(searchResult.center);
+
+        const selectedCenter = selectedDistrict ? getDistrictMapCenter(cityBoard, selectedDistrict) : null;
+        map.stop();
+
+        if (selectedCenter) {
+          const bounds = new maplibregl.LngLatBounds(selectedCenter, selectedCenter);
+          bounds.extend(searchResult.center);
+          map.fitBounds(bounds, {
+            padding: 64,
+            duration: 1000,
+            essential: true,
+            maxZoom: 14
+          });
+          return;
+        }
+
+        map.flyTo({
+          center: searchResult.center,
+          zoom: 14,
+          duration: 1000,
+          essential: true,
+          curve: 0.5,
+          speed: 1
+        });
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          console.warn("Unable to find location on map", error);
+        }
+      }
+    })();
+
+    return () => {
+      controller.abort();
+    };
+  }, [cityBoard, locationSearchRequest, markerBounds, selectedDistrict]);
 
   useEffect(() => {
     const map = mapRef.current;

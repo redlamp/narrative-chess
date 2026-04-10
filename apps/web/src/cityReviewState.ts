@@ -45,6 +45,10 @@ function readMapAnchor(value: unknown, fallback: MapAnchor | undefined) {
   return { longitude, latitude };
 }
 
+function readRadiusMeters(value: unknown, fallback: number | undefined) {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
 function hydrateDistrictCell(candidate: unknown, fallback: DistrictCell): DistrictCell {
   if (!isRecord(candidate)) {
     return { ...fallback };
@@ -61,6 +65,7 @@ function hydrateDistrictCell(candidate: unknown, fallback: DistrictCell): Distri
     nightProfile: readString(candidate.nightProfile, fallback.nightProfile),
     toneCues: readStringArray(candidate.toneCues, fallback.toneCues),
     mapAnchor: readMapAnchor(candidate.mapAnchor, fallback.mapAnchor),
+    radiusMeters: readRadiusMeters(candidate.radiusMeters, fallback.radiusMeters),
     contentStatus:
       candidate.contentStatus === "empty" ||
       candidate.contentStatus === "procedural" ||

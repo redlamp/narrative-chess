@@ -117,6 +117,7 @@ export function useChessMatch({ roleCatalog }: UseChessMatchOptions) {
   const [studyReplay, setStudyReplay] = useState<StudyReplay | null>(null);
   const [localPly, setLocalPly] = useState(0);
   const [studyPly, setStudyPly] = useState(0);
+  const [timelineKey, setTimelineKey] = useState(0);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [tonePreset, setTonePreset] = useState<NarrativeTonePreset>("grounded");
   const [savedMatches, setSavedMatches] = useState<SavedMatchRecord[]>(() => listSavedMatches());
@@ -198,6 +199,7 @@ export function useChessMatch({ roleCatalog }: UseChessMatchOptions) {
         });
         setStudyPly(0);
         setSelectedSquare(null);
+        setTimelineKey((current) => current + 1);
       });
 
       return true;
@@ -377,6 +379,7 @@ export function useChessMatch({ roleCatalog }: UseChessMatchOptions) {
       );
       setLocalPly(savedMatch.snapshot.moveHistory.length);
       setSavedMatches(listSavedMatches());
+      setTimelineKey((current) => current + 1);
     });
 
     return true;
@@ -388,6 +391,8 @@ export function useChessMatch({ roleCatalog }: UseChessMatchOptions) {
 
   return {
     snapshot,
+    timelineKey,
+    historySnapshots,
     historyMoves,
     historyEvents,
     selectedPly,

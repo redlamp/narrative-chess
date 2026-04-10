@@ -36,6 +36,9 @@ const londonBounds: CityBounds = {
   center: [-0.1276, 51.5072]
 };
 
+const defaultDistrictRadiusMeters = 600;
+const earthRadiusMeters = 6371008.8;
+
 const edinburghDistrictAnchors: Record<string, [number, number]> = {
   "edinburgh-cramond": [-3.3002, 55.9748],
   "edinburgh-stockbridge": [-3.2095, 55.9586],
@@ -106,6 +109,24 @@ export function getDistrictMapCenter(cityBoard: CityBoard, district: DistrictCel
   }
 
   return getBoardSquareCenter(cityBoard, district.square);
+}
+
+export function getDistrictRadiusMeters(district: DistrictCell) {
+  return district.radiusMeters ?? defaultDistrictRadiusMeters;
+}
+
+export function getDistanceMeters(left: [number, number], right: [number, number]) {
+  const [leftLongitude, leftLatitude] = left;
+  const [rightLongitude, rightLatitude] = right;
+  const leftLatitudeRadians = leftLatitude * Math.PI / 180;
+  const rightLatitudeRadians = rightLatitude * Math.PI / 180;
+  const latitudeDelta = (rightLatitude - leftLatitude) * Math.PI / 180;
+  const longitudeDelta = (rightLongitude - leftLongitude) * Math.PI / 180;
+  const halfChord =
+    Math.sin(latitudeDelta / 2) ** 2 +
+    Math.cos(leftLatitudeRadians) * Math.cos(rightLatitudeRadians) * Math.sin(longitudeDelta / 2) ** 2;
+
+  return 2 * earthRadiusMeters * Math.atan2(Math.sqrt(halfChord), Math.sqrt(1 - halfChord));
 }
 
 export function buildDistrictQuery(cityBoard: CityBoard, district: DistrictCell) {
@@ -257,6 +278,63 @@ export function createDistrictMarkerGeoJson(input: {
           name: district.name,
           locality: district.locality,
           isActive: district.square === activeSquare ? 1 : 0
+        }
+      };
+    })
+  };
+}
+
+function createRadiusCoordinates(center: [number, number], radiusMeters: number) {
+  const [centerLongitude, centerLatitude] = center;
+  const centerLatitudeRadians = centerLatitude * Math.PI / 180;
+  const centerLongitudeRadians = centerLongitude * Math.PI / 180;
+  const angularDistance = radiusMeters / earthRadiusMeters;
+  const coordinates: Array<[number, number]> = [];
+
+  for (let index = 0; index <= 64; index += 1) {
+    const bearing = 2 * Math.PI * (index / 64);
+    const latitudeRadians = Math.asin(
+      Math.sin(centerLatitudeRadians) * Math.cos(angularDistance) +
+        Math.cos(centerLatitudeRadians) * Math.sin(angularDistance) * Math.cos(bearing)
+    );
+    const longitudeRadians = centerLongitudeRadians + Math.atan2(
+      Math.sin(bearing) * Math.sin(angularDistance) * Math.cos(centerLatitudeRadians),
+      Math.cos(angularDistance) - Math.sin(centerLatitudeRadians) * Math.sin(latitudeRadians)
+    );
+
+    coordinates.push([
+      ((longitudeRadians * 180 / Math.PI + 540) % 360) - 180,
+      latitudeRadians * 180 / Math.PI
+    ]);
+  }
+
+  return coordinates;
+}
+
+export function createDistrictRadiusGeoJson(input: {
+  cityBoard: CityBoard;
+  districts: DistrictCell[];
+  activeDistrictId?: string | null;
+}) {
+  const { cityBoard, districts, activeDistrictId = null } = input;
+
+  return {
+    type: "FeatureCollection" as const,
+    features: districts.map((district) => {
+      const center = getDistrictMapCenter(cityBoard, district);
+      const radiusMeters = getDistrictRadiusMeters(district);
+
+      return {
+        type: "Feature" as const,
+        geometry: {
+          type: "Polygon" as const,
+          coordinates: [createRadiusCoordinates(center, radiusMeters)]
+        },
+        properties: {
+          id: district.id,
+          square: district.square,
+          isActive: district.id === activeDistrictId ? 1 : 0,
+          radiusMeters
         }
       };
     })

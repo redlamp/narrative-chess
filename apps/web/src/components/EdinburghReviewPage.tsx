@@ -19,6 +19,7 @@ import {
   FilePenLine,
   FolderTree,
   FolderOpen,
+  LocateFixed,
   Move,
   OctagonAlert,
   Bot,
@@ -35,6 +36,7 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,7 +54,7 @@ import {
   TooltipTrigger
 } from "@/components/ui/tooltip";
 import { cityBoardDefinitions, getCityBoardDefinition } from "../cityBoards";
-import { getDistrictMapCenter } from "./cityMapShared";
+import { getDistrictMapCenter, getDistrictRadiusMeters } from "./cityMapShared";
 import {
   buildCityBoardValidation,
   listCityBoardDraft,
@@ -627,6 +629,7 @@ function MapPositionMoveButton({
 type EdinburghReviewPageProps = {
   layoutMode: boolean;
   showLayoutGrid: boolean;
+  onCityBoardDraftChange?: (board: CityBoard) => void;
   onToggleLayoutMode: () => void;
   onToggleLayoutGrid: (checked: boolean) => void;
 };
@@ -634,6 +637,7 @@ type EdinburghReviewPageProps = {
 export function EdinburghReviewPage({
   layoutMode,
   showLayoutGrid,
+  onCityBoardDraftChange,
   onToggleLayoutMode,
   onToggleLayoutGrid
 }: EdinburghReviewPageProps) {
@@ -662,6 +666,10 @@ export function EdinburghReviewPage({
   const [selectedCityTab, setSelectedCityTabState] = useState<CityEditorTab>("basics");
   const [selectedDistrictTab, setSelectedDistrictTabState] = useState<DistrictEditorTab>("basics");
   const [isMapImportArmed, setIsMapImportArmed] = useState(false);
+  const [mapPlacementSearchRequest, setMapPlacementSearchRequest] = useState<{
+    token: number;
+    query: string;
+  } | null>(null);
   const selectedCityDefinition =
     getCityBoardDefinition(selectedCityId) ?? initialCityDefinition ?? cityBoardDefinitions[0] ?? null;
   const validation = useMemo(() => buildCityBoardValidation(draft), [draft]);
@@ -696,11 +704,12 @@ export function EdinburghReviewPage({
 
   useEffect(() => {
     try {
-      saveCityBoardDraft(draft);
+      const savedDraft = saveCityBoardDraft(draft);
+      onCityBoardDraftChange?.(savedDraft);
     } catch {
       // Keep persisting local working edits even while the draft is temporarily invalid.
     }
-  }, [draft]);
+  }, [draft, onCityBoardDraftChange]);
 
   useEffect(() => {
     if (!selectedCityDefinition) {
@@ -1889,8 +1898,34 @@ export function EdinburghReviewPage({
                           rows={4}
                         />
                       </label>
+                      <div className="grid gap-2 lg:col-span-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm font-medium">Radius</span>
+                          <span className="text-xs text-muted-foreground">
+                            {getDistrictRadiusMeters(editorDistrict).toLocaleString()} m
+                          </span>
+                        </div>
+                        <Slider
+                          min={100}
+                          max={3000}
+                          step={50}
+                          value={[getDistrictRadiusMeters(editorDistrict)]}
+                          disabled={!canEditEditorDistrict}
+                          onValueChange={([radiusMeters]) => {
+                            if (typeof radiusMeters !== "number") {
+                              return;
+                            }
+
+                            updateSelectedDistricts((district) => ({
+                              ...district,
+                              radiusMeters
+                            }));
+                          }}
+                        />
+                      </div>
                       <div className="cities-page__coordinate-row lg:col-span-2">
-                        <div className="grid gap-2">
+                        <div className="grid gap-2 justify-items-start">
+                          <span className="text-sm font-medium">Pin Location</span>
                           <TooltipProvider delayDuration={150}>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -1901,17 +1936,17 @@ export function EdinburghReviewPage({
                                   className="mt-auto"
                                   disabled={isBulkDistrictSelection || !canEditEditorDistrict}
                                   onClick={() => setIsMapImportArmed((current) => !current)}
-                                  aria-label="Target map position"
+                                  aria-label="Pin on map"
                                 >
                                   <Crosshair />
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent>Target Map Position</TooltipContent>
+                              <TooltipContent>Pin on map</TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         </div>
                         <CoordinateStepperField
-                          label="Long"
+                          label="Longitude"
                           value={editorDistrictEffectiveMapAnchor?.longitude ?? 0}
                           min={-180}
                           max={180}
@@ -1924,24 +1959,6 @@ export function EdinburghReviewPage({
                                 district,
                                 fallbackAnchor: editorDistrictEffectiveMapAnchor ?? { longitude: 0, latitude: 0 },
                                 longitudeText: valueText
-                              })
-                            )
-                          }
-                        />
-                        <CoordinateStepperField
-                          label="Lat"
-                          value={editorDistrictEffectiveMapAnchor?.latitude ?? 0}
-                          min={-90}
-                          max={90}
-                          step={0.00001}
-                          disabled={isBulkDistrictSelection || !canEditEditorDistrict}
-                          className="coordinate-stepper-field--compact"
-                          onChange={(valueText) =>
-                            updateSelectedDistricts((district) =>
-                              updateDistrictMapAnchorFromParts({
-                                district,
-                                fallbackAnchor: editorDistrictEffectiveMapAnchor ?? { longitude: 0, latitude: 0 },
-                                latitudeText: valueText
                               })
                             )
                           }
@@ -1966,6 +1983,44 @@ export function EdinburghReviewPage({
                             )
                           }
                         />
+                        <CoordinateStepperField
+                          label="Latitude"
+                          value={editorDistrictEffectiveMapAnchor?.latitude ?? 0}
+                          min={-90}
+                          max={90}
+                          step={0.00001}
+                          disabled={isBulkDistrictSelection || !canEditEditorDistrict}
+                          className="coordinate-stepper-field--compact"
+                          onChange={(valueText) =>
+                            updateSelectedDistricts((district) =>
+                              updateDistrictMapAnchorFromParts({
+                                district,
+                                fallbackAnchor: editorDistrictEffectiveMapAnchor ?? { longitude: 0, latitude: 0 },
+                                latitudeText: valueText
+                              })
+                            )
+                          }
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="self-end"
+                          disabled={!editorDistrict}
+                          onClick={() => {
+                            if (!editorDistrict) {
+                              return;
+                            }
+
+                            setMapPlacementSearchRequest((current) => ({
+                              token: (current?.token ?? 0) + 1,
+                              query: `${editorDistrict.name}, ${draft.name}, ${draft.country}`
+                            }));
+                          }}
+                        >
+                          <LocateFixed />
+                          Find on Map
+                        </Button>
                       </div>
                     </div>
                   </TabsContent>
@@ -2025,12 +2080,13 @@ export function EdinburghReviewPage({
               ) : null}
             </div>
           </CardHeader>
-          <CardContent className="page-card__content grid gap-4">
+          <CardContent className="page-card__content page-card__content--map-placement">
             {selectedDistrict ? (
               <CityDistrictMapEditor
                 cityBoard={draft}
                 selectedDistrict={selectedDistrict}
                 highlightedDistrict={highlightedDistrict}
+                locationSearchRequest={mapPlacementSearchRequest}
                 onHighlightedDistrictChange={setHoveredDistrictId}
                 onSelectDistrict={selectDistrictById}
                 importModeArmed={isMapImportArmed}
@@ -2049,6 +2105,7 @@ export function EdinburghReviewPage({
                 cityBoard={draft}
                 selectedDistrict={null}
                 highlightedDistrict={highlightedDistrict}
+                locationSearchRequest={mapPlacementSearchRequest}
                 onHighlightedDistrictChange={setHoveredDistrictId}
                 onSelectDistrict={selectDistrictById}
                 importModeArmed={false}
