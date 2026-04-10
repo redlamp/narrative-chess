@@ -6,6 +6,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { FloatingActionNotice } from "./FloatingActionNotice";
 import { ChevronDown, FolderOpen, FolderTree, RefreshCw, Save, Trash2, X } from "lucide-react";
 import { NumberStepperField } from "./NumberStepperField";
 
@@ -154,20 +155,12 @@ export function SharedLayoutToolbar({
             onOpenChange={(open) => updateOpenSections((current) => ({ ...current, grid: open }))}
             className="layout-toolbar__section"
           >
-            <div className="layout-toolbar__section-header">
-              <CollapsibleTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  className="layout-toolbar__section-toggle"
-                  aria-label={openSections.grid ? "Collapse grid section" : "Expand grid section"}
-                >
-                  <ChevronDown className={`layout-toolbar__section-chevron ${openSections.grid ? "is-open" : ""}`} />
-                </Button>
-              </CollapsibleTrigger>
+            <CollapsibleTrigger className="layout-toolbar__section-header">
+              <span className="layout-toolbar__section-toggle" aria-hidden="true">
+                <ChevronDown className={`layout-toolbar__section-chevron ${openSections.grid ? "is-open" : ""}`} />
+              </span>
               <h3 className="layout-toolbar__section-title">Grid</h3>
-            </div>
+            </CollapsibleTrigger>
 
             <CollapsibleContent className="layout-toolbar__section-content">
               <div className="layout-toolbar__controls">
@@ -211,25 +204,17 @@ export function SharedLayoutToolbar({
             onOpenChange={(open) => updateOpenSections((current) => ({ ...current, components: open }))}
             className="layout-toolbar__section layout-toolbar__file-section"
           >
-            <div className="layout-toolbar__section-header">
-              <CollapsibleTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  className="layout-toolbar__section-toggle"
-                  aria-label={openSections.components ? "Collapse components section" : "Expand components section"}
-                >
-                  <ChevronDown
-                    className={`layout-toolbar__section-chevron ${openSections.components ? "is-open" : ""}`}
-                  />
-                </Button>
-              </CollapsibleTrigger>
+            <CollapsibleTrigger className="layout-toolbar__section-header">
+              <span className="layout-toolbar__section-toggle" aria-hidden="true">
+                <ChevronDown
+                  className={`layout-toolbar__section-chevron ${openSections.components ? "is-open" : ""}`}
+                />
+              </span>
               <div className="layout-toolbar__section-meta">
                 <h3 className="layout-toolbar__section-title">Components</h3>
                 <Badge variant="outline">{components.length}</Badge>
               </div>
-            </div>
+            </CollapsibleTrigger>
 
             <CollapsibleContent className="layout-toolbar__section-content">
               <div className="layout-toolbar__component-list">
@@ -267,25 +252,17 @@ export function SharedLayoutToolbar({
             onOpenChange={(open) => updateOpenSections((current) => ({ ...current, layouts: open }))}
             className="layout-toolbar__section layout-toolbar__file-section"
           >
-            <div className="layout-toolbar__section-header">
-              <CollapsibleTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  className="layout-toolbar__section-toggle"
-                  aria-label={openSections.layouts ? "Collapse layouts section" : "Expand layouts section"}
-                >
-                  <ChevronDown
-                    className={`layout-toolbar__section-chevron ${openSections.layouts ? "is-open" : ""}`}
-                  />
-                </Button>
-              </CollapsibleTrigger>
+            <CollapsibleTrigger className="layout-toolbar__section-header">
+              <span className="layout-toolbar__section-toggle" aria-hidden="true">
+                <ChevronDown
+                  className={`layout-toolbar__section-chevron ${openSections.layouts ? "is-open" : ""}`}
+                />
+              </span>
               <div className="layout-toolbar__section-meta">
                 <h3 className="layout-toolbar__section-title">Layouts</h3>
                 {layoutDirectoryName ? <Badge variant="outline">Connected: {layoutDirectoryName}</Badge> : null}
               </div>
-            </div>
+            </CollapsibleTrigger>
 
             <CollapsibleContent className="layout-toolbar__section-content">
               <div className="layout-toolbar__file-controls">
@@ -383,6 +360,7 @@ export function SharedLayoutToolbar({
                     </TooltipTrigger>
                     <TooltipContent>Remove named file</TooltipContent>
                   </Tooltip>
+                  <FloatingActionNotice notice={layoutFileNotice} />
                 </div>
               </div>
 
@@ -399,16 +377,6 @@ export function SharedLayoutToolbar({
                       {file.name}
                     </Button>
                   ))}
-                </div>
-              ) : null}
-
-              {layoutFileNotice ? (
-                <div
-                  className={`layout-toolbar__notice layout-toolbar__notice--${layoutFileNotice.tone}`}
-                  role="status"
-                  aria-live="polite"
-                >
-                  {layoutFileNotice.text}
                 </div>
               ) : null}
 

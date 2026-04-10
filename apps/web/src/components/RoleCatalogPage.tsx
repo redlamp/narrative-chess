@@ -259,7 +259,7 @@ export function RoleCatalogPage({
           title="Characters"
           actions={
             <TooltipProvider delayDuration={150}>
-              <div className="cities-overview-intro__actions-group">
+              <div className="workspace-header-actions-group">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -296,7 +296,7 @@ export function RoleCatalogPage({
                       type="button"
                       variant="outline"
                       size="icon-sm"
-                      className="cities-overview-intro__reset-button"
+                      className="workspace-header-actions-reset-button"
                       onClick={onRoleCatalogReset}
                       aria-label="Reset defaults"
                     >

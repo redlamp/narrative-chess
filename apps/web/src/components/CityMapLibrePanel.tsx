@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import maplibregl, { type GeoJSONSource, type Map as MapLibreMap } from "maplibre-gl";
+import maplibregl, {
+  type DataDrivenPropertyValueSpecification,
+  type GeoJSONSource,
+  type Map as MapLibreMap
+} from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { ExternalLink, Map as MapIcon, Satellite } from "lucide-react";
 import type { CityBoard, DistrictCell, MoveRecord, PieceState } from "@narrative-chess/content-schema";
@@ -31,6 +35,28 @@ const districtMarkerLabelLayerId = "district-markers-label-layer";
 const occupiedPieceSourceId = "district-piece-markers";
 const occupiedPieceBackgroundLayerId = "district-piece-markers-background-layer";
 const occupiedPieceLayerId = "district-piece-markers-layer";
+const occupiedPieceBackgroundColor = "#BFBFBF";
+const mapMarkerColors = {
+  kingCheck: "#fbbf24",
+  kingCheckmate: "#f87171",
+  pieceAttacked: "#dc2626"
+} as const;
+const occupiedPieceBackgroundColorExpression: DataDrivenPropertyValueSpecification<string> = [
+  "case",
+  ["==", ["get", "isKingCheckmate"], 1],
+  mapMarkerColors.kingCheckmate,
+  ["==", ["get", "isKingCheck"], 1],
+  mapMarkerColors.kingCheck,
+  occupiedPieceBackgroundColor
+];
+const occupiedPieceStrokeColorExpression: DataDrivenPropertyValueSpecification<string> = [
+  "case",
+  ["==", ["get", "isAttackingPiece"], 1],
+  mapMarkerColors.pieceAttacked,
+  ["==", ["get", "isActive"], 1],
+  "#111827",
+  "rgba(17,24,39,0.28)"
+];
 
 const pieceIconDefinitions = [
   { side: "white", kind: "pawn" },
@@ -61,8 +87,12 @@ function createOccupiedPieceGeoJson(input: {
   cityBoard: CityBoard;
   pieces: PieceState[];
   activeSquare: string | null;
+  lastMove: MoveRecord | null;
 }) {
-  const { cityBoard, pieces, activeSquare } = input;
+  const { cityBoard, pieces, activeSquare, lastMove } = input;
+  const threatenedKingSide = lastMove?.isCheck || lastMove?.isCheckmate
+    ? lastMove.side === "white" ? "black" : "white"
+    : null;
 
   return {
     type: "FeatureCollection" as const,
@@ -89,6 +119,9 @@ function createOccupiedPieceGeoJson(input: {
             id: piece.pieceId,
             square: piece.square,
             isActive: piece.square === activeSquare ? 1 : 0,
+            isAttackingPiece: lastMove?.capturedPieceId && piece.pieceId === lastMove.pieceId ? 1 : 0,
+            isKingCheck: threatenedKingSide === piece.side && piece.kind === "king" && lastMove?.isCheck ? 1 : 0,
+            isKingCheckmate: threatenedKingSide === piece.side && piece.kind === "king" && lastMove?.isCheckmate ? 1 : 0,
             iconId: getPieceIconId({
               side: piece.side,
               kind: piece.promotedTo ?? piece.kind
@@ -153,7 +186,7 @@ function ensureDistrictMarkerLayers(map: MapLibreMap, cityBoard: CityBoard, acti
         14,
         9
       ],
-      "circle-color": "#ffffff",
+      "circle-color": "#696969",
       "circle-stroke-width": 2,
       "circle-stroke-color": "#111827",
       "circle-opacity": 0.95
@@ -203,19 +236,25 @@ async function syncOccupiedPieceLayer(input: {
   cityBoard: CityBoard;
   pieces: PieceState[];
   activeSquare: string | null;
+  lastMove: MoveRecord | null;
 }) {
-  const { map, cityBoard, pieces, activeSquare } = input;
+  const { map, cityBoard, pieces, activeSquare, lastMove } = input;
   await ensurePieceMarkerIcons(map);
 
   const markerData = createOccupiedPieceGeoJson({
     cityBoard,
     pieces,
-    activeSquare
+    activeSquare,
+    lastMove
   });
   const existingSource = map.getSource(occupiedPieceSourceId) as GeoJSONSource | undefined;
 
   if (existingSource) {
     existingSource.setData(markerData);
+    if (map.getLayer(occupiedPieceBackgroundLayerId)) {
+      map.setPaintProperty(occupiedPieceBackgroundLayerId, "circle-color", occupiedPieceBackgroundColorExpression);
+      map.setPaintProperty(occupiedPieceBackgroundLayerId, "circle-stroke-color", occupiedPieceStrokeColorExpression);
+    }
     return;
   }
 
@@ -238,7 +277,7 @@ async function syncOccupiedPieceLayer(input: {
         14,
         15
       ],
-      "circle-color": "#ffffff",
+      "circle-color": occupiedPieceBackgroundColorExpression,
       "circle-opacity": 0.96,
       "circle-stroke-width": [
         "case",
@@ -246,12 +285,7 @@ async function syncOccupiedPieceLayer(input: {
         2.5,
         1.5
       ],
-      "circle-stroke-color": [
-        "case",
-        ["==", ["get", "isActive"], 1],
-        "#111827",
-        "rgba(17,24,39,0.28)"
-      ]
+      "circle-stroke-color": occupiedPieceStrokeColorExpression
     }
   });
 
@@ -275,6 +309,7 @@ async function syncOccupiedPieceLayer(input: {
       "icon-ignore-placement": true
     }
   });
+
 }
 
 export function CityMapLibrePanel({
@@ -329,7 +364,8 @@ export function CityMapLibrePanel({
         map,
         cityBoard,
         pieces,
-        activeSquare: highlightedSquare
+        activeSquare: highlightedSquare,
+        lastMove
       });
     });
     mapRef.current = map;
@@ -355,7 +391,8 @@ export function CityMapLibrePanel({
         map,
         cityBoard,
         pieces,
-        activeSquare: highlightedSquare
+        activeSquare: highlightedSquare,
+        lastMove
       }).finally(() => {
         map.resize();
       });
@@ -373,9 +410,10 @@ export function CityMapLibrePanel({
       map,
       cityBoard,
       pieces,
-      activeSquare: highlightedSquare
+      activeSquare: highlightedSquare,
+      lastMove
     });
-  }, [cityBoard, highlightedSquare, pieces]);
+  }, [cityBoard, highlightedSquare, lastMove, pieces]);
 
   useEffect(() => {
     const map = mapRef.current;

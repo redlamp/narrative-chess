@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import { useRef, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { ChevronFirst, ChevronLast, ChevronLeft, ChevronRight } from "lucide-react";
 import type { CharacterSummary, MoveRecord } from "@narrative-chess/content-schema";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Panel } from "./Panel";
 import { PieceArt } from "./PieceArt";
 
@@ -87,136 +88,202 @@ export function MatchHistoryPanel({
   headerAction
 }: MatchHistoryPanelProps) {
   const movePairs = buildMovePairs(moves);
+  const scrubStartRef = useRef<{ clientX: number; clientY: number; selectedPly: number } | null>(null);
+  const clampedSelectedPly = Math.min(Math.max(selectedPly, 0), totalPlies);
+  const scrubLabel = `${clampedSelectedPly} / ${totalPlies}`;
+
+  const handleScrubPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (totalPlies <= 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    scrubStartRef.current = {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      selectedPly: clampedSelectedPly
+    };
+  };
+
+  const handleScrubPointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const scrubStart = scrubStartRef.current;
+    if (!scrubStart) {
+      return;
+    }
+
+    event.preventDefault();
+    const pixelsPerMove = 14;
+    const dragDistance = (event.clientX - scrubStart.clientX) + (event.clientY - scrubStart.clientY);
+    const nextPly = Math.min(
+      Math.max(scrubStart.selectedPly + Math.round(dragDistance / pixelsPerMove), 0),
+      totalPlies
+    );
+
+    if (nextPly !== selectedPly) {
+      onSelectPly(nextPly);
+    }
+  };
+
+  const handleScrubPointerEnd = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    scrubStartRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
 
   return (
-    <Panel
-      title="History (PGN)"
-      collapsed={collapsed}
-      onToggleCollapse={onToggleCollapse}
-      action={headerAction}
-    >
-      <div className="match-history">
-        <div className="match-history__playhead">
-          <div className="match-history__nav">
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-sm"
-              onClick={onJumpToStart}
-              disabled={selectedPly === 0}
-              aria-label="Jump to the start position"
-            >
-              <ChevronFirst />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-sm"
-              onClick={onStepBackward}
-              disabled={selectedPly === 0}
-              aria-label="Step backward one move"
-            >
-              <ChevronLeft />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-sm"
-              onClick={onStepForward}
-              disabled={selectedPly >= totalPlies}
-              aria-label="Step forward one move"
-            >
-              <ChevronRight />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-sm"
-              onClick={onJumpToEnd}
-              disabled={selectedPly >= totalPlies}
-              aria-label="Jump to the latest position"
-            >
-              <ChevronLast />
-            </Button>
-          </div>
-        </div>
-
-        {movePairs.length ? (
-          <>
-            <div className="match-history__header-row" aria-hidden="true">
-              <span className="match-history__header-cell match-history__header-cell--number" />
-              <span className="match-history__header-cell">White</span>
-              <span className="match-history__header-cell">Black</span>
-            </div>
-
-            <div className="match-history__score">
-              {movePairs.map((movePair) => (
-                <article key={movePair.moveNumber} className="match-history__row">
-                  <span className="match-history__move-number">{movePair.moveNumber}.</span>
+    <TooltipProvider delayDuration={150}>
+      <Panel
+        title="History (PGN)"
+        collapsed={collapsed}
+        onToggleCollapse={onToggleCollapse}
+        action={headerAction}
+      >
+        <div className="match-history">
+          <div className="match-history__playhead">
+            <div className="match-history__nav">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                className="match-history__nav-button"
+                onClick={onJumpToStart}
+                disabled={selectedPly === 0}
+                aria-label="Jump to the start position"
+              >
+                <ChevronFirst />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                className="match-history__nav-button"
+                onClick={onStepBackward}
+                disabled={selectedPly === 0}
+                aria-label="Step backward one move"
+              >
+                <ChevronLeft />
+              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <button
                     type="button"
-                    className={[
-                      "match-history__move-button",
-                      selectedPly === movePair.white.moveNumber ? "match-history__move-button--active" : ""
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    aria-current={selectedPly === movePair.white.moveNumber ? "step" : undefined}
-                    onClick={() => onSelectPly(movePair.white.moveNumber)}
+                    className="match-history__scrubber"
+                    disabled={totalPlies <= 0}
+                    onPointerDown={handleScrubPointerDown}
+                    onPointerMove={handleScrubPointerMove}
+                    onPointerUp={handleScrubPointerEnd}
+                    onPointerCancel={handleScrubPointerEnd}
+                    aria-label={`Move ${scrubLabel}`}
                   >
-                    <span
-                      className={`match-history__piece-icon match-history__piece-icon--${movePair.white.side}`}
-                      aria-hidden="true"
-                    >
-                      <PieceArt
-                        side={movePair.white.side}
-                        kind={movePair.white.pieceKind}
-                        className="board-piece-art board-piece-art--history"
-                      />
-                    </span>
-                    <span className="match-history__move-san">{movePair.white.san}</span>
-                    {renderCapturedPiece(movePair.white, characters)}
+                    {scrubLabel}
                   </button>
-                  {movePair.black ? (
+                </TooltipTrigger>
+                <TooltipContent>Drag to scrub</TooltipContent>
+              </Tooltip>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                className="match-history__nav-button"
+                onClick={onStepForward}
+                disabled={selectedPly >= totalPlies}
+                aria-label="Step forward one move"
+              >
+                <ChevronRight />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                className="match-history__nav-button"
+                onClick={onJumpToEnd}
+                disabled={selectedPly >= totalPlies}
+                aria-label="Jump to the latest position"
+              >
+                <ChevronLast />
+              </Button>
+            </div>
+          </div>
+
+          {movePairs.length ? (
+            <>
+              <div className="match-history__header-row" aria-hidden="true">
+                <span className="match-history__header-cell match-history__header-cell--number" />
+                <span className="match-history__header-cell">White</span>
+                <span className="match-history__header-cell">Black</span>
+              </div>
+
+              <div className="match-history__score">
+                {movePairs.map((movePair) => (
+                  <article key={movePair.moveNumber} className="match-history__row">
+                    <span className="match-history__move-number">{movePair.moveNumber}.</span>
                     <button
                       type="button"
                       className={[
                         "match-history__move-button",
-                        selectedPly === movePair.black?.moveNumber ? "match-history__move-button--active" : ""
+                        selectedPly === movePair.white.moveNumber ? "match-history__move-button--active" : ""
                       ]
                         .filter(Boolean)
                         .join(" ")}
-                      aria-current={selectedPly === movePair.black?.moveNumber ? "step" : undefined}
-                      onClick={() => {
-                        if (movePair.black) {
-                          onSelectPly(movePair.black.moveNumber);
-                        }
-                      }}
+                      aria-current={selectedPly === movePair.white.moveNumber ? "step" : undefined}
+                      onClick={() => onSelectPly(movePair.white.moveNumber)}
                     >
                       <span
-                        className={`match-history__piece-icon match-history__piece-icon--${movePair.black.side}`}
+                        className={`match-history__piece-icon match-history__piece-icon--${movePair.white.side}`}
                         aria-hidden="true"
                       >
                         <PieceArt
-                          side={movePair.black.side}
-                          kind={movePair.black.pieceKind}
+                          side={movePair.white.side}
+                          kind={movePair.white.pieceKind}
                           className="board-piece-art board-piece-art--history"
                         />
                       </span>
-                      <span className="match-history__move-san">{movePair.black.san}</span>
-                      {renderCapturedPiece(movePair.black, characters)}
+                      <span className="match-history__move-san">{movePair.white.san}</span>
+                      {renderCapturedPiece(movePair.white, characters)}
                     </button>
-                  ) : (
-                    <span className="match-history__move-empty">...</span>
-                  )}
-                </article>
-              ))}
-            </div>
-          </>
-        ) : (
-          <p className="muted">The PGN log will appear here as soon as the first move lands.</p>
-        )}
-      </div>
-    </Panel>
+                    {movePair.black ? (
+                      <button
+                        type="button"
+                        className={[
+                          "match-history__move-button",
+                          selectedPly === movePair.black?.moveNumber ? "match-history__move-button--active" : ""
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        aria-current={selectedPly === movePair.black?.moveNumber ? "step" : undefined}
+                        onClick={() => {
+                          if (movePair.black) {
+                            onSelectPly(movePair.black.moveNumber);
+                          }
+                        }}
+                      >
+                        <span
+                          className={`match-history__piece-icon match-history__piece-icon--${movePair.black.side}`}
+                          aria-hidden="true"
+                        >
+                          <PieceArt
+                            side={movePair.black.side}
+                            kind={movePair.black.pieceKind}
+                            className="board-piece-art board-piece-art--history"
+                          />
+                        </span>
+                        <span className="match-history__move-san">{movePair.black.san}</span>
+                        {renderCapturedPiece(movePair.black, characters)}
+                      </button>
+                    ) : (
+                      <span className="match-history__move-empty">...</span>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="muted">The PGN log will appear here as soon as the first move lands.</p>
+          )}
+        </div>
+      </Panel>
+    </TooltipProvider>
   );
 }

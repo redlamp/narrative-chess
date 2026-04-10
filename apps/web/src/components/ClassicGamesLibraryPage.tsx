@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useState } from "react";
-import { Copy, ExternalLink, FolderOpen, FolderTree, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
+import { ExternalLink, FileUp, FolderOpen, FolderTree, RotateCcw, Save } from "lucide-react";
 import { createReplayFromPgn, getBoardSquares } from "@narrative-chess/game-core";
 import type {
   DistrictCell,
@@ -30,8 +30,6 @@ import {
 } from "../fileSystemAccess";
 import {
   buildReferenceGameLibraryValidation,
-  createReferenceGameFromSource,
-  createReferenceGameTemplate,
   getDefaultReferenceGames,
   listReferenceGames,
   normalizeReferenceGameLibrary,
@@ -405,50 +403,6 @@ export function ClassicGamesLibraryPage({
     });
   }
 
-  function handleAddGame() {
-    const nextGame = createReferenceGameTemplate(games.length);
-    setGames((current) => [...current, nextGame]);
-    setSelectedGameId(nextGame.id);
-    onSelectReferenceGame(nextGame.id);
-    setFileNotice({
-      tone: "neutral",
-      text: "Added a new editable classic game template."
-    });
-  }
-
-  function handleDuplicateGame() {
-    if (!selectedGame) {
-      return;
-    }
-
-    const nextGame = createReferenceGameFromSource(selectedGame, games.length);
-    setGames((current) => [...current, nextGame]);
-    setSelectedGameId(nextGame.id);
-    onSelectReferenceGame(nextGame.id);
-    setFileNotice({
-      tone: "neutral",
-      text: `Duplicated ${selectedGame.title}.`
-    });
-  }
-
-  function handleDeleteGame() {
-    if (!selectedGame) {
-      return;
-    }
-
-    const nextGames = games.filter((game) => game.id !== selectedGame.id);
-    const nextSelectedId = nextGames[0]?.id ?? "";
-    setGames(nextGames);
-    setSelectedGameId(nextSelectedId);
-    if (nextSelectedId) {
-      onSelectReferenceGame(nextSelectedId);
-    }
-    setFileNotice({
-      tone: "neutral",
-      text: `Deleted ${selectedGame.title}.`
-    });
-  }
-
   return (
     <IndexedWorkspace
       className="classic-games-workspace"
@@ -456,6 +410,9 @@ export function ClassicGamesLibraryPage({
       layoutMode={layoutMode}
       layoutKey="classics-page"
       layoutVariant="two-pane"
+      panelLabels={{
+        detail: "Game Details"
+      }}
       showLayoutGrid={showLayoutGrid}
       onToggleLayoutMode={onToggleLayoutMode}
       onToggleLayoutGrid={onToggleLayoutGrid}
@@ -472,97 +429,70 @@ export function ClassicGamesLibraryPage({
           }
           title="Historic"
           actions={
-            <>
-              <TooltipProvider delayDuration={150}>
-                <div className="cities-overview-intro__actions-group">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        onClick={handleConnectFolder}
-                        disabled={!isDirectorySupported || busyAction === "connect-folder"}
-                        aria-label="Connect folder"
-                      >
-                        <FolderTree />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Connect folder</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        onClick={handleLoadFromFolder}
-                        disabled={!isDirectorySupported || busyAction === "load-folder"}
-                        aria-label="Open file"
-                      >
-                        <FolderOpen />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Open file</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        className="cities-overview-intro__reset-button"
-                        onClick={handleResetLibrary}
-                        aria-label="Reset defaults"
-                      >
-                        <RotateCcw />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Reset defaults</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        onClick={handleSaveToFolder}
-                        disabled={!isDirectorySupported || busyAction === "save-folder"}
-                        aria-label="Save to folder"
-                      >
-                        <Save />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Save to folder</TooltipContent>
-                  </Tooltip>
-                </div>
-              </TooltipProvider>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  if (selectedGame) {
-                    onLoadReferenceGame(selectedGame);
-                  }
-                }}
-                disabled={!selectedGame}
-              >
-                Load on study board
-              </Button>
-              <Button type="button" variant="outline" onClick={handleAddGame}>
-                <Plus data-icon="inline-start" />
-                Add game
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleDuplicateGame}
-                disabled={!selectedGame}
-              >
-                <Copy data-icon="inline-start" />
-                Duplicate
-              </Button>
-            </>
+            <TooltipProvider delayDuration={150}>
+              <div className="workspace-header-actions-group">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      onClick={handleConnectFolder}
+                      disabled={!isDirectorySupported || busyAction === "connect-folder"}
+                      aria-label="Connect folder"
+                    >
+                      <FolderTree />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Connect folder</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      onClick={handleLoadFromFolder}
+                      disabled={!isDirectorySupported || busyAction === "load-folder"}
+                      aria-label="Open file"
+                    >
+                      <FolderOpen />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Open file</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      className="workspace-header-actions-reset-button"
+                      onClick={handleResetLibrary}
+                      aria-label="Reset defaults"
+                    >
+                      <RotateCcw />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Reset defaults</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      onClick={handleSaveToFolder}
+                      disabled={!isDirectorySupported || busyAction === "save-folder"}
+                      aria-label="Save to folder"
+                    >
+                      <Save />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Save to folder</TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
           }
           status={fileNotice}
         >
@@ -626,32 +556,48 @@ export function ClassicGamesLibraryPage({
       detail={
         <Card className="page-card page-card--detail classic-games-page__detail">
           <CardHeader className="gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <CardTitle>{selectedGame?.title ?? "Classic game detail"}</CardTitle>
-              {selectedGame ? <Badge variant="outline">{selectedGame.year}</Badge> : null}
-              {selectedGame ? <Badge variant="secondary">{selectedGame.result}</Badge> : null}
-              {selectedGame ? <Badge variant="outline">{selectedGame.reviewStatus}</Badge> : null}
+            <div className="recent-games-details__header classic-games-page__detail-header">
+              <CardTitle>{selectedGame?.title ?? "Game Details"}</CardTitle>
+              {selectedGame ? (
+                <TooltipProvider delayDuration={150}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="icon-sm"
+                        onClick={() => onLoadReferenceGame(selectedGame)}
+                        aria-label={`Load ${selectedGame.title}`}
+                      >
+                        <FileUp />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Load game</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : null}
             </div>
+            {selectedGame ? (
+              <div className="recent-games-details__location-row muted">
+                <span>{selectedGame.site || "Unknown location"}</span>
+                <span className="recent-games-details__year">{selectedGame.year}</span>
+              </div>
+            ) : null}
             <CardDescription>
               {selectedGame
-                ? `${selectedGame.white} vs ${selectedGame.black} | ${selectedGame.event}`
+                ? `${selectedGame.white} vs ${selectedGame.black}, ${selectedGame.event}`
                 : "Select a classic game from the left to review its score and notes."}
             </CardDescription>
+            {selectedGame ? (
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="secondary">{selectedGame.result}</Badge>
+                <Badge variant="outline">{selectedGame.reviewStatus}</Badge>
+              </div>
+            ) : null}
           </CardHeader>
           <CardContent className="page-card__content grid gap-5">
             {selectedGame ? (
               <>
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="outline" onClick={handleDuplicateGame}>
-                    <Copy className="mr-2 h-4 w-4" />
-                    Duplicate
-                  </Button>
-                  <Button type="button" variant="outline" onClick={handleDeleteGame}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </Button>
-                </div>
-
                 <div className="grid gap-4 lg:grid-cols-2">
                   <div className="grid gap-4">
                     <label className="grid gap-2">

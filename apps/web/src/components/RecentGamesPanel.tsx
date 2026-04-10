@@ -14,7 +14,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
-import { ExternalLink, FolderOpen, Trash2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ExternalLink, FileUp, Trash2 } from "lucide-react";
 
 type RecentGamesPanelProps = {
   savedMatches: SavedMatchRecord[];
@@ -157,7 +158,8 @@ export function RecentGamesPanel({
   }, [isDraggingSplit]);
 
   return (
-    <Tabs defaultValue="historic" className="recent-games-panel w-full">
+    <TooltipProvider delayDuration={150}>
+      <Tabs defaultValue="historic" className="recent-games-panel w-full">
       <TabsList className="recent-games-tabs">
         <TabsTrigger value="historic">Historic Games</TabsTrigger>
         <TabsTrigger value="saved">Your Games ({savedMatches.length})</TabsTrigger>
@@ -220,26 +222,30 @@ export function RecentGamesPanel({
               <div className="recent-games-details">
                 <div className="recent-games-details__header">
                   <h4>{previewReferenceGame.title}</h4>
-                  <span className="recent-games-details__year">{previewReferenceGame.year}</span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="icon-sm"
+                        onClick={onLoadReferenceGame}
+                        aria-label={`Load ${previewReferenceGame.title}`}
+                      >
+                        <FileUp />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Load game</TooltipContent>
+                  </Tooltip>
                 </div>
                 <p className="recent-games-details__location-row muted">
                   <span>{previewReferenceGame.site || "Unknown location"}</span>
+                  <span className="recent-games-details__year">{previewReferenceGame.year}</span>
                 </p>
                 <p className="muted">
                   {previewReferenceGame.white} vs {previewReferenceGame.black}, {previewReferenceGame.event}
                 </p>
                 <p className="recent-games-summary">{previewReferenceGame.summary}</p>
                 <div className="recent-games-details__actions">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="icon-sm"
-                    onClick={onLoadReferenceGame}
-                    aria-label={`Load ${previewReferenceGame.title}`}
-                    title="Load game"
-                  >
-                    <FolderOpen />
-                  </Button>
                   {previewReferenceGame.sourceUrl ? (
                     <Button asChild type="button" variant="outline" size="sm">
                       <a href={previewReferenceGame.sourceUrl} target="_blank" rel="noreferrer">
@@ -303,26 +309,32 @@ export function RecentGamesPanel({
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-sm"
-                disabled={!selectedSavedMatch}
-                onClick={onLoadSavedMatch}
-                aria-label={
-                  selectedSavedMatch
-                    ? `Load saved game ${selectedSavedMatch.name}`
-                    : "Load selected saved game"
-                }
-              >
-                <FolderOpen />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon-sm"
+                    disabled={!selectedSavedMatch}
+                    onClick={onLoadSavedMatch}
+                    aria-label={
+                      selectedSavedMatch
+                        ? `Load saved game ${selectedSavedMatch.name}`
+                        : "Load selected saved game"
+                    }
+                  >
+                    <FileUp />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Load game</TooltipContent>
+              </Tooltip>
             </div>
           </div>
         ) : (
           <p className="muted">No saved games yet. Save the current local game to keep your place.</p>
         )}
       </TabsContent>
-    </Tabs>
+      </Tabs>
+    </TooltipProvider>
   );
 }

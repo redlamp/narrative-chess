@@ -74,7 +74,7 @@ type IndexedWorkspaceProps = {
 };
 
 const panelLabels: Record<PageLayoutPanelId, string> = {
-  intro: "Intro",
+  intro: "Header",
   index: "Primary column",
   secondary: "Secondary column",
   detail: "Detail column",

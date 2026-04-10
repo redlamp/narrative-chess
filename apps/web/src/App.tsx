@@ -7,7 +7,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent
 } from "react";
-import { Building2, ChessPawn, Cog, LayoutDashboard, Moon, Pencil, Scroll, Sun, UsersRound } from "lucide-react";
+import { Building2, ChessPawn, Cog, LayoutDashboard, Moon, Pencil, Scroll, Sun, Telescope, UsersRound } from "lucide-react";
 import { getPieceAtSquare } from "@narrative-chess/game-core";
 import { getCharacterEventHistory } from "@narrative-chess/narrative-engine";
 import type { PieceKind, Square } from "@narrative-chess/content-schema";
@@ -137,7 +137,7 @@ const pageOptions: Array<{ value: AppPage; label: string; icon?: React.ReactNode
   { value: "cities", label: "Cities", icon: <Building2 className="size-4" /> },
   { value: "roles", label: "Characters", icon: <UsersRound className="size-4" /> },
   { value: "classics", label: "Historic", icon: <Scroll className="size-4" /> },
-  { value: "research", label: "Research" },
+  { value: "research", label: "Research", icon: <Telescope className="size-4" /> },
   { value: "design", label: "Design", icon: <Pencil className="size-4" /> }
 ];
 
@@ -1416,7 +1416,7 @@ export default function App() {
               <TabsList aria-label="Workspace sections">
                 {pageOptions.map(({ value, label, icon }) => (
                   <TabsTrigger key={value} value={value}>
-                    {icon && <span className="mr-2">{icon}</span>}
+                    {icon && <span className="mr-1.5">{icon}</span>}
                     {label}
                   </TabsTrigger>
                 ))}

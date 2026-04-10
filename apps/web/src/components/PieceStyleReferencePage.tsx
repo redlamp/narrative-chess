@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FolderOpen, FolderTree, RotateCcw, Save } from "lucide-react";
 import { defaultPieceStyleSheet } from "../pieceStyles";
+import { FloatingActionNotice } from "./FloatingActionNotice";
 import { PieceArt } from "./PieceArt";
 
 type FileNotice = {
@@ -136,7 +137,7 @@ export function PieceStyleReferencePage({
                 spellCheck={false}
               />
               <TooltipProvider delayDuration={150}>
-                <div className="cities-overview-intro__actions-group">
+                <div className="workspace-header-actions-group">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
@@ -173,7 +174,7 @@ export function PieceStyleReferencePage({
                         type="button"
                         variant="outline"
                         size="icon-sm"
-                        className="cities-overview-intro__reset-button"
+                        className="workspace-header-actions-reset-button"
                         onClick={onResetPieceStyleSheet}
                         aria-label="Reset defaults"
                       >
@@ -197,16 +198,9 @@ export function PieceStyleReferencePage({
                     </TooltipTrigger>
                     <TooltipContent>Save project CSS</TooltipContent>
                   </Tooltip>
+                  <FloatingActionNotice notice={pieceStyleFileNotice} />
                 </div>
               </TooltipProvider>
-              {pieceStyleFileNotice ? (
-                <div
-                  className="rounded-lg border bg-muted/20 p-3 text-sm"
-                  data-tone={pieceStyleFileNotice.tone}
-                >
-                  {pieceStyleFileNotice.text}
-                </div>
-              ) : null}
             </CardContent>
           </Card>
         </div>
