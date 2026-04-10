@@ -1,26 +1,26 @@
 {
   "version": 1,
-  "layoutKey": "classics-page",
+  "layoutKey": "design-page",
   "layoutVariant": "two-pane",
-  "name": "classics",
-  "savedAt": "2026-04-10T12:26:13.977Z",
+  "name": "design",
+  "savedAt": "2026-04-10T12:26:14.094Z",
   "layoutState": {
     "version": 2,
     "columnCount": 12,
     "columnGap": 16,
-    "rowHeight": 44,
+    "rowHeight": 64,
     "panels": {
       "intro": {
         "x": 1,
         "y": 1,
         "w": 12,
-        "h": 2
+        "h": 1
       },
       "index": {
         "x": 1,
-        "y": 3,
+        "y": 2,
         "w": 4,
-        "h": 16
+        "h": 12
       },
       "secondary": {
         "x": 5,
@@ -30,9 +30,9 @@
       },
       "detail": {
         "x": 5,
-        "y": 3,
+        "y": 2,
         "w": 8,
-        "h": 16
+        "h": 12
       },
       "tertiary": {
         "x": 5,

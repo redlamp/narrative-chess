@@ -50,24 +50,30 @@ import {
   type WorkspaceLayoutFileReference
 } from "./layoutFiles";
 import { applyPieceStyleSheet, listPieceStyleSheet, resetPieceStyleSheet, savePieceStyleSheet } from "./pieceStyles";
-import { listReferenceGames, type ReferenceGameLibrary } from "./referenceGames";
+import { listReferenceGames, saveReferenceGames, type ReferenceGameLibrary } from "./referenceGames";
 import {
   connectRoleCatalogDirectory,
   getConnectedRoleCatalogDirectoryName,
   loadRoleCatalogFromDirectory,
   saveRoleCatalogDraftToDirectory,
   supportsDirectoryWrite as supportsRoleCatalogDirectory,
+  saveClassicGamesDraftToDirectory,
+  saveCityDraftToDirectory,
   connectWorkspaceLayoutDirectory,
   getConnectedWorkspaceLayoutDirectoryName,
   deleteWorkspaceLayoutFileFromDirectory,
   loadWorkspaceLayoutFileFromDirectory,
   saveWorkspaceLayoutFileToDirectory,
+  savePageLayoutFileToDirectory,
   connectPieceStylesDirectory,
   getConnectedPieceStylesDirectoryName,
   loadPieceStylesFromDirectory,
   savePieceStylesDraftToDirectory,
   supportsWorkspaceLayoutDirectory
 } from "./fileSystemAccess";
+import { cityBoardDefinitions } from "./cityBoards";
+import { listCityBoardDraft, saveCityBoardDraft } from "./cityReviewState";
+import { listPageLayoutState, savePageLayoutState, type PageLayoutPanelId, type PageLayoutVariant } from "./pageLayoutState";
 import { Board } from "./components/Board";
 import { CityMapLibrePanel } from "./components/CityMapLibrePanel";
 import { CityMapPanel } from "./components/CityMapPanel";
@@ -113,6 +119,15 @@ type LayoutFileNotice = {
   text: string;
 };
 
+type SaveEverythingNotice = LayoutFileNotice;
+
+type PageLayoutSaveTarget = {
+  layoutKey: string;
+  layoutVariant: PageLayoutVariant;
+  panelIds: PageLayoutPanelId[];
+  name: string;
+};
+
 type PanelSizeConstraint = {
   minW: number;
   maxW: number;
@@ -139,6 +154,39 @@ const pageOptions: Array<{ value: AppPage; label: string; icon?: React.ReactNode
   { value: "classics", label: "Historic", icon: <Scroll className="size-4" /> },
   { value: "research", label: "Research", icon: <Telescope className="size-4" /> },
   { value: "design", label: "Design", icon: <Pencil className="size-4" /> }
+];
+
+const pageLayoutSaveTargets: PageLayoutSaveTarget[] = [
+  {
+    layoutKey: "cities-page",
+    layoutVariant: "three-pane",
+    panelIds: ["intro", "index", "secondary", "detail", "tertiary", "quaternary"],
+    name: "cities"
+  },
+  {
+    layoutKey: "classics-page",
+    layoutVariant: "two-pane",
+    panelIds: ["intro", "index", "detail"],
+    name: "classics"
+  },
+  {
+    layoutKey: "roles-page",
+    layoutVariant: "three-pane",
+    panelIds: ["intro", "index", "secondary", "detail"],
+    name: "roles"
+  },
+  {
+    layoutKey: "design-page",
+    layoutVariant: "two-pane",
+    panelIds: ["intro", "index", "detail"],
+    name: "design"
+  },
+  {
+    layoutKey: "research-page",
+    layoutVariant: "two-pane",
+    panelIds: ["intro", "index", "detail"],
+    name: "research"
+  }
 ];
 
 function isAppPage(value: string | null): value is AppPage {
@@ -323,6 +371,8 @@ export default function App() {
   const [layoutDirectoryName, setLayoutDirectoryName] = useState<string | null>(null);
   const [layoutFileBusyAction, setLayoutFileBusyAction] = useState<string | null>(null);
   const [layoutFileNotice, setLayoutFileNotice] = useState<LayoutFileNotice | null>(null);
+  const [saveEverythingNotice, setSaveEverythingNotice] = useState<SaveEverythingNotice | null>(null);
+  const [isSavingEverything, setIsSavingEverything] = useState(false);
   const [knownLayoutFiles, setKnownLayoutFiles] = useState<WorkspaceLayoutFileReference[]>(() =>
     listKnownWorkspaceLayoutFiles()
   );
@@ -1242,6 +1292,109 @@ export default function App() {
     setPieceStyleSheet(savePieceStyleSheet(value));
   };
 
+  const handleSaveEverything = () => {
+    if (isSavingEverything) {
+      return;
+    }
+
+    void (async () => {
+      setIsSavingEverything(true);
+      setSaveEverythingNotice(null);
+
+      const savedItems: string[] = [];
+      const failedItems: string[] = [];
+      const recordSave = async (label: string, action: () => Promise<void>) => {
+        try {
+          await action();
+          savedItems.push(label);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "unknown error";
+          failedItems.push(`${label}: ${message}`);
+        }
+      };
+
+      try {
+        saveAppSettings(settings);
+        saveWorkspaceLayoutState(workspaceLayout);
+        saveRoleCatalog(roleCatalog);
+        savePieceStyleSheet(pieceStyleSheet);
+        saveReferenceGames(referenceGamesLibrary);
+        cityBoardDefinitions.forEach((definition) => {
+          saveCityBoardDraft(listCityBoardDraft(definition.id, definition.board));
+        });
+        savedItems.push("browser state");
+
+        await recordSave("Play layout", async () => {
+          const result = await saveWorkspaceLayoutFileToDirectory({
+            name: layoutFileName,
+            layoutState: workspaceLayout
+          });
+          setKnownLayoutFiles(result.knownFiles);
+          setLayoutDirectoryName(result.directoryName);
+          setLayoutFileName(result.layoutName);
+        });
+
+        for (const target of pageLayoutSaveTargets) {
+          await recordSave(`${target.name} layout`, async () => {
+            const layoutState = listPageLayoutState({
+              layoutKey: target.layoutKey,
+              variant: target.layoutVariant,
+              panelIds: target.panelIds
+            });
+            savePageLayoutState({
+              layoutKey: target.layoutKey,
+              layoutState,
+              variant: target.layoutVariant,
+              panelIds: target.panelIds
+            });
+            await savePageLayoutFileToDirectory({
+              layoutKey: target.layoutKey,
+              layoutVariant: target.layoutVariant,
+              panelIds: target.panelIds,
+              name: target.name,
+              layoutState
+            });
+          });
+        }
+
+        for (const definition of cityBoardDefinitions) {
+          await recordSave(`${definition.displayLabel} city data`, async () => {
+            const board = listCityBoardDraft(definition.id, definition.board);
+            const result = await saveCityDraftToDirectory(board);
+            saveCityBoardDraft(board);
+            setSaveEverythingNotice({
+              tone: "neutral",
+              text: `Saving ${result.relativePath}...`
+            });
+          });
+        }
+
+        await recordSave("Historic games", async () => {
+          await saveClassicGamesDraftToDirectory(referenceGamesLibrary);
+        });
+
+        await recordSave("Character roles", async () => {
+          const result = await saveRoleCatalogDraftToDirectory(roleCatalog);
+          setRoleCatalogDirectoryName(result.directoryName);
+        });
+
+        await recordSave("Piece styles", async () => {
+          const result = await savePieceStylesDraftToDirectory(pieceStyleSheet);
+          setPieceStyleDirectoryName(result.directoryName);
+        });
+
+        setSaveEverythingNotice({
+          tone: failedItems.length ? "error" : "success",
+          text: failedItems.length
+            ? `Saved ${savedItems.length} item(s). ${failedItems.length} item(s) need a connected folder: ${failedItems.join(" | ")}`
+            : `Saved everything: ${savedItems.join(", ")}.`
+        });
+      } finally {
+        setIsSavingEverything(false);
+      }
+    })();
+  };
+
   const handleLoadSelectedSavedMatch = () => {
     if (!selectedSavedMatch) {
       return;
@@ -1459,6 +1612,9 @@ export default function App() {
               settings={settings}
               onOpenChange={setIsMenuOpen}
               onResetSettings={handleResetSettings}
+              onSaveEverything={handleSaveEverything}
+              isSavingEverything={isSavingEverything}
+              saveEverythingNotice={saveEverythingNotice}
               onThemeChange={handleThemeChange}
               onDefaultViewModeChange={handleDefaultViewModeChange}
               onBooleanSettingChange={handleBooleanSettingChange}

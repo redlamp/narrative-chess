@@ -3,12 +3,12 @@
   "layoutKey": "research-page",
   "layoutVariant": "two-pane",
   "name": "research",
-  "savedAt": "2026-04-08T22:36:33.449Z",
+  "savedAt": "2026-04-10T12:26:14.158Z",
   "layoutState": {
     "version": 2,
     "columnCount": 12,
     "columnGap": 16,
-    "rowHeight": 64,
+    "rowHeight": 44,
     "panels": {
       "intro": {
         "x": 1,
@@ -20,19 +20,19 @@
         "x": 1,
         "y": 3,
         "w": 4,
-        "h": 15
+        "h": 16
       },
       "secondary": {
         "x": 5,
-        "y": 6,
+        "y": 5,
         "w": 3,
-        "h": 15
+        "h": 14
       },
       "detail": {
         "x": 5,
         "y": 3,
         "w": 8,
-        "h": 15
+        "h": 16
       },
       "tertiary": {
         "x": 5,

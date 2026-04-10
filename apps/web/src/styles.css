@@ -3449,6 +3449,26 @@ select {
   gap: 8px;
 }
 
+.app-menu__notice {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+  background: color-mix(in srgb, var(--muted) 52%, var(--background) 48%);
+}
+
+.app-menu__notice[data-tone="success"] {
+  color: var(--foreground);
+}
+
+.app-menu__notice[data-tone="error"] {
+  border-color: color-mix(in srgb, var(--destructive) 36%, var(--border) 64%);
+  color: color-mix(in srgb, var(--destructive) 84%, var(--foreground) 16%);
+  background: color-mix(in srgb, var(--destructive) 10%, var(--background) 90%);
+}
+
 .cities-workspace__detail-sticky {
   min-width: 0;
 }

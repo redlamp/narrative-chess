@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -10,6 +10,12 @@ type AppMenuProps = {
   settings: AppSettings;
   onOpenChange: (open: boolean) => void;
   onResetSettings: () => void;
+  onSaveEverything: () => void;
+  isSavingEverything: boolean;
+  saveEverythingNotice: {
+    tone: "neutral" | "success" | "error";
+    text: string;
+  } | null;
   onThemeChange: (value: AppSettings["theme"]) => void;
   onDefaultViewModeChange: (value: "board" | "map") => void;
   onBooleanSettingChange: (
@@ -54,6 +60,9 @@ export function AppMenu({
   settings,
   onOpenChange,
   onResetSettings,
+  onSaveEverything,
+  isSavingEverything,
+  saveEverythingNotice,
   onThemeChange,
   onDefaultViewModeChange,
   onBooleanSettingChange
@@ -204,10 +213,29 @@ export function AppMenu({
             </div>
 
             <div className="app-menu__actions">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onSaveEverything}
+                disabled={isSavingEverything}
+              >
+                <Save data-icon="inline-start" />
+                {isSavingEverything ? "Saving..." : "Save everything"}
+              </Button>
               <Button variant="outline" size="sm" onClick={onResetSettings}>
                 Reset settings
               </Button>
             </div>
+            {saveEverythingNotice ? (
+              <div
+                className="app-menu__notice"
+                data-tone={saveEverythingNotice.tone}
+                role="status"
+                aria-live="polite"
+              >
+                {saveEverythingNotice.text}
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       ) : null}
