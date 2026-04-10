@@ -303,7 +303,7 @@ export function DesignPage({
             </div>
           </CardHeader>
           <CardContent className="page-card__content page-card__content--scroll pt-0">
-            <div className="grid gap-2">
+            <ul className="workspace-list">
               <WorkspaceListItem
                 type="button"
                 onClick={() => setActiveSection("art-assets")}
@@ -328,7 +328,7 @@ export function DesignPage({
                 description="Explore scale, rhythm, labels, and code-like copy for the Design page."
                 meta={<Badge variant="outline">New</Badge>}
               />
-            </div>
+            </ul>
           </CardContent>
         </Card>
       }

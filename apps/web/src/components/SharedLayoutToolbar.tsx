@@ -6,7 +6,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ChevronDown, Folder, FolderOpen, RefreshCw, Save, Trash2, X } from "lucide-react";
+import { ChevronDown, FolderOpen, FolderTree, RefreshCw, Save, Trash2, X } from "lucide-react";
 import { NumberStepperField } from "./NumberStepperField";
 
 export type SharedLayoutFileNotice = {
@@ -314,7 +314,7 @@ export function SharedLayoutToolbar({
                         disabled={!isLayoutDirectorySupported || layoutFileBusyAction !== null}
                         aria-label="Connect layout folder"
                       >
-                        <Folder />
+                        <FolderTree />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Connect folder</TooltipContent>
@@ -328,28 +328,12 @@ export function SharedLayoutToolbar({
                         size="icon-sm"
                         onClick={onLoadLayoutFile}
                         disabled={!layoutDirectoryName || layoutFileBusyAction !== null}
-                        aria-label="Load layout file"
+                        aria-label="Open layout file"
                       >
                         <FolderOpen />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Load named file</TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        onClick={onSaveLayoutFile}
-                        disabled={!layoutDirectoryName || layoutFileBusyAction !== null}
-                        aria-label="Save layout file"
-                      >
-                        <Save />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Save named file</TooltipContent>
+                    <TooltipContent>Open file</TooltipContent>
                   </Tooltip>
 
                   <Tooltip>
@@ -366,6 +350,22 @@ export function SharedLayoutToolbar({
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Reset layout</TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={onSaveLayoutFile}
+                        disabled={!layoutDirectoryName || layoutFileBusyAction !== null}
+                        aria-label="Save layout file"
+                      >
+                        <Save />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Save named file</TooltipContent>
                   </Tooltip>
 
                   <Tooltip>

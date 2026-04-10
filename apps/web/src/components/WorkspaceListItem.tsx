@@ -21,30 +21,28 @@ export function WorkspaceListItem({
   ...buttonProps
 }: WorkspaceListItemProps) {
   return (
-    <button
-      type={type}
-      {...buttonProps}
-      aria-pressed={selected}
-      className={cn(
-        "workspace-list-item grid gap-1.5 border px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        selected ? "border-foreground/15 bg-muted" : "bg-background hover:bg-muted/50",
-        className
-      )}
-    >
-      <div className="workspace-list-item__header flex items-start justify-between gap-3">
-        <div className="workspace-list-item__title-row flex min-w-0 items-center gap-3">
-          {leading ? (
-            <span aria-hidden="true" className="workspace-list-item__leading text-lg leading-none">
-              {leading}
-            </span>
+    <li className="workspace-list-item__entry">
+      <button
+        type={type}
+        {...buttonProps}
+        aria-pressed={selected}
+        className={cn("workspace-list-item", selected ? "is-selected" : null, className)}
+      >
+        <div className="workspace-list-item__main">
+          <div className="workspace-list-item__title-row">
+            {leading ? (
+              <span aria-hidden="true" className="workspace-list-item__leading">
+                {leading}
+              </span>
+            ) : null}
+            <span className="workspace-list-item__title">{title}</span>
+          </div>
+          {description ? (
+            <p className="workspace-list-item__description">{description}</p>
           ) : null}
-          <span className="workspace-list-item__title min-w-0 font-medium">{title}</span>
         </div>
-        {meta ? <div className="workspace-list-item__meta flex flex-wrap justify-end gap-2">{meta}</div> : null}
-      </div>
-      {description ? (
-        <p className="workspace-list-item__description text-sm text-muted-foreground">{description}</p>
-      ) : null}
-    </button>
+        {meta ? <div className="workspace-list-item__meta">{meta}</div> : null}
+      </button>
+    </li>
   );
 }

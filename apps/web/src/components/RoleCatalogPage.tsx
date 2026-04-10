@@ -4,6 +4,7 @@ import type {
   PieceKind,
   ReviewStatus
 } from "@narrative-chess/content-schema";
+import { FolderOpen, FolderTree, RotateCcw, Save } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getPieceKindLabel } from "../chessPresentation";
 import {
   listRoleCatalog,
@@ -256,35 +258,70 @@ export function RoleCatalogPage({
           }
           title="Characters"
           actions={
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onConnectRoleCatalogDirectory}
-                disabled={!isRoleCatalogDirectorySupported || roleCatalogFileBusyAction !== null}
-              >
-                Connect folder
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onLoadRoleCatalogFromDirectory}
-                disabled={!roleCatalogDirectoryName || roleCatalogFileBusyAction !== null}
-              >
-                Load from disk
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onSaveRoleCatalogToDirectory}
-                disabled={!roleCatalogDirectoryName || roleCatalogFileBusyAction !== null}
-              >
-                Save to disk
-              </Button>
-              <Button type="button" variant="outline" onClick={onRoleCatalogReset}>
-                Reset defaults
-              </Button>
-            </>
+            <TooltipProvider delayDuration={150}>
+              <div className="cities-overview-intro__actions-group">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      onClick={onConnectRoleCatalogDirectory}
+                      disabled={!isRoleCatalogDirectorySupported || roleCatalogFileBusyAction !== null}
+                      aria-label="Connect folder"
+                    >
+                      <FolderTree />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Connect folder</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      onClick={onLoadRoleCatalogFromDirectory}
+                      disabled={!roleCatalogDirectoryName || roleCatalogFileBusyAction !== null}
+                      aria-label="Open file"
+                    >
+                      <FolderOpen />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Open file</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      className="cities-overview-intro__reset-button"
+                      onClick={onRoleCatalogReset}
+                      aria-label="Reset defaults"
+                    >
+                      <RotateCcw />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Reset defaults</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      onClick={onSaveRoleCatalogToDirectory}
+                      disabled={!roleCatalogDirectoryName || roleCatalogFileBusyAction !== null}
+                      aria-label="Save to disk"
+                    >
+                      <Save />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Save to disk</TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
           }
           status={roleCatalogFileNotice}
         />
@@ -305,7 +342,7 @@ export function RoleCatalogPage({
             </div>
           </CardHeader>
           <CardContent className="page-card__content page-card__content--scroll pt-0">
-            <div className="grid gap-2">
+            <ul className="workspace-list">
               {pieceKinds.map((pieceKind) => {
                 const totalCount = groupedRoles[pieceKind].length;
                 const visibleCount = filteredRoleGroups[pieceKind].length;
@@ -332,7 +369,7 @@ export function RoleCatalogPage({
                   />
                 );
               })}
-            </div>
+            </ul>
           </CardContent>
         </Card>
       }
@@ -376,7 +413,7 @@ export function RoleCatalogPage({
             </div>
           </CardHeader>
           <CardContent className="page-card__content page-card__content--scroll pt-0">
-            <div className="grid gap-2">
+            <ul className="workspace-list">
               {selectedPieceRoles.map((role) => (
                 <WorkspaceListItem
                   key={role.id}
@@ -391,11 +428,11 @@ export function RoleCatalogPage({
                 />
               ))}
               {!selectedPieceRoles.length ? (
-                <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                <li className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
                   No {getPieceKindLabel(selectedPieceKind).toLowerCase()} roles matched that search.
-                </div>
+                </li>
               ) : null}
-            </div>
+            </ul>
           </CardContent>
         </Card>
       }

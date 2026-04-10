@@ -1,20 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import maplibregl, { type GeoJSONSource, type Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { ExternalLink, Map, Satellite } from "lucide-react";
-import type { CityBoard, DistrictCell, MoveRecord } from "@narrative-chess/content-schema";
+import { ExternalLink, Map as MapIcon, Satellite } from "lucide-react";
+import type { CityBoard, DistrictCell, MoveRecord, PieceState } from "@narrative-chess/content-schema";
 import { Button } from "@/components/ui/button";
+import { getPieceAssetPath } from "@/chessPresentation";
 import {
   buildOpenStreetMapUrl,
   createDistrictMarkerGeoJson,
   createMapLibreRasterStyle,
-  getCityBoardMarkerBounds,
   getActiveCityMapLocation,
+  getCityBoardMarkerBounds,
+  getDistrictMapCenter,
   type MapViewMode
 } from "./cityMapShared";
 
 type CityMapLibrePanelProps = {
   cityBoard: CityBoard;
+  pieces: PieceState[];
   selectedDistrict: DistrictCell | null;
   hoveredDistrict: DistrictCell | null;
   lastMoveDistrict: DistrictCell | null;
@@ -25,8 +28,79 @@ const districtMarkerSourceId = "district-markers";
 const districtMarkerLayerId = "district-markers-layer";
 const districtMarkerActiveLayerId = "district-markers-active-layer";
 const districtMarkerLabelLayerId = "district-markers-label-layer";
+const occupiedPieceSourceId = "district-piece-markers";
+const occupiedPieceBackgroundLayerId = "district-piece-markers-background-layer";
+const occupiedPieceLayerId = "district-piece-markers-layer";
 
-function syncDistrictMarkerLayers(map: MapLibreMap, cityBoard: CityBoard, activeSquare: string | null) {
+const pieceIconDefinitions = [
+  { side: "white", kind: "pawn" },
+  { side: "white", kind: "rook" },
+  { side: "white", kind: "knight" },
+  { side: "white", kind: "bishop" },
+  { side: "white", kind: "queen" },
+  { side: "white", kind: "king" },
+  { side: "black", kind: "pawn" },
+  { side: "black", kind: "rook" },
+  { side: "black", kind: "knight" },
+  { side: "black", kind: "bishop" },
+  { side: "black", kind: "queen" },
+  { side: "black", kind: "king" }
+] satisfies Array<{
+  side: PieceState["side"];
+  kind: PieceState["kind"];
+}>;
+
+function getPieceIconId(input: {
+  side: PieceState["side"];
+  kind: PieceState["kind"];
+}) {
+  return `map-piece-${input.side}-${input.kind}`;
+}
+
+function createOccupiedPieceGeoJson(input: {
+  cityBoard: CityBoard;
+  pieces: PieceState[];
+  activeSquare: string | null;
+}) {
+  const { cityBoard, pieces, activeSquare } = input;
+
+  return {
+    type: "FeatureCollection" as const,
+    features: pieces.flatMap((piece) => {
+      if (!piece.square) {
+        return [];
+      }
+
+      const district = cityBoard.districts.find((candidate) => candidate.square === piece.square);
+      if (!district) {
+        return [];
+      }
+
+      const [longitude, latitude] = getDistrictMapCenter(cityBoard, district);
+
+      return [
+        {
+          type: "Feature" as const,
+          geometry: {
+            type: "Point" as const,
+            coordinates: [longitude, latitude] as [number, number]
+          },
+          properties: {
+            id: piece.pieceId,
+            square: piece.square,
+            isActive: piece.square === activeSquare ? 1 : 0,
+            iconId: getPieceIconId({
+              side: piece.side,
+              kind: piece.promotedTo ?? piece.kind
+            })
+          }
+        }
+      ];
+    })
+  };
+}
+
+function ensureDistrictMarkerLayers(map: MapLibreMap, cityBoard: CityBoard, activeSquare: string | null) {
   const markerData = createDistrictMarkerGeoJson({
     cityBoard,
     activeSquare
@@ -108,8 +182,104 @@ function syncDistrictMarkerLayers(map: MapLibreMap, cityBoard: CityBoard, active
   });
 }
 
+async function ensurePieceMarkerIcons(map: MapLibreMap) {
+  await Promise.all(
+    pieceIconDefinitions.map(async (definition) => {
+      const iconId = getPieceIconId(definition);
+      if (map.hasImage(iconId)) {
+        return;
+      }
+
+      const image = await map.loadImage(getPieceAssetPath(definition));
+      if (!map.hasImage(iconId)) {
+        map.addImage(iconId, image.data);
+      }
+    })
+  );
+}
+
+async function syncOccupiedPieceLayer(input: {
+  map: MapLibreMap;
+  cityBoard: CityBoard;
+  pieces: PieceState[];
+  activeSquare: string | null;
+}) {
+  const { map, cityBoard, pieces, activeSquare } = input;
+  await ensurePieceMarkerIcons(map);
+
+  const markerData = createOccupiedPieceGeoJson({
+    cityBoard,
+    pieces,
+    activeSquare
+  });
+  const existingSource = map.getSource(occupiedPieceSourceId) as GeoJSONSource | undefined;
+
+  if (existingSource) {
+    existingSource.setData(markerData);
+    return;
+  }
+
+  map.addSource(occupiedPieceSourceId, {
+    type: "geojson",
+    data: markerData
+  });
+
+  map.addLayer({
+    id: occupiedPieceBackgroundLayerId,
+    type: "circle",
+    source: occupiedPieceSourceId,
+    paint: {
+      "circle-radius": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        10,
+        10,
+        14,
+        15
+      ],
+      "circle-color": "#ffffff",
+      "circle-opacity": 0.96,
+      "circle-stroke-width": [
+        "case",
+        ["==", ["get", "isActive"], 1],
+        2.5,
+        1.5
+      ],
+      "circle-stroke-color": [
+        "case",
+        ["==", ["get", "isActive"], 1],
+        "#111827",
+        "rgba(17,24,39,0.28)"
+      ]
+    }
+  });
+
+  map.addLayer({
+    id: occupiedPieceLayerId,
+    type: "symbol",
+    source: occupiedPieceSourceId,
+    layout: {
+      "icon-image": ["get", "iconId"],
+      "icon-size": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        10,
+        0.12,
+        14,
+        0.2
+      ],
+      "icon-anchor": "center",
+      "icon-allow-overlap": true,
+      "icon-ignore-placement": true
+    }
+  });
+}
+
 export function CityMapLibrePanel({
   cityBoard,
+  pieces,
   selectedDistrict,
   hoveredDistrict,
   lastMoveDistrict,
@@ -154,7 +324,13 @@ export function CityMapLibrePanel({
     map.dragRotate.disable();
     map.touchZoomRotate.disableRotation();
     map.on("load", () => {
-      syncDistrictMarkerLayers(map, cityBoard, highlightedSquare);
+      ensureDistrictMarkerLayers(map, cityBoard, highlightedSquare);
+      void syncOccupiedPieceLayer({
+        map,
+        cityBoard,
+        pieces,
+        activeSquare: highlightedSquare
+      });
     });
     mapRef.current = map;
     hasHydratedCamera.current = false;
@@ -174,10 +350,17 @@ export function CityMapLibrePanel({
 
     map.setStyle(createMapLibreRasterStyle(viewMode));
     map.once("styledata", () => {
-      syncDistrictMarkerLayers(map, cityBoard, highlightedSquare);
-      map.resize();
+      ensureDistrictMarkerLayers(map, cityBoard, highlightedSquare);
+      void syncOccupiedPieceLayer({
+        map,
+        cityBoard,
+        pieces,
+        activeSquare: highlightedSquare
+      }).finally(() => {
+        map.resize();
+      });
     });
-  }, [cityBoard, highlightedSquare, viewMode]);
+  }, [cityBoard, highlightedSquare, pieces, viewMode]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -185,8 +368,14 @@ export function CityMapLibrePanel({
       return;
     }
 
-    syncDistrictMarkerLayers(map, cityBoard, highlightedSquare);
-  }, [cityBoard, highlightedSquare]);
+    ensureDistrictMarkerLayers(map, cityBoard, highlightedSquare);
+    void syncOccupiedPieceLayer({
+      map,
+      cityBoard,
+      pieces,
+      activeSquare: highlightedSquare
+    });
+  }, [cityBoard, highlightedSquare, pieces]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -275,7 +464,7 @@ export function CityMapLibrePanel({
             variant={viewMode === "map" ? "secondary" : "outline"}
             onClick={() => setViewMode("map")}
           >
-            <Map />
+            <MapIcon />
             Map
           </Button>
           <Button

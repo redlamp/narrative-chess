@@ -1,4 +1,9 @@
-import { cityBoardSchema, type CityBoard, type DistrictCell } from "@narrative-chess/content-schema";
+import {
+  cityBoardSchema,
+  type CityBoard,
+  type DistrictCell,
+  type MapAnchor
+} from "@narrative-chess/content-schema";
 import { getCityBoardDefinition } from "./cityBoards";
 
 function cloneBoard(board: CityBoard) {
@@ -25,6 +30,21 @@ function readStringArray(value: unknown, fallback: string[]) {
   return value.filter((item): item is string => typeof item === "string");
 }
 
+function readMapAnchor(value: unknown, fallback: MapAnchor | undefined) {
+  if (!isRecord(value)) {
+    return fallback;
+  }
+
+  const longitude = typeof value.longitude === "number" ? value.longitude : fallback?.longitude;
+  const latitude = typeof value.latitude === "number" ? value.latitude : fallback?.latitude;
+
+  if (longitude === undefined || latitude === undefined) {
+    return fallback;
+  }
+
+  return { longitude, latitude };
+}
+
 function hydrateDistrictCell(candidate: unknown, fallback: DistrictCell): DistrictCell {
   if (!isRecord(candidate)) {
     return { ...fallback };
@@ -40,6 +60,7 @@ function hydrateDistrictCell(candidate: unknown, fallback: DistrictCell): Distri
     dayProfile: readString(candidate.dayProfile, fallback.dayProfile),
     nightProfile: readString(candidate.nightProfile, fallback.nightProfile),
     toneCues: readStringArray(candidate.toneCues, fallback.toneCues),
+    mapAnchor: readMapAnchor(candidate.mapAnchor, fallback.mapAnchor),
     contentStatus:
       candidate.contentStatus === "empty" ||
       candidate.contentStatus === "procedural" ||
@@ -111,6 +132,10 @@ function getStorageKey(cityId: string) {
   return `narrative-chess:city-board-draft:v1:${cityId}`;
 }
 
+function getSavedBaselineStorageKey(cityId: string) {
+  return `narrative-chess:city-board-saved-baseline:v1:${cityId}`;
+}
+
 export function listCityBoardDraft(cityId: string, fallback = getCityBoardDefinition(cityId)?.board) {
   if (!fallback) {
     throw new Error(`Unknown city board: ${cityId}`);
@@ -132,12 +157,43 @@ export function listCityBoardDraft(cityId: string, fallback = getCityBoardDefini
   }
 }
 
+export function listCityBoardSavedBaseline(cityId: string, fallback = getCityBoardDefinition(cityId)?.board) {
+  if (!fallback) {
+    throw new Error(`Unknown city board: ${cityId}`);
+  }
+
+  if (typeof window === "undefined") {
+    return cloneBoard(fallback);
+  }
+
+  const storedValue = window.localStorage.getItem(getSavedBaselineStorageKey(cityId));
+  if (!storedValue) {
+    return listCityBoardDraft(cityId, fallback);
+  }
+
+  try {
+    return hydrateCityBoardDraft(JSON.parse(storedValue) as unknown, fallback);
+  } catch {
+    return listCityBoardDraft(cityId, fallback);
+  }
+}
+
 export function saveCityBoardDraft(board: CityBoard) {
   if (typeof window !== "undefined") {
     window.localStorage.setItem(getStorageKey(board.id), JSON.stringify(board, null, 2));
   }
 
   return cityBoardSchema.parse(board);
+}
+
+export function saveCityBoardSavedBaseline(board: CityBoard) {
+  const parsedBoard = cityBoardSchema.parse(board);
+
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(getSavedBaselineStorageKey(parsedBoard.id), JSON.stringify(parsedBoard, null, 2));
+  }
+
+  return parsedBoard;
 }
 
 export function resetCityBoardDraft(cityId: string, fallback = getCityBoardDefinition(cityId)?.board) {
@@ -147,6 +203,7 @@ export function resetCityBoardDraft(cityId: string, fallback = getCityBoardDefin
 
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(getStorageKey(cityId));
+    window.localStorage.removeItem(getSavedBaselineStorageKey(cityId));
   }
 
   return cloneBoard(fallback);

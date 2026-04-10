@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { FolderOpen, FolderTree, RotateCcw, Save } from "lucide-react";
 import { defaultPieceStyleSheet } from "../pieceStyles";
 import { PieceArt } from "./PieceArt";
 
@@ -133,35 +135,70 @@ export function PieceStyleReferencePage({
                 onChange={(event) => onPieceStyleSheetChange(event.currentTarget.value)}
                 spellCheck={false}
               />
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onConnectPieceStyleDirectory}
-                  disabled={!isPieceStyleDirectorySupported || pieceStyleFileBusyAction !== null}
-                >
-                  Connect folder
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onLoadPieceStyleSheetFromDirectory}
-                  disabled={!pieceStyleDirectoryName || pieceStyleFileBusyAction !== null}
-                >
-                  Load project CSS
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onSavePieceStyleSheetToDirectory}
-                  disabled={!pieceStyleDirectoryName || pieceStyleFileBusyAction !== null}
-                >
-                  Save project CSS
-                </Button>
-                <Button type="button" variant="outline" onClick={onResetPieceStyleSheet}>
-                  Reset defaults
-                </Button>
-              </div>
+              <TooltipProvider delayDuration={150}>
+                <div className="cities-overview-intro__actions-group">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={onConnectPieceStyleDirectory}
+                        disabled={!isPieceStyleDirectorySupported || pieceStyleFileBusyAction !== null}
+                        aria-label="Connect folder"
+                      >
+                        <FolderTree />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Connect folder</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={onLoadPieceStyleSheetFromDirectory}
+                        disabled={!pieceStyleDirectoryName || pieceStyleFileBusyAction !== null}
+                        aria-label="Open file"
+                      >
+                        <FolderOpen />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Open file</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        className="cities-overview-intro__reset-button"
+                        onClick={onResetPieceStyleSheet}
+                        aria-label="Reset defaults"
+                      >
+                        <RotateCcw />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Reset defaults</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={onSavePieceStyleSheetToDirectory}
+                        disabled={!pieceStyleDirectoryName || pieceStyleFileBusyAction !== null}
+                        aria-label="Save project CSS"
+                      >
+                        <Save />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Save project CSS</TooltipContent>
+                  </Tooltip>
+                </div>
+              </TooltipProvider>
               {pieceStyleFileNotice ? (
                 <div
                   className="rounded-lg border bg-muted/20 p-3 text-sm"

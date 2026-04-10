@@ -442,7 +442,7 @@ export function CityDistrictMapEditor({
           ) : null}
           <Button asChild type="button" size="sm" variant="outline">
             <a href={openUrl} target="_blank" rel="noreferrer">
-              Open in OpenStreetMap
+              Source
               <ExternalLink />
             </a>
           </Button>

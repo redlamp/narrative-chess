@@ -1769,6 +1769,7 @@ export default function App() {
               >
                 <CityMapLibrePanel
                   cityBoard={edinburghBoard}
+                  pieces={snapshot.pieces}
                   selectedDistrict={selectedDistrict}
                   hoveredDistrict={hoveredSquare ? focusedDistrict : null}
                   lastMoveDistrict={lastMoveDistrict}

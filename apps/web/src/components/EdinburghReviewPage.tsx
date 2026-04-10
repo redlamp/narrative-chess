@@ -10,13 +10,14 @@ import type { CityBoard, DistrictCell, Square } from "@narrative-chess/content-s
 import {
   ArrowDownAZ,
   ArrowDownZA,
+  Asterisk,
   BadgeCheck,
   Check,
   ChevronDown,
   Crosshair,
   Download,
   FilePenLine,
-  Folder,
+  FolderTree,
   FolderOpen,
   Move,
   OctagonAlert,
@@ -55,11 +56,14 @@ import { getDistrictMapCenter } from "./cityMapShared";
 import {
   buildCityBoardValidation,
   listCityBoardDraft,
+  listCityBoardSavedBaseline,
   resetCityBoardDraft,
-  saveCityBoardDraft
+  saveCityBoardDraft,
+  saveCityBoardSavedBaseline
 } from "../cityReviewState";
 import {
   connectCityReviewDirectory,
+  getConnectedCityReviewDirectoryName,
   loadCityDraftFromDirectory,
   saveCityDraftToDirectory,
   supportsLocalContentDirectory
@@ -123,6 +127,16 @@ function createInitialCityDraft() {
   }
 
   return listCityBoardDraft(fallbackDefinition.id, fallbackDefinition.board);
+}
+
+function createInitialCitySavedBaseline() {
+  const fallbackDefinition = initialCityDefinition ?? cityBoardDefinitions[0] ?? null;
+
+  if (!fallbackDefinition) {
+    throw new Error("At least one city board definition is required.");
+  }
+
+  return listCityBoardSavedBaseline(fallbackDefinition.id, fallbackDefinition.board);
 }
 
 function formatListValue(values: string[]) {
@@ -256,6 +270,31 @@ function updateDistrict(
       district.id === districtId ? updater(district) : district
     )
   };
+}
+
+function cloneDistrict(district: DistrictCell) {
+  return JSON.parse(JSON.stringify(district)) as DistrictCell;
+}
+
+function areDistrictsEqual(left: DistrictCell | null | undefined, right: DistrictCell | null | undefined) {
+  if (!left || !right) {
+    return left === right;
+  }
+
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function getDirtyDistrictIdSet(currentBoard: CityBoard, savedBoard: CityBoard | null | undefined) {
+  if (!savedBoard) {
+    return new Set<string>();
+  }
+
+  const savedDistrictsById = new Map(savedBoard.districts.map((district) => [district.id, district] as const));
+  return new Set(
+    currentBoard.districts
+      .filter((district) => !areDistrictsEqual(district, savedDistrictsById.get(district.id)))
+      .map((district) => district.id)
+  );
 }
 
 function reassignDistrictSquare(board: CityBoard, districtId: string, nextSquare: Square) {
@@ -399,6 +438,7 @@ type StatusDropdownFieldProps<Value extends string> = {
   value: Value;
   options: readonly Value[];
   getMeta: (value: Value) => StatusMeta;
+  disabled?: boolean;
   onChange: (value: Value) => void;
 };
 
@@ -407,6 +447,7 @@ function StatusDropdownField<Value extends string>({
   value,
   options,
   getMeta,
+  disabled = false,
   onChange
 }: StatusDropdownFieldProps<Value>) {
   const activeMeta = getMeta(value);
@@ -417,7 +458,7 @@ function StatusDropdownField<Value extends string>({
       <span className="text-sm font-medium">{label}</span>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button type="button" variant="outline" className="field-select status-menu-trigger">
+          <Button type="button" variant="outline" className="field-select status-menu-trigger" disabled={disabled}>
             <span className="status-menu-trigger__value">
               <ActiveIcon className={activeMeta.toneClassName} />
               <span>{activeMeta.label}</span>
@@ -603,6 +644,9 @@ export function EdinburghReviewPage({
   const cityDraftsRef = useRef<Record<string, CityBoard>>({
     [initialCityId]: createInitialCityDraft()
   });
+  const [savedDraftsByCityId, setSavedDraftsByCityId] = useState<Record<string, CityBoard>>(() => ({
+    [initialCityId]: createInitialCitySavedBaseline()
+  }));
   const [selectedRecordId, setSelectedRecordId] = useState(cityOverviewId);
   const [selectedDistrictIds, setSelectedDistrictIds] = useState<string[]>([]);
   const [districtSelectionAnchorId, setDistrictSelectionAnchorId] = useState<string | null>(null);
@@ -614,6 +658,7 @@ export function EdinburghReviewPage({
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState<SaveNotice | null>(null);
   const [isDirectorySupported, setIsDirectorySupported] = useState(false);
+  const [cityReviewDirectoryName, setCityReviewDirectoryName] = useState<string | null>(null);
   const [selectedCityTab, setSelectedCityTabState] = useState<CityEditorTab>("basics");
   const [selectedDistrictTab, setSelectedDistrictTabState] = useState<DistrictEditorTab>("basics");
   const [isMapImportArmed, setIsMapImportArmed] = useState(false);
@@ -644,6 +689,9 @@ export function EdinburghReviewPage({
 
   useEffect(() => {
     setIsDirectorySupported(supportsLocalContentDirectory());
+    void getConnectedCityReviewDirectoryName().then((directoryName) => {
+      setCityReviewDirectoryName(directoryName);
+    });
   }, []);
 
   useEffect(() => {
@@ -662,6 +710,17 @@ export function EdinburghReviewPage({
     const cachedDraft = cityDraftsRef.current[selectedCityDefinition.id];
     const nextDraft = cachedDraft ?? listCityBoardDraft(selectedCityDefinition.id, selectedCityDefinition.board);
     cityDraftsRef.current[selectedCityDefinition.id] = nextDraft;
+    setSavedDraftsByCityId((current) =>
+      current[selectedCityDefinition.id]
+        ? current
+        : {
+            ...current,
+            [selectedCityDefinition.id]: listCityBoardSavedBaseline(
+              selectedCityDefinition.id,
+              selectedCityDefinition.board
+            )
+          }
+    );
     setDraft(nextDraft);
     setSelectedRecordId(cityOverviewId);
     setSelectedDistrictIds([]);
@@ -713,21 +772,30 @@ export function EdinburghReviewPage({
     ? draft.districts.find((district) => district.square === hoveredBoardSquare) ?? null
     : null;
   const highlightedDistrict = hoveredDistrictFromList ?? hoveredDistrictFromBoard ?? null;
+  const savedDraft = savedDraftsByCityId[draft.id] ?? null;
+  const dirtyDistrictIdSet = useMemo(
+    () => getDirtyDistrictIdSet(draft, savedDraft),
+    [draft, savedDraft]
+  );
+  const editorDistrict = highlightedDistrict ?? selectedDistrict;
+  const isDistrictHoverPreview = highlightedDistrict !== null && highlightedDistrict.id !== selectedDistrict?.id;
+  const canEditEditorDistrict = editorDistrict !== null && !isDistrictHoverPreview;
+  const isEditorDistrictDirty = editorDistrict ? dirtyDistrictIdSet.has(editorDistrict.id) : false;
   const cityContentStatusMeta = getContentStatusMeta(draft.contentStatus);
   const cityReviewStatusMeta = getReviewStatusMeta(draft.reviewStatus);
   const CityContentStatusIcon = cityContentStatusMeta.icon;
   const CityReviewStatusIcon = cityReviewStatusMeta.icon;
-  const selectedDistrictEffectiveMapAnchor = useMemo(() => {
-    if (!selectedDistrict) {
+  const editorDistrictEffectiveMapAnchor = useMemo(() => {
+    if (!editorDistrict) {
       return null;
     }
 
-    const [longitude, latitude] = getDistrictMapCenter(draft, selectedDistrict);
+    const [longitude, latitude] = getDistrictMapCenter(draft, editorDistrict);
     return {
       longitude,
       latitude
     };
-  }, [draft, selectedDistrict]);
+  }, [draft, editorDistrict]);
   const isBulkCitySelection = selectedCityIds.length > 1;
   const isBulkDistrictSelection = selectedDistrictIds.length > 1;
   const setSelectedCityTab = (nextTab: CityEditorTab) => {
@@ -822,6 +890,113 @@ export function EdinburghReviewPage({
     }
   };
 
+  const markCityBoardSaved = (board: CityBoard) => {
+    const nextBoard = saveCityBoardSavedBaseline(board);
+    setSavedDraftsByCityId((current) => ({
+      ...current,
+      [nextBoard.id]: nextBoard
+    }));
+    return nextBoard;
+  };
+
+  const saveBoardToConnectedDirectory = async (board: CityBoard) => {
+    if (!cityReviewDirectoryName) {
+      return null;
+    }
+
+    const result = await saveCityDraftToDirectory(board);
+    setCityReviewDirectoryName(result.directoryName);
+    return result;
+  };
+
+  const handleSaveCityDraft = () => {
+    void runDirectoryAction("save-city-draft", async () => {
+      const nextDraft = saveCityBoardDraft(draft);
+      cityDraftsRef.current[nextDraft.id] = nextDraft;
+      markCityBoardSaved(nextDraft);
+
+      const result = await saveBoardToConnectedDirectory(nextDraft);
+      setSaveNotice({
+        tone: "success",
+        text: result
+          ? `Saved all ${nextDraft.name} data to ${result.relativePath} inside ${result.directoryName}.`
+          : `Saved all ${nextDraft.name} data to the browser draft. Connect a folder to save to disk.`
+      });
+    });
+  };
+
+  const handleResetCityDraft = () => {
+    const fallback = selectedCityDefinition?.board ?? createInitialCityDraft();
+    const nextDraft = resetCityBoardDraft(selectedCityId, fallback);
+    cityDraftsRef.current[nextDraft.id] = nextDraft;
+    markCityBoardSaved(nextDraft);
+    setDraft(nextDraft);
+    setSelectedCityId(nextDraft.id);
+    setSelectedRecordId(cityOverviewId);
+    setSelectedDistrictIds([]);
+    setDistrictSelectionAnchorId(null);
+    setSaveNotice({
+      tone: "neutral",
+      text: `Reset all ${nextDraft.name} data back to the bundled board.`
+    });
+  };
+
+  const handleSaveEditorDistrict = () => {
+    if (!editorDistrict || !canEditEditorDistrict) {
+      return;
+    }
+
+    const districtId = editorDistrict.id;
+    const districtToSave = draft.districts.find((district) => district.id === districtId);
+    if (!districtToSave) {
+      return;
+    }
+
+    void runDirectoryAction("save-district-draft", async () => {
+      const baselineBoard = savedDraft ?? selectedCityDefinition?.board ?? draft;
+      const nextSavedBoard = updateDistrict(
+        reassignDistrictSquare(baselineBoard, districtId, districtToSave.square),
+        districtId,
+        () => cloneDistrict(districtToSave)
+      );
+      markCityBoardSaved(nextSavedBoard);
+
+      const result = await saveBoardToConnectedDirectory(nextSavedBoard);
+      setSaveNotice({
+        tone: "success",
+        text: result
+          ? `Saved ${districtToSave.name} to ${result.relativePath} inside ${result.directoryName}.`
+          : `Saved ${districtToSave.name} to the browser draft baseline. Connect a folder to save to disk.`
+      });
+    });
+  };
+
+  const handleResetEditorDistrict = () => {
+    if (!editorDistrict || !canEditEditorDistrict || !savedDraft) {
+      return;
+    }
+
+    const savedDistrict = savedDraft.districts.find((district) => district.id === editorDistrict.id);
+    if (!savedDistrict) {
+      return;
+    }
+
+    setDraft((current) => {
+      const nextDraft = updateDistrict(
+        reassignDistrictSquare(current, savedDistrict.id, savedDistrict.square),
+        savedDistrict.id,
+        () => ({ ...savedDistrict })
+      );
+      cityDraftsRef.current[nextDraft.id] = nextDraft;
+      return nextDraft;
+    });
+    setIsMapImportArmed(false);
+    setSaveNotice({
+      tone: "neutral",
+      text: `Reset ${savedDistrict.name} to its last saved state.`
+    });
+  };
+
   const handleCityListItemClick = (cityId: string, event: ReactMouseEvent<HTMLButtonElement>) => {
     const nextSelection = getNextMultiSelection({
       orderedIds: trackedCities.map((city) => city.id),
@@ -911,6 +1086,7 @@ export function EdinburghReviewPage({
                         onClick={() =>
                           runDirectoryAction("connect-directory", async () => {
                             const result = await connectCityReviewDirectory();
+                            setCityReviewDirectoryName(result.directoryName);
                             setSaveNotice({
                               tone: "success",
                               text: `Connected to ${result.directoryName}.`
@@ -920,7 +1096,7 @@ export function EdinburghReviewPage({
                         disabled={!isDirectorySupported || busyAction !== null}
                         aria-label="Connect folder"
                       >
-                        <Folder />
+                        <FolderTree />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Connect folder</TooltipContent>
@@ -946,9 +1122,12 @@ export function EdinburghReviewPage({
 
                             const nextDraft = saveCityBoardDraft(result.board);
                             cityDraftsRef.current[nextDraft.id] = nextDraft;
+                            markCityBoardSaved(nextDraft);
                             setDraft(nextDraft);
                             setSelectedCityId(result.board.id);
                             setSelectedRecordId(cityOverviewId);
+                            setSelectedDistrictIds([]);
+                            setDistrictSelectionAnchorId(null);
                             setSaveNotice({
                               tone: "success",
                               text: `Loaded ${result.sourceKind} data from ${result.relativePath}.`
@@ -956,12 +1135,28 @@ export function EdinburghReviewPage({
                           })
                         }
                         disabled={busyAction !== null}
-                        aria-label="Load file"
+                        aria-label="Open file"
                       >
                         <FolderOpen />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Load file</TooltipContent>
+                    <TooltipContent>Open file</TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="outline"
+                        className="cities-overview-intro__reset-button"
+                        onClick={handleResetCityDraft}
+                        aria-label="Reset all city data"
+                      >
+                        <RotateCcw />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Reset all city data</TooltipContent>
                   </Tooltip>
 
                   <Tooltip>
@@ -992,51 +1187,16 @@ export function EdinburghReviewPage({
                         type="button"
                         size="icon-sm"
                         variant="outline"
-                        className="cities-overview-intro__reset-button"
-                        onClick={() => {
-                          const fallback = selectedCityDefinition?.board ?? createInitialCityDraft();
-                          const nextDraft = resetCityBoardDraft(selectedCityId, fallback);
-                          setDraft(nextDraft);
-                          setSelectedCityId(nextDraft.id);
-                          setSelectedRecordId(cityOverviewId);
-                          setSaveNotice({
-                            tone: "neutral",
-                            text: `Reset the working draft back to the bundled ${nextDraft.name} board.`
-                          });
-                        }}
-                        aria-label="Reset draft"
+                        onClick={handleSaveCityDraft}
+                        disabled={busyAction !== null}
+                        aria-label="Save all city data"
                       >
-                        <RotateCcw />
+                        <Save />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Reset draft</TooltipContent>
+                    <TooltipContent>Save all city data</TooltipContent>
                   </Tooltip>
                 </div>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      size="icon-sm"
-                      variant="outline"
-                      className="cities-overview-intro__save-button"
-                      onClick={() =>
-                        runDirectoryAction("save-directory-draft", async () => {
-                          const result = await saveCityDraftToDirectory(draft);
-                          setSaveNotice({
-                            tone: "success",
-                            text: `Saved the current draft to ${result.relativePath} inside ${result.directoryName}.`
-                          });
-                        })
-                      }
-                      disabled={busyAction !== null}
-                      aria-label="Save draft file"
-                    >
-                      <Save />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Save draft file</TooltipContent>
-                </Tooltip>
               </div>
             </TooltipProvider>
           </div>
@@ -1064,7 +1224,7 @@ export function EdinburghReviewPage({
             </div>
           </CardHeader>
           <CardContent className="page-card__content page-card__content--scroll pt-0">
-            <div className="cities-page__list">
+            <ul className="cities-page__list">
               {trackedCities.map((city) => {
                 const contentStatusMeta = getContentStatusMeta(city.contentStatus);
                 const reviewStatusMeta = getReviewStatusMeta(city.reviewStatus);
@@ -1104,7 +1264,7 @@ export function EdinburghReviewPage({
                   />
                 );
               })}
-            </div>
+            </ul>
           </CardContent>
         </Card>
       }
@@ -1114,42 +1274,44 @@ export function EdinburghReviewPage({
             <div className="grid gap-2">
               <CardTitle>City</CardTitle>
             </div>
-            <WorkspaceListItem
-              type="button"
-              onClick={() => {
-                setSelectedRecordId(cityOverviewId);
-                setSelectedDistrictIds([]);
-                setDistrictSelectionAnchorId(null);
-                setHoveredDistrictId(null);
-                setHoveredBoardSquare(null);
-              }}
-              selected={selectedDistrictIds.length === 0}
-              className="workspace-list-item--overview cities-page__overview-item"
-              title={
-                <div className="cities-page__overview-title">
-                  <h4 className="cities-page__district-title">{draft.name}</h4>
-                  <Badge variant="secondary" className="cities-page__overview-pill">City Overview</Badge>
-                </div>
-              }
-              meta={
-                <>
-                  <span
-                    className={`cities-page__status-indicator ${cityContentStatusMeta.toneClassName}`}
-                    aria-label={`Content status: ${cityContentStatusMeta.label}`}
-                    title={`Content status: ${cityContentStatusMeta.label}`}
-                  >
-                    <CityContentStatusIcon />
-                  </span>
-                  <span
-                    className={`cities-page__status-indicator ${cityReviewStatusMeta.toneClassName}`}
-                    aria-label={`Review status: ${cityReviewStatusMeta.label}`}
-                    title={`Review status: ${cityReviewStatusMeta.label}`}
-                  >
-                    <CityReviewStatusIcon />
-                  </span>
-                </>
-              }
-            />
+            <ul className="workspace-list">
+              <WorkspaceListItem
+                type="button"
+                onClick={() => {
+                  setSelectedRecordId(cityOverviewId);
+                  setSelectedDistrictIds([]);
+                  setDistrictSelectionAnchorId(null);
+                  setHoveredDistrictId(null);
+                  setHoveredBoardSquare(null);
+                }}
+                selected={selectedDistrictIds.length === 0}
+                className="workspace-list-item--overview cities-page__overview-item"
+                title={
+                  <div className="cities-page__overview-title">
+                    <h4 className="cities-page__district-title">{draft.name}</h4>
+                    <Badge variant="secondary" className="cities-page__overview-pill">City Overview</Badge>
+                  </div>
+                }
+                meta={
+                  <>
+                    <span
+                      className={`cities-page__status-indicator ${cityContentStatusMeta.toneClassName}`}
+                      aria-label={`Content status: ${cityContentStatusMeta.label}`}
+                      title={`Content status: ${cityContentStatusMeta.label}`}
+                    >
+                      <CityContentStatusIcon />
+                    </span>
+                    <span
+                      className={`cities-page__status-indicator ${cityReviewStatusMeta.toneClassName}`}
+                      aria-label={`Review status: ${cityReviewStatusMeta.label}`}
+                      title={`Review status: ${cityReviewStatusMeta.label}`}
+                    >
+                      <CityReviewStatusIcon />
+                    </span>
+                  </>
+                }
+              />
+            </ul>
             <hr className="cities-districts-divider" />
             <div className="grid gap-3">
               <div className="cities-districts-section-header">
@@ -1205,7 +1367,7 @@ export function EdinburghReviewPage({
             </div>
           </CardHeader>
           <CardContent className="page-card__content page-card__content--scroll pt-0">
-            <div className="cities-page__list">
+            <ul className="cities-page__list">
               {filteredDistricts.map((district) => (
                 (() => {
                   const contentStatusMeta = getContentStatusMeta(district.contentStatus);
@@ -1227,6 +1389,15 @@ export function EdinburghReviewPage({
                       title={<h4 className="cities-page__district-title">{district.name}</h4>}
                       meta={
                         <>
+                          {dirtyDistrictIdSet.has(district.id) ? (
+                            <span
+                              className="cities-page__dirty-indicator"
+                              aria-label="District has unsaved edits"
+                              title="District has unsaved edits"
+                            >
+                              <Asterisk />
+                            </span>
+                          ) : null}
                           <Badge variant="outline" className="cities-page__district-square-badge">
                             {district.square}
                           </Badge>
@@ -1251,26 +1422,64 @@ export function EdinburghReviewPage({
                 })()
               ))}
               {!filteredDistricts.length ? (
-                <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                <li className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
                   No districts matched that search.
-                </div>
+                </li>
               ) : null}
-            </div>
+            </ul>
           </CardContent>
         </Card>
       }
       detail={
         <div className="page-card-stack">
-          {selectedDistrictIds.length === 0 ? (
+          {selectedDistrictIds.length === 0 && !editorDistrict ? (
           <Card className="page-card page-card--detail">
-            <CardHeader className="gap-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <CardTitle>City detail editor</CardTitle>
-                {isBulkCitySelection ? (
-                  <Badge variant="secondary">{selectedCityIds.length} selected</Badge>
-                ) : selectedCity ? (
-                  <Badge variant="outline">{selectedCity.name}</Badge>
-                ) : null}
+            <CardHeader className="gap-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="grid min-w-0 gap-2">
+                  <CardTitle>City Editor</CardTitle>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {isBulkCitySelection ? (
+                      <Badge variant="secondary">{selectedCityIds.length} selected</Badge>
+                    ) : selectedCity ? (
+                      <Badge variant="outline">{selectedCity.name}</Badge>
+                    ) : null}
+                  </div>
+                </div>
+                <TooltipProvider delayDuration={150}>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          size="icon-sm"
+                          variant="outline"
+                          className="cities-overview-intro__reset-button"
+                          onClick={handleResetCityDraft}
+                          aria-label="Reset all city data"
+                        >
+                          <RotateCcw />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Reset all city data</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          size="icon-sm"
+                          variant="outline"
+                          onClick={handleSaveCityDraft}
+                          disabled={busyAction !== null}
+                          aria-label="Save all city data"
+                        >
+                          <Save />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Save all city data</TooltipContent>
+                    </Tooltip>
+                  </div>
+                </TooltipProvider>
               </div>
             </CardHeader>
             <CardContent className="page-card__content grid gap-4">
@@ -1392,21 +1601,74 @@ export function EdinburghReviewPage({
           </Card>
           ) : null}
 
-          {selectedDistrict ? (
+          {editorDistrict ? (
           <>
             <Card className="page-card page-card--detail">
               <CardHeader className="gap-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <CardTitle>District detail editor</CardTitle>
-                  {selectedCity ? <Badge variant="outline">{selectedCity.name}</Badge> : null}
-                  {isBulkDistrictSelection ? (
-                    <Badge variant="secondary">{selectedDistrictIds.length} selected</Badge>
-                  ) : (
-                    <>
-                      <Badge variant="secondary">{selectedDistrict.name}</Badge>
-                      <Badge variant="outline">{selectedDistrict.square}</Badge>
-                    </>
-                  )}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="grid min-w-0 gap-2">
+                    <CardTitle>District Editor</CardTitle>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {selectedCity ? <Badge variant="outline">{selectedCity.name}</Badge> : null}
+                      {isBulkDistrictSelection && !isDistrictHoverPreview ? (
+                        <Badge variant="secondary">{selectedDistrictIds.length} selected</Badge>
+                      ) : (
+                        <>
+                          {isEditorDistrictDirty ? (
+                            <span
+                              className="cities-page__dirty-indicator"
+                              aria-label="District has unsaved edits"
+                              title="District has unsaved edits"
+                            >
+                              <Asterisk />
+                            </span>
+                          ) : null}
+                          <Badge variant="secondary">{editorDistrict.name}</Badge>
+                          <Badge variant="outline">{editorDistrict.square}</Badge>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <TooltipProvider delayDuration={150}>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            size="icon-sm"
+                            variant="outline"
+                            className="cities-overview-intro__reset-button"
+                            onClick={handleResetEditorDistrict}
+                            disabled={isBulkDistrictSelection || !canEditEditorDistrict || !isEditorDistrictDirty}
+                            aria-label="Reset district"
+                          >
+                            <RotateCcw />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Reset district</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            size="icon-sm"
+                            variant="outline"
+                            onClick={handleSaveEditorDistrict}
+                            disabled={
+                              busyAction !== null ||
+                              isBulkDistrictSelection ||
+                              !canEditEditorDistrict ||
+                              !isEditorDistrictDirty
+                            }
+                            aria-label="Save district"
+                          >
+                            <Save />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Save district</TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </TooltipProvider>
                 </div>
               </CardHeader>
               <CardContent className="page-card__content grid gap-4">
@@ -1424,20 +1686,23 @@ export function EdinburghReviewPage({
                         <Input
                           name="district-name"
                           autoComplete="off"
-                          value={selectedDistrict.name}
-                          onChange={(event) =>
+                          disabled={!canEditEditorDistrict}
+                          value={editorDistrict.name}
+                          onChange={(event) => {
+                            const nextName = event.currentTarget.value;
                             updateSelectedDistricts((district) => ({
                               ...district,
-                              name: event.currentTarget.value
-                            }))
-                          }
+                              name: nextName
+                            }));
+                          }}
                         />
                       </label>
                       <StatusDropdownField
                         label="Content status"
-                        value={selectedDistrict.contentStatus}
+                        value={editorDistrict.contentStatus}
                         options={statusOptions}
                         getMeta={getContentStatusMeta}
+                        disabled={!canEditEditorDistrict}
                         onChange={(value) =>
                           updateSelectedDistricts((district) => ({
                             ...district,
@@ -1447,9 +1712,10 @@ export function EdinburghReviewPage({
                       />
                       <StatusDropdownField
                         label="Review status"
-                        value={selectedDistrict.reviewStatus}
+                        value={editorDistrict.reviewStatus}
                         options={reviewOptions}
                         getMeta={getReviewStatusMeta}
+                        disabled={!canEditEditorDistrict}
                         onChange={(value) =>
                           updateSelectedDistricts((district) => ({
                             ...district,
@@ -1463,13 +1729,15 @@ export function EdinburghReviewPage({
                           name="district-last-reviewed-at"
                           autoComplete="off"
                           type="date"
-                          value={selectedDistrict.lastReviewedAt ?? ""}
-                          onChange={(event) =>
+                          disabled={!canEditEditorDistrict}
+                          value={editorDistrict.lastReviewedAt ?? ""}
+                          onChange={(event) => {
+                            const nextLastReviewedAt = event.currentTarget.value || null;
                             updateSelectedDistricts((district) => ({
                               ...district,
-                              lastReviewedAt: event.currentTarget.value || null
-                            }))
-                          }
+                              lastReviewedAt: nextLastReviewedAt
+                            }));
+                          }}
                         />
                       </label>
                       <label className="grid gap-2 lg:col-span-3">
@@ -1477,13 +1745,15 @@ export function EdinburghReviewPage({
                         <Textarea
                           name="district-review-notes"
                           autoComplete="off"
-                          value={selectedDistrict.reviewNotes ?? ""}
-                          onChange={(event) =>
+                          disabled={!canEditEditorDistrict}
+                          value={editorDistrict.reviewNotes ?? ""}
+                          onChange={(event) => {
+                            const nextReviewNotes = event.currentTarget.value || null;
                             updateSelectedDistricts((district) => ({
                               ...district,
-                              reviewNotes: event.currentTarget.value || null
-                            }))
-                          }
+                              reviewNotes: nextReviewNotes
+                            }));
+                          }}
                           rows={4}
                         />
                       </label>
@@ -1497,13 +1767,15 @@ export function EdinburghReviewPage({
                         <Textarea
                           name="district-day-profile"
                           autoComplete="off"
-                          value={selectedDistrict.dayProfile}
-                          onChange={(event) =>
+                          disabled={!canEditEditorDistrict}
+                          value={editorDistrict.dayProfile}
+                          onChange={(event) => {
+                            const nextDayProfile = event.currentTarget.value;
                             updateSelectedDistricts((district) => ({
                               ...district,
-                              dayProfile: event.currentTarget.value
-                            }))
-                          }
+                              dayProfile: nextDayProfile
+                            }));
+                          }}
                           rows={3}
                         />
                       </label>
@@ -1512,13 +1784,15 @@ export function EdinburghReviewPage({
                         <Textarea
                           name="district-night-profile"
                           autoComplete="off"
-                          value={selectedDistrict.nightProfile}
-                          onChange={(event) =>
+                          disabled={!canEditEditorDistrict}
+                          value={editorDistrict.nightProfile}
+                          onChange={(event) => {
+                            const nextNightProfile = event.currentTarget.value;
                             updateSelectedDistricts((district) => ({
                               ...district,
-                              nightProfile: event.currentTarget.value
-                            }))
-                          }
+                              nightProfile: nextNightProfile
+                            }));
+                          }}
                           rows={3}
                         />
                       </label>
@@ -1527,13 +1801,15 @@ export function EdinburghReviewPage({
                         <Textarea
                           name="district-descriptors"
                           autoComplete="off"
-                          value={formatListValue(selectedDistrict.descriptors)}
-                          onChange={(event) =>
+                          disabled={!canEditEditorDistrict}
+                          value={formatListValue(editorDistrict.descriptors)}
+                          onChange={(event) => {
+                            const nextDescriptors = parseListValue(event.currentTarget.value);
                             updateSelectedDistricts((district) => ({
                               ...district,
-                              descriptors: parseListValue(event.currentTarget.value)
-                            }))
-                          }
+                              descriptors: nextDescriptors
+                            }));
+                          }}
                           rows={5}
                         />
                       </label>
@@ -1542,13 +1818,15 @@ export function EdinburghReviewPage({
                         <Textarea
                           name="district-tone-cues"
                           autoComplete="off"
-                          value={formatListValue(selectedDistrict.toneCues)}
-                          onChange={(event) =>
+                          disabled={!canEditEditorDistrict}
+                          value={formatListValue(editorDistrict.toneCues)}
+                          onChange={(event) => {
+                            const nextToneCues = parseListValue(event.currentTarget.value);
                             updateSelectedDistricts((district) => ({
                               ...district,
-                              toneCues: parseListValue(event.currentTarget.value)
-                            }))
-                          }
+                              toneCues: nextToneCues
+                            }));
+                          }}
                           rows={5}
                         />
                       </label>
@@ -1562,17 +1840,18 @@ export function EdinburghReviewPage({
                         <select
                           name="district-square"
                           className="field-select"
-                          disabled={isBulkDistrictSelection}
-                          value={selectedDistrict.square}
-                          onChange={(event) =>
+                          disabled={isBulkDistrictSelection || !canEditEditorDistrict}
+                          value={editorDistrict.square}
+                          onChange={(event) => {
+                            const nextSquare = event.currentTarget.value as DistrictCell["square"];
                             setDraft((current) =>
                               reassignDistrictSquare(
                                 current,
-                                selectedDistrict.id,
-                                event.currentTarget.value as DistrictCell["square"]
+                                editorDistrict.id,
+                                nextSquare
                               )
-                            )
-                          }
+                            );
+                          }}
                         >
                           {boardSquares.map((square) => (
                             <option key={square} value={square}>
@@ -1586,13 +1865,15 @@ export function EdinburghReviewPage({
                         <Input
                           name="district-locality"
                           autoComplete="off"
-                          value={selectedDistrict.locality}
-                          onChange={(event) =>
+                          disabled={!canEditEditorDistrict}
+                          value={editorDistrict.locality}
+                          onChange={(event) => {
+                            const nextLocality = event.currentTarget.value;
                             updateSelectedDistricts((district) => ({
                               ...district,
-                              locality: event.currentTarget.value
-                            }))
-                          }
+                              locality: nextLocality
+                            }));
+                          }}
                         />
                       </label>
                       <label className="grid gap-2 lg:col-span-2">
@@ -1600,13 +1881,15 @@ export function EdinburghReviewPage({
                         <Textarea
                           name="district-landmarks"
                           autoComplete="off"
-                          value={formatListValue(selectedDistrict.landmarks)}
-                          onChange={(event) =>
+                          disabled={!canEditEditorDistrict}
+                          value={formatListValue(editorDistrict.landmarks)}
+                          onChange={(event) => {
+                            const nextLandmarks = parseListValue(event.currentTarget.value);
                             updateSelectedDistricts((district) => ({
                               ...district,
-                              landmarks: parseListValue(event.currentTarget.value)
-                            }))
-                          }
+                              landmarks: nextLandmarks
+                            }));
+                          }}
                           rows={4}
                         />
                       </label>
@@ -1620,7 +1903,7 @@ export function EdinburghReviewPage({
                                   size="icon-sm"
                                   variant={isMapImportArmed ? "secondary" : "outline"}
                                   className="mt-auto"
-                                  disabled={isBulkDistrictSelection}
+                                  disabled={isBulkDistrictSelection || !canEditEditorDistrict}
                                   onClick={() => setIsMapImportArmed((current) => !current)}
                                   aria-label="Target map position"
                                 >
@@ -1633,17 +1916,17 @@ export function EdinburghReviewPage({
                         </div>
                         <CoordinateStepperField
                           label="Long"
-                          value={selectedDistrictEffectiveMapAnchor?.longitude ?? 0}
+                          value={editorDistrictEffectiveMapAnchor?.longitude ?? 0}
                           min={-180}
                           max={180}
                           step={0.00001}
-                          disabled={isBulkDistrictSelection}
+                          disabled={isBulkDistrictSelection || !canEditEditorDistrict}
                           className="coordinate-stepper-field--compact"
                           onChange={(valueText) =>
                             updateSelectedDistricts((district) =>
                               updateDistrictMapAnchorFromParts({
                                 district,
-                                fallbackAnchor: selectedDistrictEffectiveMapAnchor ?? { longitude: 0, latitude: 0 },
+                                fallbackAnchor: editorDistrictEffectiveMapAnchor ?? { longitude: 0, latitude: 0 },
                                 longitudeText: valueText
                               })
                             )
@@ -1651,36 +1934,36 @@ export function EdinburghReviewPage({
                         />
                         <CoordinateStepperField
                           label="Lat"
-                          value={selectedDistrictEffectiveMapAnchor?.latitude ?? 0}
+                          value={editorDistrictEffectiveMapAnchor?.latitude ?? 0}
                           min={-90}
                           max={90}
                           step={0.00001}
-                          disabled={isBulkDistrictSelection}
+                          disabled={isBulkDistrictSelection || !canEditEditorDistrict}
                           className="coordinate-stepper-field--compact"
                           onChange={(valueText) =>
                             updateSelectedDistricts((district) =>
                               updateDistrictMapAnchorFromParts({
                                 district,
-                                fallbackAnchor: selectedDistrictEffectiveMapAnchor ?? { longitude: 0, latitude: 0 },
+                                fallbackAnchor: editorDistrictEffectiveMapAnchor ?? { longitude: 0, latitude: 0 },
                                 latitudeText: valueText
                               })
                             )
                           }
                         />
                         <MapPositionMoveButton
-                          longitude={selectedDistrictEffectiveMapAnchor?.longitude ?? 0}
-                          latitude={selectedDistrictEffectiveMapAnchor?.latitude ?? 0}
+                          longitude={editorDistrictEffectiveMapAnchor?.longitude ?? 0}
+                          latitude={editorDistrictEffectiveMapAnchor?.latitude ?? 0}
                           longitudeMin={-180}
                           longitudeMax={180}
                           latitudeMin={-90}
                           latitudeMax={90}
                           step={0.00001}
-                          disabled={isBulkDistrictSelection}
+                          disabled={isBulkDistrictSelection || !canEditEditorDistrict}
                           onMove={(longitudeText, latitudeText) =>
                             updateSelectedDistricts((district) =>
                               updateDistrictMapAnchorFromParts({
                                 district,
-                                fallbackAnchor: selectedDistrictEffectiveMapAnchor ?? { longitude: 0, latitude: 0 },
+                                fallbackAnchor: editorDistrictEffectiveMapAnchor ?? { longitude: 0, latitude: 0 },
                                 longitudeText,
                                 latitudeText
                               })

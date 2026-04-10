@@ -3,8 +3,10 @@ import { getCityBoardDefinition } from "./cityBoards";
 import {
   buildCityBoardValidation,
   listCityBoardDraft,
+  listCityBoardSavedBaseline,
   resetCityBoardDraft,
-  saveCityBoardDraft
+  saveCityBoardDraft,
+  saveCityBoardSavedBaseline
 } from "./cityReviewState";
 
 describe("cityReviewState", () => {
@@ -31,6 +33,62 @@ describe("cityReviewState", () => {
     expect(nextDraft.reviewNotes).toBe("Local working note");
     expect(listCityBoardDraft("london", london).reviewNotes).toBe("Local working note");
     expect(resetCityBoardDraft("london", london).reviewNotes).toBe(london.reviewNotes);
+  });
+
+  it("preserves district map anchors while hydrating drafts", () => {
+    const london = getCityBoardDefinition("london")?.board;
+
+    expect(london).toBeTruthy();
+    if (!london) {
+      return;
+    }
+
+    const initialDraft = listCityBoardDraft("london", london);
+    const nextDraft = saveCityBoardDraft({
+      ...initialDraft,
+      districts: initialDraft.districts.map((district, index) =>
+        index === 0
+          ? {
+              ...district,
+              mapAnchor: {
+                longitude: -0.1276,
+                latitude: 51.5072
+              }
+            }
+          : district
+      )
+    });
+
+    expect(nextDraft.districts[0]?.mapAnchor).toEqual({
+      longitude: -0.1276,
+      latitude: 51.5072
+    });
+    expect(listCityBoardDraft("london", london).districts[0]?.mapAnchor).toEqual({
+      longitude: -0.1276,
+      latitude: 51.5072
+    });
+  });
+
+  it("tracks a saved baseline separately from the working draft", () => {
+    const london = getCityBoardDefinition("london")?.board;
+
+    expect(london).toBeTruthy();
+    if (!london) {
+      return;
+    }
+
+    const initialDraft = listCityBoardDraft("london", london);
+    saveCityBoardSavedBaseline({
+      ...initialDraft,
+      reviewNotes: "Saved baseline"
+    });
+    saveCityBoardDraft({
+      ...initialDraft,
+      reviewNotes: "Working draft"
+    });
+
+    expect(listCityBoardSavedBaseline("london", london).reviewNotes).toBe("Saved baseline");
+    expect(listCityBoardDraft("london", london).reviewNotes).toBe("Working draft");
   });
 
   it("validates bundled city boards", () => {

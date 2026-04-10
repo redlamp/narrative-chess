@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useState } from "react";
-import { Copy, ExternalLink, FolderOpen, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
+import { Copy, ExternalLink, FolderOpen, FolderTree, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import { createReplayFromPgn, getBoardSquares } from "@narrative-chess/game-core";
 import type {
   DistrictCell,
@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Board } from "./Board";
 import { ClearableSearchField } from "./ClearableSearchField";
 import { IndexedWorkspace } from "./IndexedWorkspace";
@@ -472,32 +473,70 @@ export function ClassicGamesLibraryPage({
           title="Historic"
           actions={
             <>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleConnectFolder}
-                disabled={!isDirectorySupported || busyAction === "connect-folder"}
-              >
-                <FolderOpen className="mr-2 h-4 w-4" />
-                Connect folder
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleLoadFromFolder}
-                disabled={!isDirectorySupported || busyAction === "load-folder"}
-              >
-                Load from folder
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleSaveToFolder}
-                disabled={!isDirectorySupported || busyAction === "save-folder"}
-              >
-                <Save className="mr-2 h-4 w-4" />
-                Save to folder
-              </Button>
+              <TooltipProvider delayDuration={150}>
+                <div className="cities-overview-intro__actions-group">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={handleConnectFolder}
+                        disabled={!isDirectorySupported || busyAction === "connect-folder"}
+                        aria-label="Connect folder"
+                      >
+                        <FolderTree />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Connect folder</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={handleLoadFromFolder}
+                        disabled={!isDirectorySupported || busyAction === "load-folder"}
+                        aria-label="Open file"
+                      >
+                        <FolderOpen />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Open file</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        className="cities-overview-intro__reset-button"
+                        onClick={handleResetLibrary}
+                        aria-label="Reset defaults"
+                      >
+                        <RotateCcw />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Reset defaults</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={handleSaveToFolder}
+                        disabled={!isDirectorySupported || busyAction === "save-folder"}
+                        aria-label="Save to folder"
+                      >
+                        <Save />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Save to folder</TooltipContent>
+                  </Tooltip>
+                </div>
+              </TooltipProvider>
               <Button
                 type="button"
                 variant="outline"
@@ -511,7 +550,7 @@ export function ClassicGamesLibraryPage({
                 Load on study board
               </Button>
               <Button type="button" variant="outline" onClick={handleAddGame}>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus data-icon="inline-start" />
                 Add game
               </Button>
               <Button
@@ -520,12 +559,8 @@ export function ClassicGamesLibraryPage({
                 onClick={handleDuplicateGame}
                 disabled={!selectedGame}
               >
-                <Copy className="mr-2 h-4 w-4" />
+                <Copy data-icon="inline-start" />
                 Duplicate
-              </Button>
-              <Button type="button" variant="outline" onClick={handleResetLibrary}>
-                <RotateCcw className="mr-2 h-4 w-4" />
-                Reset defaults
               </Button>
             </>
           }
@@ -561,7 +596,7 @@ export function ClassicGamesLibraryPage({
             />
           </CardHeader>
           <CardContent className="page-card__content page-card__content--scroll pt-0">
-            <div className="grid gap-2">
+            <ul className="classic-games-page__list">
               {filteredGames.map((game) => (
                 <WorkspaceListItem
                   key={game.id}
@@ -580,11 +615,11 @@ export function ClassicGamesLibraryPage({
                 />
               ))}
               {!filteredGames.length ? (
-                <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                <li className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
                   No classic games matched that search.
-                </div>
+                </li>
               ) : null}
-            </div>
+            </ul>
           </CardContent>
         </Card>
       }

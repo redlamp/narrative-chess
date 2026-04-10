@@ -15,7 +15,6 @@ import {
   AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 import { ExternalLink, FolderOpen, Trash2 } from "lucide-react";
-import { WorkspaceListItem } from "./WorkspaceListItem";
 
 type RecentGamesPanelProps = {
   savedMatches: SavedMatchRecord[];
@@ -28,6 +27,47 @@ type RecentGamesPanelProps = {
   onSelectReferenceGame: (value: string) => void;
   onLoadReferenceGame: () => void;
 };
+
+type RecentGameRowProps = {
+  title: string;
+  description?: string;
+  meta: string;
+  selected: boolean;
+  onClick: () => void;
+  onMouseEnter?: () => void;
+  onFocus?: () => void;
+};
+
+function RecentGameRow({
+  title,
+  description,
+  meta,
+  selected,
+  onClick,
+  onMouseEnter,
+  onFocus
+}: RecentGameRowProps) {
+  return (
+    <li className="recent-games-list__entry">
+      <button
+        type="button"
+        role="option"
+        className="recent-games-list-row"
+        data-selected={selected ? "true" : "false"}
+        aria-selected={selected}
+        onClick={onClick}
+        onMouseEnter={onMouseEnter}
+        onFocus={onFocus}
+      >
+        <span className="recent-games-list-row__main">
+          <span className="recent-games-list-row__title">{title}</span>
+          {description ? <span className="recent-games-list-row__description">{description}</span> : null}
+        </span>
+        <span className="recent-games-list-row__meta">{meta}</span>
+      </button>
+    </li>
+  );
+}
 
 export function RecentGamesPanel({
   savedMatches,
@@ -126,29 +166,25 @@ export function RecentGamesPanel({
       <TabsContent value="historic" className="recent-games-content">
         <div className="recent-games-historic">
           <div ref={splitContentRef} className="recent-games-historic__content" style={historicSplitStyle}>
-            <div
+            <ul
               className="recent-games-historic__list"
               role="listbox"
               aria-label="Historic games"
               onMouseLeave={() => setHoveredReferenceGameId(null)}
             >
               {referenceGames.map((game) => (
-                <WorkspaceListItem
+                <RecentGameRow
                   key={game.id}
-                  type="button"
                   selected={game.id === selectedReferenceGameId}
-                  className="recent-games-list__item"
                   onClick={() => onSelectReferenceGame(game.id)}
                   onMouseEnter={() => setHoveredReferenceGameId(game.id)}
                   onFocus={() => setHoveredReferenceGameId(game.id)}
                   title={game.title}
-                  description={
-                    <span className="recent-games-historic__item-desc">{game.white} vs {game.black}</span>
-                  }
-                  meta={<span className="recent-games-historic__item-year">{game.year}</span>}
+                  description={`${game.white} vs ${game.black}`}
+                  meta={String(game.year)}
                 />
               ))}
-            </div>
+            </ul>
             <button
               type="button"
               className="recent-games-historic__splitter"
@@ -184,25 +220,34 @@ export function RecentGamesPanel({
               <div className="recent-games-details">
                 <div className="recent-games-details__header">
                   <h4>{previewReferenceGame.title}</h4>
-                  <Button type="button" variant="secondary" size="sm" onClick={onLoadReferenceGame}>
-                    Load Game
-                  </Button>
+                  <span className="recent-games-details__year">{previewReferenceGame.year}</span>
                 </div>
-                <p className="muted">
-                  {previewReferenceGame.white} vs {previewReferenceGame.black}, {previewReferenceGame.event},{" "}
-                  {previewReferenceGame.year}
+                <p className="recent-games-details__location-row muted">
+                  <span>{previewReferenceGame.site || "Unknown location"}</span>
                 </p>
-                {previewReferenceGame.site ? <p className="muted">{previewReferenceGame.site}</p> : null}
+                <p className="muted">
+                  {previewReferenceGame.white} vs {previewReferenceGame.black}, {previewReferenceGame.event}
+                </p>
                 <p className="recent-games-summary">{previewReferenceGame.summary}</p>
-                {previewReferenceGame.sourceUrl ? (
-                  <p className="recent-games-link">
+                <div className="recent-games-details__actions">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon-sm"
+                    onClick={onLoadReferenceGame}
+                    aria-label={`Load ${previewReferenceGame.title}`}
+                    title="Load game"
+                  >
+                    <FolderOpen />
+                  </Button>
+                  {previewReferenceGame.sourceUrl ? (
                     <Button asChild type="button" variant="outline" size="sm">
                       <a href={previewReferenceGame.sourceUrl} target="_blank" rel="noreferrer">
-                        Open Reference <ExternalLink />
+                        Source <ExternalLink />
                       </a>
                     </Button>
-                  </p>
-                ) : null}
+                  ) : null}
+                </div>
               </div>
             ) : null}
           </div>
@@ -212,20 +257,18 @@ export function RecentGamesPanel({
       <TabsContent value="saved" className="recent-games-content">
         {savedMatches.length ? (
           <div className="recent-games-shell">
-            <div className="recent-games-list" role="listbox" aria-label="Saved games">
+            <ul className="recent-games-list" role="listbox" aria-label="Saved games">
               {savedMatches.map((savedMatch) => (
-                <WorkspaceListItem
+                <RecentGameRow
                   key={savedMatch.id}
-                  type="button"
                   selected={savedMatch.id === selectedSavedMatchId}
-                  className="recent-games-list__item"
                   onClick={() => onSelectSavedMatch(savedMatch.id)}
                   title={savedMatch.name}
                   description={formatSavedAt(savedMatch.savedAt)}
-                  meta={<span className="recent-games__meta">{savedMatch.moveCount} moves</span>}
+                  meta={`${savedMatch.moveCount} moves`}
                 />
               ))}
-            </div>
+            </ul>
             <div className="recent-games-actions">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
