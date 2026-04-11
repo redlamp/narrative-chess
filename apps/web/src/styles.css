@@ -4177,27 +4177,6 @@ select {
   color: var(--accent-foreground);
 }
 
-.city-placement-editor__search-marker {
-  position: relative;
-  pointer-events: none;
-  width: 1rem;
-  height: 1rem;
-  border-radius: 999px;
-  border: 2px solid #111827;
-  background: #fb7185;
-  box-shadow:
-    0 0 0 4px rgb(251 113 133 / 0.2),
-    0 6px 16px rgba(15, 23, 42, 0.22);
-}
-
-.city-placement-editor__search-marker::after {
-  content: "";
-  position: absolute;
-  inset: -0.35rem;
-  border: 1px dashed rgb(17 24 39 / 0.55);
-  border-radius: 999px;
-}
-
 .city-placement-editor__map-frame {
   display: grid;
   flex: 1 1 auto;
