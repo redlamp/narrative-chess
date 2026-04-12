@@ -661,7 +661,7 @@
     },
     {
       "id": "london-fulham",
-      "square": "e5",
+      "square": "e4",
       "name": "Fulham",
       "locality": "Central",
       "descriptors": [
@@ -684,7 +684,7 @@
     },
     {
       "id": "london-battersea",
-      "square": "f5",
+      "square": "e5",
       "name": "Battersea",
       "locality": "Central",
       "descriptors": [
@@ -845,7 +845,7 @@
     },
     {
       "id": "london-putney",
-      "square": "e4",
+      "square": "e2",
       "name": "Putney",
       "locality": "West",
       "descriptors": [
@@ -868,7 +868,7 @@
     },
     {
       "id": "london-dulwich",
-      "square": "f4",
+      "square": "f5",
       "name": "Dulwich",
       "locality": "West",
       "descriptors": [
@@ -891,7 +891,7 @@
     },
     {
       "id": "london-peckham",
-      "square": "g4",
+      "square": "f4",
       "name": "Peckham",
       "locality": "West",
       "descriptors": [
@@ -1213,7 +1213,7 @@
     },
     {
       "id": "london-barking",
-      "square": "e2",
+      "square": "g4",
       "name": "Barking",
       "locality": "East",
       "descriptors": [

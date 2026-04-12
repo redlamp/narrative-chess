@@ -62,11 +62,13 @@ import { cityBoardDefinitions, getCityBoardDefinition } from "../cityBoards";
 import { getDistrictMapCenter, getDistrictRadiusMeters, getSquareTone } from "./cityMapShared";
 import {
   buildCityBoardValidation,
+  getCityBoardDraftStatus,
   listCityBoardDraft,
   listCityBoardSavedBaseline,
   resetCityBoardDraft,
   saveCityBoardDraft,
-  saveCityBoardSavedBaseline
+  saveCityBoardSavedBaseline,
+  type CityBoardDraftStatus
 } from "../cityReviewState";
 import {
   connectCityReviewDirectory,
@@ -804,6 +806,13 @@ export function EdinburghReviewPage({
     [draft]
   );
   const selectedCity = trackedCities.find((city) => city.id === selectedCityId) ?? trackedCities[0] ?? null;
+
+  const cityDraftStatus = useMemo(
+    (): CityBoardDraftStatus => getCityBoardDraftStatus(selectedCityId),
+    // Re-evaluate when city switches or when savedDraftsByCityId updates (save / reset events).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedCityId, savedDraftsByCityId]
+  );
 
   useEffect(() => {
     setIsDirectorySupported(supportsLocalContentDirectory());
@@ -1768,6 +1777,12 @@ export function EdinburghReviewPage({
                     ) : selectedCity ? (
                       <Badge variant="outline">{selectedCity.name}</Badge>
                     ) : null}
+                    {!isBulkCitySelection && cityDraftStatus === "saved" && (
+                      <Badge variant="secondary">Saved to file</Badge>
+                    )}
+                    {!isBulkCitySelection && cityDraftStatus === "draft" && (
+                      <Badge variant="outline">Unsaved draft</Badge>
+                    )}
                   </div>
                 </div>
               </div>

@@ -214,6 +214,28 @@ export function resetCityBoardDraft(cityId: string, fallback = getCityBoardDefin
   return cloneBoard(fallback);
 }
 
+export type CityBoardDraftStatus = "published" | "saved" | "draft";
+
+/**
+ * Load priority for city board data:
+ *   1. localStorage draft  (key: narrative-chess:city-board-draft:v1:<cityId>)
+ *   2. Bundled canonical JSON from content/cities/<city>-board.json (compiled at build time)
+ *
+ * Status meanings:
+ *   "published" — no localStorage key; showing bundled data as deployed.
+ *   "saved"     — savedBaseline key exists; was saved to filesystem via File System Access API.
+ *   "draft"     — draft key exists, no savedBaseline; browser edits not yet saved to file.
+ *
+ * When moving to a database backend, this function should check the DB sync state instead.
+ */
+export function getCityBoardDraftStatus(cityId: string): CityBoardDraftStatus {
+  if (typeof window === "undefined") return "published";
+  const hasDraft = window.localStorage.getItem(getStorageKey(cityId)) !== null;
+  if (!hasDraft) return "published";
+  const hasSaved = window.localStorage.getItem(getSavedBaselineStorageKey(cityId)) !== null;
+  return hasSaved ? "saved" : "draft";
+}
+
 export function buildCityBoardValidation(board: CityBoard) {
   const result = cityBoardSchema.safeParse(board);
 

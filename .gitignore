@@ -14,3 +14,6 @@ coverage/
 .codex-dev-server.log
 .DS_Store
 Thumbs.db
+
+# Local city board working files — save via Cities editor, not committed
+*.local.json

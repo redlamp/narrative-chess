@@ -15,76 +15,1538 @@
   "reviewNotes": "Milestone 2 prototype mapping assembled from public neighborhood references and arranged for readable board play rather than full cartographic fidelity. Northern waterfront entries were later revised toward stronger land-based districts and village centres, and dense central umbrella districts were narrowed into more specific corridors where useful.",
   "lastReviewedAt": "2026-04-08",
   "districts": [
-    {"id":"edinburgh-cramond","square":"a8","name":"Cramond","locality":"North West","descriptors":["historic village","river mouth"],"landmarks":["Cramond Village"],"dayProfile":"Walkers, cafes, and village routines cluster around the landward centre.","nightProfile":"Quiet lanes and the river edge make it feel tucked away after dark.","toneCues":["historic","contained"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":"Positioned as the village centre rather than the exposed foreshore.","lastReviewedAt":"2026-04-08"},
-    {"id":"edinburgh-silverknowes","square":"b8","name":"Silverknowes","locality":"North West","descriptors":["coastal edge","residential"],"landmarks":["Silverknowes promenade"],"dayProfile":"Open shoreline and suburban movement.","nightProfile":"Mostly still once the coast empties.","toneCues":["spacious","suburban"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-davidsons-mains","square":"c8","name":"Davidson's Mains","locality":"North West","descriptors":["village core","residential"],"landmarks":["Main Street"],"dayProfile":"School runs and local errands set the pace.","nightProfile":"Pub light and housing streets dominate.","toneCues":["compact","neighborly"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-trinity","square":"d8","name":"Trinity","locality":"North","descriptors":["leafy","residential"],"landmarks":["Trinity Academy"],"dayProfile":"Steady residential traffic and school activity.","nightProfile":"Reserved and dimmer than the city core.","toneCues":["settled","measured"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-newhaven","square":"e8","name":"Newhaven","locality":"North","descriptors":["harbour","historic"],"landmarks":["Newhaven Harbour"],"dayProfile":"Harbour traces and waterfront trade stay visible.","nightProfile":"Harbour lights and food spots carry the mood.","toneCues":["salty","stubborn"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-leith-shore","square":"f8","name":"Leith Shore","locality":"North East","descriptors":["waterfront quarter","restaurant district"],"landmarks":["Commercial Quay"],"dayProfile":"Walkers, cafes, and mixed-use blocks keep the waterfront visibly active.","nightProfile":"Bars and restaurants make evenings busier than nearby residential streets.","toneCues":["waterfront","social"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":"Promoted from planning overlay to replace a weaker open-quay placeholder.","lastReviewedAt":"2026-04-08"},
-    {"id":"edinburgh-leith","square":"g8","name":"Leith","locality":"North East","descriptors":["port district","dense"],"landmarks":["Leith Walk","Kirkgate"],"dayProfile":"Busy, mixed, and commercially active.","nightProfile":"One of the livelier evening districts.","toneCues":["brisk","assertive"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":"Kept broader than Leith Shore by focusing landmarks on the main district spine.","lastReviewedAt":"2026-04-08"},
-    {"id":"edinburgh-easter-road","square":"h8","name":"Easter Road","locality":"North East","descriptors":["urban corridor","dense residential"],"landmarks":["Easter Road corridor"],"dayProfile":"Local shops, buses, and tenement streets keep the district moving.","nightProfile":"The main corridor stays lit and active after side streets quieten.","toneCues":["street-level","direct"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":"Promoted from planning overlay to replace a low-density shoreline fringe district.","lastReviewedAt":"2026-04-08"},
-
-    {"id":"edinburgh-barnton","square":"a7","name":"Barnton","locality":"North West","descriptors":["suburban","residential"],"landmarks":["Barnton Junction"],"dayProfile":"Commuter traffic and suburban routines.","nightProfile":"Mostly quiet once the main roads ease.","toneCues":["tidy","peripheral"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-blackhall","square":"b7","name":"Blackhall","locality":"North West","descriptors":["leafy","residential"],"landmarks":["local school cluster"],"dayProfile":"School, errands, and neighborhood loops.","nightProfile":"Low-key and domestic.","toneCues":["orderly","quiet"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-clermiston","square":"c7","name":"Clermiston","locality":"North West","descriptors":["housing estate","elevated"],"landmarks":["Clermiston tower area"],"dayProfile":"Local retail and bus corridors keep it moving.","nightProfile":"Quieter blocks around a few main roads.","toneCues":["grounded","plainspoken"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-inverleith","square":"d7","name":"Inverleith","locality":"North","descriptors":["park edge","residential"],"landmarks":["Inverleith Park"],"dayProfile":"Walkers, families, and park traffic.","nightProfile":"Calmer once the park empties.","toneCues":["leafy","composed"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-stockbridge","square":"e7","name":"Stockbridge","locality":"North","descriptors":["village high street","affluent"],"landmarks":["Raeburn Place"],"dayProfile":"Cafes, markets, and polished local traffic.","nightProfile":"Social but more contained than rowdy.","toneCues":["polished","walkable"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-bonnington","square":"f7","name":"Bonnington","locality":"North East","descriptors":["mixed residential","waterside"],"landmarks":["Water of Leith path"],"dayProfile":"A quieter connector between bigger districts.","nightProfile":"Mostly residential calm.","toneCues":["in-between","steady"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-leith-walk","square":"g7","name":"Leith Walk","locality":"North East","descriptors":["urban corridor","mixed use"],"landmarks":["Leith Walk"],"dayProfile":"Buses, shops, takeaways, and constant foot traffic make it one of the city’s busiest connectors.","nightProfile":"Late retail and nightlife spill keep the corridor visibly active after dark.","toneCues":["busy","street-level"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":"Promoted from planning overlay to represent the denser inner approach into Leith more directly than Pilrig.","lastReviewedAt":"2026-04-08"},
-    {"id":"edinburgh-lochend","square":"h7","name":"Lochend","locality":"North East","descriptors":["park edge","residential"],"landmarks":["Lochend Park"],"dayProfile":"Residential activity around the park edge.","nightProfile":"Quieter than nearby Leith.","toneCues":["reserved","local"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-
-    {"id":"edinburgh-corstorphine","square":"a6","name":"Corstorphine","locality":"West","descriptors":["historic corridor","district centre"],"landmarks":["St John's Road"],"dayProfile":"Traffic-heavy but long-established.","nightProfile":"Main roads stay busy while side streets settle.","toneCues":["established","linear"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-murrayfield","square":"b6","name":"Murrayfield","locality":"West","descriptors":["stadium quarter","residential"],"landmarks":["Murrayfield Stadium"],"dayProfile":"Usually calm outside event traffic.","nightProfile":"Event nights change the whole rhythm.","toneCues":["spacious","event-ready"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-haymarket","square":"c6","name":"Haymarket","locality":"West Central","descriptors":["transport hub","commercial"],"landmarks":["Haymarket Station"],"dayProfile":"Commuters, offices, hotels, and tram traffic keep the district in constant motion.","nightProfile":"Travel, bars, and late movement make it feel active beyond office hours.","toneCues":["connected","restless"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":"Promoted from planning overlay to strengthen the west-central board with a denser land-based district.","lastReviewedAt":"2026-04-08"},
-    {"id":"edinburgh-west-end","square":"d6","name":"West End","locality":"Central","descriptors":["commercial","cultural"],"landmarks":["Shandwick Place"],"dayProfile":"Professional footfall and hospitality overlap constantly.","nightProfile":"After-work energy keeps it lively.","toneCues":["urbane","lively"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-new-town-west","square":"e6","name":"New Town West","locality":"Central","descriptors":["georgian core","city centre"],"landmarks":["Charlotte Square"],"dayProfile":"Offices, shops, and visitors keep the western half of the New Town busy all day.","nightProfile":"Lively, polished, and active around bars, hotels, and late buses.","toneCues":["formal","prominent"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":"Promoted from planning overlay to split the broad New Town into more usable board districts.","lastReviewedAt":"2026-04-08"},
-    {"id":"edinburgh-new-town-east","square":"f6","name":"New Town East","locality":"Central North","descriptors":["georgian grid","mixed use"],"landmarks":["St Andrew Square"],"dayProfile":"Retail, offices, and cross-city foot traffic keep the eastern New Town in motion.","nightProfile":"Evening activity thins more gradually than in quieter residential streets nearby.","toneCues":["urban","well-kept"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":"Promoted from planning overlay to complement New Town West and reduce reliance on a single umbrella district.","lastReviewedAt":"2026-04-08"},
-    {"id":"edinburgh-broughton","square":"g6","name":"Broughton","locality":"Central North","descriptors":["mixed residential","restaurant strip"],"landmarks":["Broughton Street"],"dayProfile":"Dense local movement and independent retail.","nightProfile":"Restaurant traffic keeps it lively.","toneCues":["social","dense"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-meadowbank","square":"h6","name":"Meadowbank","locality":"East","descriptors":["sports quarter","residential"],"landmarks":["Meadowbank Sports Centre"],"dayProfile":"Sports facilities and arterial movement define it.","nightProfile":"Quieter once facilities close.","toneCues":["active","practical"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-
-    {"id":"edinburgh-saughton","square":"a5","name":"Saughton","locality":"West","descriptors":["mixed residential","park edge"],"landmarks":["Saughton Park"],"dayProfile":"Parks, schools, and working streets mix together.","nightProfile":"Residential and subdued after park traffic fades.","toneCues":["local","practical"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-gorgie","square":"b5","name":"Gorgie","locality":"West","descriptors":["arterial corridor","working district"],"landmarks":["Gorgie Road"],"dayProfile":"Constant road movement and neighborhood trade.","nightProfile":"Match nights can shift the mood quickly.","toneCues":["hard-edged","energetic"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-dalry","square":"c5","name":"Dalry","locality":"West Central","descriptors":["dense tenements","mixed use"],"landmarks":["Dalry Road"],"dayProfile":"A busy urban strip with constant movement.","nightProfile":"Transit and pubs keep it active.","toneCues":["crowded","connected"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-tollcross","square":"d5","name":"Tollcross","locality":"Central South","descriptors":["junction district","nightlife edge"],"landmarks":["Tollcross junction"],"dayProfile":"Students, buses, cafes, and through-movement keep the area continually busy.","nightProfile":"Restaurants, bars, and cinema traffic make evenings noticeably louder.","toneCues":["busy","lived-in"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":"Promoted from planning overlay to add a denser central-west district than the broader redevelopment framing of Fountainbridge.","lastReviewedAt":"2026-04-08"},
-    {"id":"edinburgh-old-town-north","square":"e5","name":"Old Town North","locality":"Central","descriptors":["historic core","tourist heavy"],"landmarks":["Royal Mile"],"dayProfile":"Visitors, institutions, and steep pedestrian flows keep the northern Old Town packed.","nightProfile":"Crowded lanes and landmark lighting keep the district animated after dark.","toneCues":["dramatic","crowded"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":"Promoted from planning overlay to make the historic core more granular for board play.","lastReviewedAt":"2026-04-08"},
-    {"id":"edinburgh-calton","square":"f5","name":"Calton","locality":"Central East","descriptors":["hill district","historic edge"],"landmarks":["Calton Hill"],"dayProfile":"Tourist views and city-edge movement overlap.","nightProfile":"The hill becomes more atmospheric after dark.","toneCues":["elevated","ceremonial"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-abbeyhill","square":"g5","name":"Abbeyhill","locality":"East","descriptors":["residential","inner-city"],"landmarks":["Holyrood edge"],"dayProfile":"Residential but tightly connected to the centre.","nightProfile":"Calmer than the core, never fully detached.","toneCues":["adjacent","compact"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-willowbrae","square":"h5","name":"Willowbrae","locality":"East","descriptors":["hillside residential","gateway"],"landmarks":["London Road ascent"],"dayProfile":"Roads and hillside housing shape the district.","nightProfile":"Quieter once through-traffic thins.","toneCues":["sloped","watchful"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-
-    {"id":"edinburgh-slateford","square":"a4","name":"Slateford","locality":"South West","descriptors":["mixed use","rail corridor"],"landmarks":["Slateford Road"],"dayProfile":"Roads, rail, and local retail keep it functional.","nightProfile":"The transport feel remains after dark.","toneCues":["industrial","connected"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-shandon","square":"b4","name":"Shandon","locality":"South West","descriptors":["canal-side","residential"],"landmarks":["Union Canal"],"dayProfile":"The canal softens an otherwise residential district.","nightProfile":"Quiet streets and dark water shape the mood.","toneCues":["contained","calm"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-bruntsfield","square":"c4","name":"Bruntsfield","locality":"South Central","descriptors":["cafes","residential"],"landmarks":["Bruntsfield Place"],"dayProfile":"Independent shops and local footfall keep it polished.","nightProfile":"Evenings stay sociable without turning chaotic.","toneCues":["trim","sociable"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-marchmont","square":"d4","name":"Marchmont","locality":"South Central","descriptors":["student adjacent","tenement district"],"landmarks":["The Meadows edge"],"dayProfile":"Academic and residential rhythms overlap constantly.","nightProfile":"Busy enough to stay active but less loud than nightlife corridors.","toneCues":["bookish","steady"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-southside-west","square":"e4","name":"Southside West","locality":"South Central","descriptors":["student quarter","food corridor"],"landmarks":["Nicolson Street"],"dayProfile":"Pedestrian traffic, food spots, and student routines keep the western Southside bright and busy.","nightProfile":"Late food, bars, and dense foot traffic keep it active well into the evening.","toneCues":["animated","crowded"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":"Promoted from planning overlay to split the broad Southside into more precise board districts.","lastReviewedAt":"2026-04-08"},
-    {"id":"edinburgh-southside-east","square":"f4","name":"Southside East","locality":"South Central","descriptors":["urban corridor","student edge"],"landmarks":["South Clerk Street"],"dayProfile":"Main-road movement and mixed residential streets keep the eastern Southside in near-constant use.","nightProfile":"Restaurants, buses, and student traffic keep it lively after dark.","toneCues":["layered","active"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":"Promoted from planning overlay to complement Southside West and replace a broader district label.","lastReviewedAt":"2026-04-08"},
-    {"id":"edinburgh-prestonfield","square":"g4","name":"Prestonfield","locality":"South East","descriptors":["park edge","residential"],"landmarks":["Arthur's Seat edge"],"dayProfile":"Green edges and quieter housing slow the pace.","nightProfile":"Dark greenspace makes it feel more secluded.","toneCues":["green","withdrawn"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-duddingston","square":"h4","name":"Duddingston","locality":"South East","descriptors":["historic village","lochside"],"landmarks":["Duddingston Loch"],"dayProfile":"Village feel survives beside major parkland.","nightProfile":"Atmospheric and quiet with the loch nearby.","toneCues":["historic","still"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-
-    {"id":"edinburgh-wester-hailes","square":"a3","name":"Wester Hailes","locality":"South West","descriptors":["housing district","peripheral"],"landmarks":["Westside Plaza edge"],"dayProfile":"Large housing infrastructure and shopping nodes define it.","nightProfile":"Quieter between hubs and road corridors.","toneCues":["broad","direct"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-craiglockhart","square":"b3","name":"Craiglockhart","locality":"South West","descriptors":["hillside","residential"],"landmarks":["Craiglockhart Hill"],"dayProfile":"Residential slopes and campus movement shape the day.","nightProfile":"Withdrawn and lightly trafficked after dark.","toneCues":["elevated","quiet"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-morningside","square":"c3","name":"Morningside","locality":"South","descriptors":["district centre","affluent"],"landmarks":["Morningside Road"],"dayProfile":"Shops, schools, and steady local footfall keep it polished.","nightProfile":"Calmer after business hours but still social.","toneCues":["composed","affluent"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-grange","square":"d3","name":"Grange","locality":"South","descriptors":["villa district","residential"],"landmarks":["Grange Road"],"dayProfile":"Quiet wealth and broad streets shape the pace.","nightProfile":"One of the quieter southern districts.","toneCues":["reserved","grand"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-blackford","square":"e3","name":"Blackford","locality":"South","descriptors":["hill district","institutional"],"landmarks":["Royal Observatory"],"dayProfile":"Residential calm meets scientific landmarks.","nightProfile":"The hill makes it feel contemplative after dark.","toneCues":["observant","elevated"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-liberton","square":"f3","name":"Liberton","locality":"South East","descriptors":["residential","historic corridor"],"landmarks":["Liberton Kirk"],"dayProfile":"A long-settled district with a slower local rhythm.","nightProfile":"Quiet housing and wider roads dominate.","toneCues":["settled","plain"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-craigmillar","square":"g3","name":"Craigmillar","locality":"South East","descriptors":["estate district","historic landmark"],"landmarks":["Craigmillar Castle"],"dayProfile":"Housing and regeneration sites shape the area.","nightProfile":"Quieter residential sections beside arterial edges.","toneCues":["sturdy","changing"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-portobello","square":"h3","name":"Portobello","locality":"East","descriptors":["beach district","high street"],"landmarks":["Portobello Beach"],"dayProfile":"Promenade, high street, and beach draw constant movement.","nightProfile":"The shore keeps it active after dark.","toneCues":["bright","open"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-
-    {"id":"edinburgh-currie","square":"a2","name":"Currie","locality":"Far South West","descriptors":["village suburb","edge district"],"landmarks":["Currie Main Street"],"dayProfile":"Village-suburb routines shape the day.","nightProfile":"Mostly quiet and local.","toneCues":["outlying","self-contained"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-juniper-green","square":"b2","name":"Juniper Green","locality":"Far South West","descriptors":["village strip","hillside edge"],"landmarks":["Lanark Road"],"dayProfile":"A small linear district tied to the road through it.","nightProfile":"The village feel becomes more pronounced after traffic drops.","toneCues":["narrow","village-like"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-colinton","square":"c2","name":"Colinton","locality":"South West","descriptors":["historic village","river edge"],"landmarks":["Colinton Village"],"dayProfile":"Paths and heritage fabric keep it distinctive.","nightProfile":"Calm and picturesque in the evening.","toneCues":["picturesque","village"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-fairmilehead","square":"d2","name":"Fairmilehead","locality":"South","descriptors":["southern gateway","suburban"],"landmarks":["Pentland gateway"],"dayProfile":"A hinge point between suburb and hillside edge.","nightProfile":"Main-road light shapes the evening atmosphere.","toneCues":["threshold","suburban"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-buckstone","square":"e2","name":"Buckstone","locality":"South","descriptors":["residential","suburban"],"landmarks":["local shopping cluster"],"dayProfile":"Family and school rhythms dominate the district.","nightProfile":"Quiet cul-de-sacs define the mood.","toneCues":["domestic","quiet"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-gilmerton","square":"f2","name":"Gilmerton","locality":"South East","descriptors":["historic edge","residential"],"landmarks":["Gilmerton crossroads"],"dayProfile":"A practical southern district with local trade.","nightProfile":"Main junctions stay active even as side streets quieten.","toneCues":["grounded","workaday"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-niddrie","square":"g2","name":"Niddrie","locality":"South East","descriptors":["estate district","arterial edge"],"landmarks":["Niddrie Mains"],"dayProfile":"Large housing blocks and main corridors define the pace.","nightProfile":"Residential pockets alternate with harder road edges.","toneCues":["stark","direct"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-joppa","square":"h2","name":"Joppa","locality":"East","descriptors":["seaside edge","residential"],"landmarks":["Joppa shore"],"dayProfile":"A calmer eastern coastal strip tied to the promenade.","nightProfile":"Sea air and low-lit streets create a reflective feel.","toneCues":["coastal","quiet"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-
-    {"id":"edinburgh-balerno","square":"a1","name":"Balerno","locality":"Far South West","descriptors":["outer village","hillside edge"],"landmarks":["Main Street"],"dayProfile":"An outer village rhythm with a rural edge nearby.","nightProfile":"Feels detached from the city core.","toneCues":["outer-edge","village"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-baberton","square":"b1","name":"Baberton","locality":"Far South West","descriptors":["suburban edge","golfside"],"landmarks":["Baberton Mains"],"dayProfile":"Suburban and car-oriented with open edges nearby.","nightProfile":"Very quiet, with little movement beyond residents.","toneCues":["peripheral","still"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-oxgangs","square":"c1","name":"Oxgangs","locality":"South","descriptors":["housing district","southern connector"],"landmarks":["Oxgangs Road"],"dayProfile":"Steady local movement shaped by buses and schools.","nightProfile":"Subdued, with activity near main roads.","toneCues":["solid","local"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-kaimes","square":"d1","name":"Kaimes","locality":"South","descriptors":["estate edge","residential"],"landmarks":["Kaimes area"],"dayProfile":"A quieter southern estate district with a local rhythm.","nightProfile":"Dim and low-key.","toneCues":["plain","contained"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-alnwickhill","square":"e1","name":"Alnwickhill","locality":"South East","descriptors":["suburban edge","green fringe"],"landmarks":["Alnwickhill Road"],"dayProfile":"A low-density southern edge district.","nightProfile":"More road-noise than street-life after dark.","toneCues":["fringe","quiet"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-burdiehouse","square":"f1","name":"Burdiehouse","locality":"South East","descriptors":["estate district","edge housing"],"landmarks":["Burdiehouse Burn edge"],"dayProfile":"Housing and edge-of-city infrastructure shape the area.","nightProfile":"Mostly residential, with darker fringes.","toneCues":["edge-city","sturdy"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-greendykes","square":"g1","name":"Greendykes","locality":"South East","descriptors":["estate district","regeneration edge"],"landmarks":["Greendykes Road"],"dayProfile":"An area shaped by housing renewal and broad roads.","nightProfile":"Patchy lighting and newer housing mix together.","toneCues":["changing","broad"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"},
-    {"id":"edinburgh-brunstane","square":"h1","name":"Brunstane","locality":"Far East","descriptors":["railside edge","residential"],"landmarks":["Brunstane station area"],"dayProfile":"A quieter eastern edge shaped by rail and housing.","nightProfile":"Feels detached from the core after dark.","toneCues":["outer-east","reserved"],"contentStatus":"procedural","reviewStatus":"needs review","reviewNotes":null,"lastReviewedAt":"2026-04-04"}
+    {
+      "id": "edinburgh-cramond",
+      "square": "h3",
+      "name": "Cramond",
+      "locality": "North West",
+      "descriptors": [
+        "historic village",
+        "river mouth"
+      ],
+      "landmarks": [
+        "Cramond Village"
+      ],
+      "dayProfile": "Walkers, cafes, and village routines cluster around the landward centre.",
+      "nightProfile": "Quiet lanes and the river edge make it feel tucked away after dark.",
+      "toneCues": [
+        "historic",
+        "contained"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": "Positioned as the village centre rather than the exposed foreshore.",
+      "lastReviewedAt": "2026-04-08"
+    },
+    {
+      "id": "edinburgh-silverknowes",
+      "square": "b8",
+      "name": "Silverknowes",
+      "locality": "North West",
+      "descriptors": [
+        "coastal edge",
+        "residential"
+      ],
+      "landmarks": [
+        "Silverknowes promenade"
+      ],
+      "dayProfile": "Open shoreline and suburban movement.",
+      "nightProfile": "Mostly still once the coast empties.",
+      "toneCues": [
+        "spacious",
+        "suburban"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-davidsons-mains",
+      "square": "c8",
+      "name": "Davidson's Mains",
+      "locality": "North West",
+      "descriptors": [
+        "village core",
+        "residential"
+      ],
+      "landmarks": [
+        "Main Street"
+      ],
+      "dayProfile": "School runs and local errands set the pace.",
+      "nightProfile": "Pub light and housing streets dominate.",
+      "toneCues": [
+        "compact",
+        "neighborly"
+      ],
+      "mapAnchor": {
+        "longitude": -3.270009,
+        "latitude": 55.965461
+      },
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-trinity",
+      "square": "f8",
+      "name": "Trinity",
+      "locality": "North",
+      "descriptors": [
+        "leafy",
+        "residential"
+      ],
+      "landmarks": [
+        "Trinity Academy"
+      ],
+      "dayProfile": "Steady residential traffic and school activity.",
+      "nightProfile": "Reserved and dimmer than the city core.",
+      "toneCues": [
+        "settled",
+        "measured"
+      ],
+      "mapAnchor": {
+        "longitude": -3.201645,
+        "latitude": 55.972084
+      },
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-newhaven",
+      "square": "d8",
+      "name": "Newhaven",
+      "locality": "North",
+      "descriptors": [
+        "harbour",
+        "historic"
+      ],
+      "landmarks": [
+        "Newhaven Harbour"
+      ],
+      "dayProfile": "Harbour traces and waterfront trade stay visible.",
+      "nightProfile": "Harbour lights and food spots carry the mood.",
+      "toneCues": [
+        "salty",
+        "stubborn"
+      ],
+      "mapAnchor": {
+        "longitude": -3.193146,
+        "latitude": 55.980316
+      },
+      "radiusMeters": 600,
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-leith-shore",
+      "square": "e8",
+      "name": "Leith Shore",
+      "locality": "North East",
+      "descriptors": [
+        "waterfront quarter",
+        "restaurant district"
+      ],
+      "landmarks": [
+        "Commercial Quay"
+      ],
+      "dayProfile": "Walkers, cafes, and mixed-use blocks keep the waterfront visibly active.",
+      "nightProfile": "Bars and restaurants make evenings busier than nearby residential streets.",
+      "toneCues": [
+        "waterfront",
+        "social"
+      ],
+      "mapAnchor": {
+        "longitude": -3.170388,
+        "latitude": 55.976285
+      },
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": "Promoted from planning overlay to replace a weaker open-quay placeholder.",
+      "lastReviewedAt": "2026-04-08"
+    },
+    {
+      "id": "edinburgh-leith",
+      "square": "g8",
+      "name": "Leith",
+      "locality": "North East",
+      "descriptors": [
+        "port district",
+        "dense"
+      ],
+      "landmarks": [
+        "Leith Walk",
+        "Kirkgate"
+      ],
+      "dayProfile": "Busy, mixed, and commercially active.",
+      "nightProfile": "One of the livelier evening districts.",
+      "toneCues": [
+        "brisk",
+        "assertive"
+      ],
+      "mapAnchor": {
+        "longitude": -3.171836,
+        "latitude": 55.970427
+      },
+      "radiusMeters": 450,
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": "Kept broader than Leith Shore by focusing landmarks on the main district spine.",
+      "lastReviewedAt": "2026-04-08"
+    },
+    {
+      "id": "edinburgh-easter-road",
+      "square": "b6",
+      "name": "Easter Road",
+      "locality": "North East",
+      "descriptors": [
+        "urban corridor",
+        "dense residential"
+      ],
+      "landmarks": [
+        "Easter Road corridor"
+      ],
+      "dayProfile": "Local shops, buses, and tenement streets keep the district moving.",
+      "nightProfile": "The main corridor stays lit and active after side streets quieten.",
+      "toneCues": [
+        "street-level",
+        "direct"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": "Promoted from planning overlay to replace a low-density shoreline fringe district.",
+      "lastReviewedAt": "2026-04-08"
+    },
+    {
+      "id": "edinburgh-barnton",
+      "square": "a7",
+      "name": "Barnton",
+      "locality": "North West",
+      "descriptors": [
+        "suburban",
+        "residential"
+      ],
+      "landmarks": [
+        "Barnton Junction"
+      ],
+      "dayProfile": "Commuter traffic and suburban routines.",
+      "nightProfile": "Mostly quiet once the main roads ease.",
+      "toneCues": [
+        "tidy",
+        "peripheral"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-blackhall",
+      "square": "b7",
+      "name": "Blackhall",
+      "locality": "North West",
+      "descriptors": [
+        "leafy",
+        "residential"
+      ],
+      "landmarks": [
+        "local school cluster"
+      ],
+      "dayProfile": "School, errands, and neighborhood loops.",
+      "nightProfile": "Low-key and domestic.",
+      "toneCues": [
+        "orderly",
+        "quiet"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-clermiston",
+      "square": "c7",
+      "name": "Clermiston",
+      "locality": "North West",
+      "descriptors": [
+        "housing estate",
+        "elevated"
+      ],
+      "landmarks": [
+        "Clermiston tower area"
+      ],
+      "dayProfile": "Local retail and bus corridors keep it moving.",
+      "nightProfile": "Quieter blocks around a few main roads.",
+      "toneCues": [
+        "grounded",
+        "plainspoken"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-inverleith",
+      "square": "d7",
+      "name": "Inverleith",
+      "locality": "North",
+      "descriptors": [
+        "park edge",
+        "residential"
+      ],
+      "landmarks": [
+        "Inverleith Park"
+      ],
+      "dayProfile": "Walkers, families, and park traffic.",
+      "nightProfile": "Calmer once the park empties.",
+      "toneCues": [
+        "leafy",
+        "composed"
+      ],
+      "mapAnchor": {
+        "longitude": -3.214338,
+        "latitude": 55.966438
+      },
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-stockbridge",
+      "square": "e7",
+      "name": "Stockbridge",
+      "locality": "North",
+      "descriptors": [
+        "village high street",
+        "affluent"
+      ],
+      "landmarks": [
+        "Raeburn Place"
+      ],
+      "dayProfile": "Cafes, markets, and polished local traffic.",
+      "nightProfile": "Social but more contained than rowdy.",
+      "toneCues": [
+        "polished",
+        "walkable"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-bonnington",
+      "square": "f7",
+      "name": "Bonnington",
+      "locality": "North East",
+      "descriptors": [
+        "mixed residential",
+        "waterside"
+      ],
+      "landmarks": [
+        "Water of Leith path"
+      ],
+      "dayProfile": "A quieter connector between bigger districts.",
+      "nightProfile": "Mostly residential calm.",
+      "toneCues": [
+        "in-between",
+        "steady"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-leith-walk",
+      "square": "g7",
+      "name": "Leith Walk",
+      "locality": "North East",
+      "descriptors": [
+        "urban corridor",
+        "mixed use"
+      ],
+      "landmarks": [
+        "Leith Walk"
+      ],
+      "dayProfile": "Buses, shops, takeaways, and constant foot traffic make it one of the city’s busiest connectors.",
+      "nightProfile": "Late retail and nightlife spill keep the corridor visibly active after dark.",
+      "toneCues": [
+        "busy",
+        "street-level"
+      ],
+      "mapAnchor": {
+        "longitude": -3.178066,
+        "latitude": 55.963647
+      },
+      "radiusMeters": 450,
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": "Promoted from planning overlay to represent the denser inner approach into Leith more directly than Pilrig.",
+      "lastReviewedAt": "2026-04-08"
+    },
+    {
+      "id": "edinburgh-lochend",
+      "square": "h7",
+      "name": "Lochend",
+      "locality": "North East",
+      "descriptors": [
+        "park edge",
+        "residential"
+      ],
+      "landmarks": [
+        "Lochend Park"
+      ],
+      "dayProfile": "Residential activity around the park edge.",
+      "nightProfile": "Quieter than nearby Leith.",
+      "toneCues": [
+        "reserved",
+        "local"
+      ],
+      "mapAnchor": {
+        "longitude": -3.156212,
+        "latitude": 55.959086
+      },
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-corstorphine",
+      "square": "a6",
+      "name": "Corstorphine",
+      "locality": "West",
+      "descriptors": [
+        "historic corridor",
+        "district centre"
+      ],
+      "landmarks": [
+        "St John's Road"
+      ],
+      "dayProfile": "Traffic-heavy but long-established.",
+      "nightProfile": "Main roads stay busy while side streets settle.",
+      "toneCues": [
+        "established",
+        "linear"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-murrayfield",
+      "square": "h8",
+      "name": "Murrayfield",
+      "locality": "West",
+      "descriptors": [
+        "stadium quarter",
+        "residential"
+      ],
+      "landmarks": [
+        "Murrayfield Stadium"
+      ],
+      "dayProfile": "Usually calm outside event traffic.",
+      "nightProfile": "Event nights change the whole rhythm.",
+      "toneCues": [
+        "spacious",
+        "event-ready"
+      ],
+      "mapAnchor": {
+        "longitude": -3.240997,
+        "latitude": 55.942239
+      },
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-haymarket",
+      "square": "c6",
+      "name": "Haymarket",
+      "locality": "West Central",
+      "descriptors": [
+        "transport hub",
+        "commercial"
+      ],
+      "landmarks": [
+        "Haymarket Station"
+      ],
+      "dayProfile": "Commuters, offices, hotels, and tram traffic keep the district in constant motion.",
+      "nightProfile": "Travel, bars, and late movement make it feel active beyond office hours.",
+      "toneCues": [
+        "connected",
+        "restless"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": "Promoted from planning overlay to strengthen the west-central board with a denser land-based district.",
+      "lastReviewedAt": "2026-04-08"
+    },
+    {
+      "id": "edinburgh-west-end",
+      "square": "d6",
+      "name": "West End",
+      "locality": "Central",
+      "descriptors": [
+        "commercial",
+        "cultural"
+      ],
+      "landmarks": [
+        "Shandwick Place"
+      ],
+      "dayProfile": "Professional footfall and hospitality overlap constantly.",
+      "nightProfile": "After-work energy keeps it lively.",
+      "toneCues": [
+        "urbane",
+        "lively"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-new-town-west",
+      "square": "e6",
+      "name": "New Town West",
+      "locality": "Central",
+      "descriptors": [
+        "georgian core",
+        "city centre"
+      ],
+      "landmarks": [
+        "Charlotte Square"
+      ],
+      "dayProfile": "Offices, shops, and visitors keep the western half of the New Town busy all day.",
+      "nightProfile": "Lively, polished, and active around bars, hotels, and late buses.",
+      "toneCues": [
+        "formal",
+        "prominent"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": "Promoted from planning overlay to split the broad New Town into more usable board districts.",
+      "lastReviewedAt": "2026-04-08"
+    },
+    {
+      "id": "edinburgh-new-town-east",
+      "square": "f6",
+      "name": "New Town East",
+      "locality": "Central North",
+      "descriptors": [
+        "georgian grid",
+        "mixed use"
+      ],
+      "landmarks": [
+        "St Andrew Square"
+      ],
+      "dayProfile": "Retail, offices, and cross-city foot traffic keep the eastern New Town in motion.",
+      "nightProfile": "Evening activity thins more gradually than in quieter residential streets nearby.",
+      "toneCues": [
+        "urban",
+        "well-kept"
+      ],
+      "mapAnchor": {
+        "longitude": -3.193022,
+        "latitude": 55.954218
+      },
+      "radiusMeters": 200,
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": "Promoted from planning overlay to complement New Town West and reduce reliance on a single umbrella district.",
+      "lastReviewedAt": "2026-04-08"
+    },
+    {
+      "id": "edinburgh-broughton",
+      "square": "g6",
+      "name": "Broughton",
+      "locality": "Central North",
+      "descriptors": [
+        "mixed residential",
+        "restaurant strip"
+      ],
+      "landmarks": [
+        "Broughton Street"
+      ],
+      "dayProfile": "Dense local movement and independent retail.",
+      "nightProfile": "Restaurant traffic keeps it lively.",
+      "toneCues": [
+        "social",
+        "dense"
+      ],
+      "mapAnchor": {
+        "longitude": -3.19081,
+        "latitude": 55.95915
+      },
+      "radiusMeters": 400,
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-meadowbank",
+      "square": "h6",
+      "name": "Meadowbank",
+      "locality": "East",
+      "descriptors": [
+        "sports quarter",
+        "residential"
+      ],
+      "landmarks": [
+        "Meadowbank Sports Centre"
+      ],
+      "dayProfile": "Sports facilities and arterial movement define it.",
+      "nightProfile": "Quieter once facilities close.",
+      "toneCues": [
+        "active",
+        "practical"
+      ],
+      "mapAnchor": {
+        "longitude": -3.155065,
+        "latitude": 55.955482
+      },
+      "radiusMeters": 400,
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-saughton",
+      "square": "a5",
+      "name": "Saughton",
+      "locality": "West",
+      "descriptors": [
+        "mixed residential",
+        "park edge"
+      ],
+      "landmarks": [
+        "Saughton Park"
+      ],
+      "dayProfile": "Parks, schools, and working streets mix together.",
+      "nightProfile": "Residential and subdued after park traffic fades.",
+      "toneCues": [
+        "local",
+        "practical"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-gorgie",
+      "square": "b5",
+      "name": "Gorgie",
+      "locality": "West",
+      "descriptors": [
+        "arterial corridor",
+        "working district"
+      ],
+      "landmarks": [
+        "Gorgie Road"
+      ],
+      "dayProfile": "Constant road movement and neighborhood trade.",
+      "nightProfile": "Match nights can shift the mood quickly.",
+      "toneCues": [
+        "hard-edged",
+        "energetic"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-dalry",
+      "square": "c5",
+      "name": "Dalry",
+      "locality": "West Central",
+      "descriptors": [
+        "dense tenements",
+        "mixed use"
+      ],
+      "landmarks": [
+        "Dalry Road"
+      ],
+      "dayProfile": "A busy urban strip with constant movement.",
+      "nightProfile": "Transit and pubs keep it active.",
+      "toneCues": [
+        "crowded",
+        "connected"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-tollcross",
+      "square": "d5",
+      "name": "Tollcross",
+      "locality": "Central South",
+      "descriptors": [
+        "junction district",
+        "nightlife edge"
+      ],
+      "landmarks": [
+        "Tollcross junction"
+      ],
+      "dayProfile": "Students, buses, cafes, and through-movement keep the area continually busy.",
+      "nightProfile": "Restaurants, bars, and cinema traffic make evenings noticeably louder.",
+      "toneCues": [
+        "busy",
+        "lived-in"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": "Promoted from planning overlay to add a denser central-west district than the broader redevelopment framing of Fountainbridge.",
+      "lastReviewedAt": "2026-04-08"
+    },
+    {
+      "id": "edinburgh-old-town-north",
+      "square": "e5",
+      "name": "Old Town North",
+      "locality": "Central",
+      "descriptors": [
+        "historic core",
+        "tourist heavy"
+      ],
+      "landmarks": [
+        "Royal Mile"
+      ],
+      "dayProfile": "Visitors, institutions, and steep pedestrian flows keep the northern Old Town packed.",
+      "nightProfile": "Crowded lanes and landmark lighting keep the district animated after dark.",
+      "toneCues": [
+        "dramatic",
+        "crowded"
+      ],
+      "mapAnchor": {
+        "longitude": -3.187347,
+        "latitude": 55.950109
+      },
+      "radiusMeters": 400,
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": "Promoted from planning overlay to make the historic core more granular for board play.",
+      "lastReviewedAt": "2026-04-08"
+    },
+    {
+      "id": "edinburgh-calton",
+      "square": "f5",
+      "name": "Calton",
+      "locality": "Central East",
+      "descriptors": [
+        "hill district",
+        "historic edge"
+      ],
+      "landmarks": [
+        "Calton Hill"
+      ],
+      "dayProfile": "Tourist views and city-edge movement overlap.",
+      "nightProfile": "The hill becomes more atmospheric after dark.",
+      "toneCues": [
+        "elevated",
+        "ceremonial"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-abbeyhill",
+      "square": "g5",
+      "name": "Abbeyhill",
+      "locality": "East",
+      "descriptors": [
+        "residential",
+        "inner-city"
+      ],
+      "landmarks": [
+        "Holyrood edge"
+      ],
+      "dayProfile": "Residential but tightly connected to the centre.",
+      "nightProfile": "Calmer than the core, never fully detached.",
+      "toneCues": [
+        "adjacent",
+        "compact"
+      ],
+      "radiusMeters": 700,
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-willowbrae",
+      "square": "h5",
+      "name": "Willowbrae",
+      "locality": "East",
+      "descriptors": [
+        "hillside residential",
+        "gateway"
+      ],
+      "landmarks": [
+        "London Road ascent"
+      ],
+      "dayProfile": "Roads and hillside housing shape the district.",
+      "nightProfile": "Quieter once through-traffic thins.",
+      "toneCues": [
+        "sloped",
+        "watchful"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-slateford",
+      "square": "a4",
+      "name": "Slateford",
+      "locality": "South West",
+      "descriptors": [
+        "mixed use",
+        "rail corridor"
+      ],
+      "landmarks": [
+        "Slateford Road"
+      ],
+      "dayProfile": "Roads, rail, and local retail keep it functional.",
+      "nightProfile": "The transport feel remains after dark.",
+      "toneCues": [
+        "industrial",
+        "connected"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-shandon",
+      "square": "b4",
+      "name": "Shandon",
+      "locality": "South West",
+      "descriptors": [
+        "canal-side",
+        "residential"
+      ],
+      "landmarks": [
+        "Union Canal"
+      ],
+      "dayProfile": "The canal softens an otherwise residential district.",
+      "nightProfile": "Quiet streets and dark water shape the mood.",
+      "toneCues": [
+        "contained",
+        "calm"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-bruntsfield",
+      "square": "c4",
+      "name": "Bruntsfield",
+      "locality": "South Central",
+      "descriptors": [
+        "cafes",
+        "residential"
+      ],
+      "landmarks": [
+        "Bruntsfield Place"
+      ],
+      "dayProfile": "Independent shops and local footfall keep it polished.",
+      "nightProfile": "Evenings stay sociable without turning chaotic.",
+      "toneCues": [
+        "trim",
+        "sociable"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-marchmont",
+      "square": "d4",
+      "name": "Marchmont",
+      "locality": "South Central",
+      "descriptors": [
+        "student adjacent",
+        "tenement district"
+      ],
+      "landmarks": [
+        "The Meadows edge"
+      ],
+      "dayProfile": "Academic and residential rhythms overlap constantly.",
+      "nightProfile": "Busy enough to stay active but less loud than nightlife corridors.",
+      "toneCues": [
+        "bookish",
+        "steady"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-southside-west",
+      "square": "e4",
+      "name": "Southside West",
+      "locality": "South Central",
+      "descriptors": [
+        "student quarter",
+        "food corridor"
+      ],
+      "landmarks": [
+        "Nicolson Street"
+      ],
+      "dayProfile": "Pedestrian traffic, food spots, and student routines keep the western Southside bright and busy.",
+      "nightProfile": "Late food, bars, and dense foot traffic keep it active well into the evening.",
+      "toneCues": [
+        "animated",
+        "crowded"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": "Promoted from planning overlay to split the broad Southside into more precise board districts.",
+      "lastReviewedAt": "2026-04-08"
+    },
+    {
+      "id": "edinburgh-southside-east",
+      "square": "f4",
+      "name": "Southside East",
+      "locality": "South Central",
+      "descriptors": [
+        "urban corridor",
+        "student edge"
+      ],
+      "landmarks": [
+        "South Clerk Street"
+      ],
+      "dayProfile": "Main-road movement and mixed residential streets keep the eastern Southside in near-constant use.",
+      "nightProfile": "Restaurants, buses, and student traffic keep it lively after dark.",
+      "toneCues": [
+        "layered",
+        "active"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": "Promoted from planning overlay to complement Southside West and replace a broader district label.",
+      "lastReviewedAt": "2026-04-08"
+    },
+    {
+      "id": "edinburgh-prestonfield",
+      "square": "g4",
+      "name": "Prestonfield",
+      "locality": "South East",
+      "descriptors": [
+        "park edge",
+        "residential"
+      ],
+      "landmarks": [
+        "Arthur's Seat edge"
+      ],
+      "dayProfile": "Green edges and quieter housing slow the pace.",
+      "nightProfile": "Dark greenspace makes it feel more secluded.",
+      "toneCues": [
+        "green",
+        "withdrawn"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-duddingston",
+      "square": "h4",
+      "name": "Duddingston",
+      "locality": "South East",
+      "descriptors": [
+        "historic village",
+        "lochside"
+      ],
+      "landmarks": [
+        "Duddingston Loch"
+      ],
+      "dayProfile": "Village feel survives beside major parkland.",
+      "nightProfile": "Atmospheric and quiet with the loch nearby.",
+      "toneCues": [
+        "historic",
+        "still"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-wester-hailes",
+      "square": "a3",
+      "name": "Wester Hailes",
+      "locality": "South West",
+      "descriptors": [
+        "housing district",
+        "peripheral"
+      ],
+      "landmarks": [
+        "Westside Plaza edge"
+      ],
+      "dayProfile": "Large housing infrastructure and shopping nodes define it.",
+      "nightProfile": "Quieter between hubs and road corridors.",
+      "toneCues": [
+        "broad",
+        "direct"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-craiglockhart",
+      "square": "b3",
+      "name": "Craiglockhart",
+      "locality": "South West",
+      "descriptors": [
+        "hillside",
+        "residential"
+      ],
+      "landmarks": [
+        "Craiglockhart Hill"
+      ],
+      "dayProfile": "Residential slopes and campus movement shape the day.",
+      "nightProfile": "Withdrawn and lightly trafficked after dark.",
+      "toneCues": [
+        "elevated",
+        "quiet"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-morningside",
+      "square": "c3",
+      "name": "Morningside",
+      "locality": "South",
+      "descriptors": [
+        "district centre",
+        "affluent"
+      ],
+      "landmarks": [
+        "Morningside Road"
+      ],
+      "dayProfile": "Shops, schools, and steady local footfall keep it polished.",
+      "nightProfile": "Calmer after business hours but still social.",
+      "toneCues": [
+        "composed",
+        "affluent"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-grange",
+      "square": "d3",
+      "name": "Grange",
+      "locality": "South",
+      "descriptors": [
+        "villa district",
+        "residential"
+      ],
+      "landmarks": [
+        "Grange Road"
+      ],
+      "dayProfile": "Quiet wealth and broad streets shape the pace.",
+      "nightProfile": "One of the quieter southern districts.",
+      "toneCues": [
+        "reserved",
+        "grand"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-blackford",
+      "square": "e3",
+      "name": "Blackford",
+      "locality": "South",
+      "descriptors": [
+        "hill district",
+        "institutional"
+      ],
+      "landmarks": [
+        "Royal Observatory"
+      ],
+      "dayProfile": "Residential calm meets scientific landmarks.",
+      "nightProfile": "The hill makes it feel contemplative after dark.",
+      "toneCues": [
+        "observant",
+        "elevated"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-liberton",
+      "square": "f3",
+      "name": "Liberton",
+      "locality": "South East",
+      "descriptors": [
+        "residential",
+        "historic corridor"
+      ],
+      "landmarks": [
+        "Liberton Kirk"
+      ],
+      "dayProfile": "A long-settled district with a slower local rhythm.",
+      "nightProfile": "Quiet housing and wider roads dominate.",
+      "toneCues": [
+        "settled",
+        "plain"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-craigmillar",
+      "square": "g3",
+      "name": "Craigmillar",
+      "locality": "South East",
+      "descriptors": [
+        "estate district",
+        "historic landmark"
+      ],
+      "landmarks": [
+        "Craigmillar Castle"
+      ],
+      "dayProfile": "Housing and regeneration sites shape the area.",
+      "nightProfile": "Quieter residential sections beside arterial edges.",
+      "toneCues": [
+        "sturdy",
+        "changing"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-portobello",
+      "square": "a8",
+      "name": "Portobello",
+      "locality": "East",
+      "descriptors": [
+        "beach district",
+        "high street"
+      ],
+      "landmarks": [
+        "Portobello Beach"
+      ],
+      "dayProfile": "Promenade, high street, and beach draw constant movement.",
+      "nightProfile": "The shore keeps it active after dark.",
+      "toneCues": [
+        "bright",
+        "open"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-currie",
+      "square": "a2",
+      "name": "Currie",
+      "locality": "Far South West",
+      "descriptors": [
+        "village suburb",
+        "edge district"
+      ],
+      "landmarks": [
+        "Currie Main Street"
+      ],
+      "dayProfile": "Village-suburb routines shape the day.",
+      "nightProfile": "Mostly quiet and local.",
+      "toneCues": [
+        "outlying",
+        "self-contained"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-juniper-green",
+      "square": "b2",
+      "name": "Juniper Green",
+      "locality": "Far South West",
+      "descriptors": [
+        "village strip",
+        "hillside edge"
+      ],
+      "landmarks": [
+        "Lanark Road"
+      ],
+      "dayProfile": "A small linear district tied to the road through it.",
+      "nightProfile": "The village feel becomes more pronounced after traffic drops.",
+      "toneCues": [
+        "narrow",
+        "village-like"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-colinton",
+      "square": "c2",
+      "name": "Colinton",
+      "locality": "South West",
+      "descriptors": [
+        "historic village",
+        "river edge"
+      ],
+      "landmarks": [
+        "Colinton Village"
+      ],
+      "dayProfile": "Paths and heritage fabric keep it distinctive.",
+      "nightProfile": "Calm and picturesque in the evening.",
+      "toneCues": [
+        "picturesque",
+        "village"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-fairmilehead",
+      "square": "d2",
+      "name": "Fairmilehead",
+      "locality": "South",
+      "descriptors": [
+        "southern gateway",
+        "suburban"
+      ],
+      "landmarks": [
+        "Pentland gateway"
+      ],
+      "dayProfile": "A hinge point between suburb and hillside edge.",
+      "nightProfile": "Main-road light shapes the evening atmosphere.",
+      "toneCues": [
+        "threshold",
+        "suburban"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-buckstone",
+      "square": "e2",
+      "name": "Buckstone",
+      "locality": "South",
+      "descriptors": [
+        "residential",
+        "suburban"
+      ],
+      "landmarks": [
+        "local shopping cluster"
+      ],
+      "dayProfile": "Family and school rhythms dominate the district.",
+      "nightProfile": "Quiet cul-de-sacs define the mood.",
+      "toneCues": [
+        "domestic",
+        "quiet"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-gilmerton",
+      "square": "f2",
+      "name": "Gilmerton",
+      "locality": "South East",
+      "descriptors": [
+        "historic edge",
+        "residential"
+      ],
+      "landmarks": [
+        "Gilmerton crossroads"
+      ],
+      "dayProfile": "A practical southern district with local trade.",
+      "nightProfile": "Main junctions stay active even as side streets quieten.",
+      "toneCues": [
+        "grounded",
+        "workaday"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-niddrie",
+      "square": "g2",
+      "name": "Niddrie",
+      "locality": "South East",
+      "descriptors": [
+        "estate district",
+        "arterial edge"
+      ],
+      "landmarks": [
+        "Niddrie Mains"
+      ],
+      "dayProfile": "Large housing blocks and main corridors define the pace.",
+      "nightProfile": "Residential pockets alternate with harder road edges.",
+      "toneCues": [
+        "stark",
+        "direct"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-joppa",
+      "square": "h2",
+      "name": "Joppa",
+      "locality": "East",
+      "descriptors": [
+        "seaside edge",
+        "residential"
+      ],
+      "landmarks": [
+        "Joppa shore"
+      ],
+      "dayProfile": "A calmer eastern coastal strip tied to the promenade.",
+      "nightProfile": "Sea air and low-lit streets create a reflective feel.",
+      "toneCues": [
+        "coastal",
+        "quiet"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-balerno",
+      "square": "a1",
+      "name": "Balerno",
+      "locality": "Far South West",
+      "descriptors": [
+        "outer village",
+        "hillside edge"
+      ],
+      "landmarks": [
+        "Main Street"
+      ],
+      "dayProfile": "An outer village rhythm with a rural edge nearby.",
+      "nightProfile": "Feels detached from the city core.",
+      "toneCues": [
+        "outer-edge",
+        "village"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-baberton",
+      "square": "b1",
+      "name": "Baberton",
+      "locality": "Far South West",
+      "descriptors": [
+        "suburban edge",
+        "golfside"
+      ],
+      "landmarks": [
+        "Baberton Mains"
+      ],
+      "dayProfile": "Suburban and car-oriented with open edges nearby.",
+      "nightProfile": "Very quiet, with little movement beyond residents.",
+      "toneCues": [
+        "peripheral",
+        "still"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-oxgangs",
+      "square": "c1",
+      "name": "Oxgangs",
+      "locality": "South",
+      "descriptors": [
+        "housing district",
+        "southern connector"
+      ],
+      "landmarks": [
+        "Oxgangs Road"
+      ],
+      "dayProfile": "Steady local movement shaped by buses and schools.",
+      "nightProfile": "Subdued, with activity near main roads.",
+      "toneCues": [
+        "solid",
+        "local"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-kaimes",
+      "square": "d1",
+      "name": "Kaimes",
+      "locality": "South",
+      "descriptors": [
+        "estate edge",
+        "residential"
+      ],
+      "landmarks": [
+        "Kaimes area"
+      ],
+      "dayProfile": "A quieter southern estate district with a local rhythm.",
+      "nightProfile": "Dim and low-key.",
+      "toneCues": [
+        "plain",
+        "contained"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-alnwickhill",
+      "square": "e1",
+      "name": "Alnwickhill",
+      "locality": "South East",
+      "descriptors": [
+        "suburban edge",
+        "green fringe"
+      ],
+      "landmarks": [
+        "Alnwickhill Road"
+      ],
+      "dayProfile": "A low-density southern edge district.",
+      "nightProfile": "More road-noise than street-life after dark.",
+      "toneCues": [
+        "fringe",
+        "quiet"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-burdiehouse",
+      "square": "f1",
+      "name": "Burdiehouse",
+      "locality": "South East",
+      "descriptors": [
+        "estate district",
+        "edge housing"
+      ],
+      "landmarks": [
+        "Burdiehouse Burn edge"
+      ],
+      "dayProfile": "Housing and edge-of-city infrastructure shape the area.",
+      "nightProfile": "Mostly residential, with darker fringes.",
+      "toneCues": [
+        "edge-city",
+        "sturdy"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-greendykes",
+      "square": "g1",
+      "name": "Greendykes",
+      "locality": "South East",
+      "descriptors": [
+        "estate district",
+        "regeneration edge"
+      ],
+      "landmarks": [
+        "Greendykes Road"
+      ],
+      "dayProfile": "An area shaped by housing renewal and broad roads.",
+      "nightProfile": "Patchy lighting and newer housing mix together.",
+      "toneCues": [
+        "changing",
+        "broad"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    },
+    {
+      "id": "edinburgh-brunstane",
+      "square": "h1",
+      "name": "Brunstane",
+      "locality": "Far East",
+      "descriptors": [
+        "railside edge",
+        "residential"
+      ],
+      "landmarks": [
+        "Brunstane station area"
+      ],
+      "dayProfile": "A quieter eastern edge shaped by rail and housing.",
+      "nightProfile": "Feels detached from the core after dark.",
+      "toneCues": [
+        "outer-east",
+        "reserved"
+      ],
+      "contentStatus": "procedural",
+      "reviewStatus": "needs review",
+      "reviewNotes": null,
+      "lastReviewedAt": "2026-04-04"
+    }
   ]
 }
