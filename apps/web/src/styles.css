@@ -4725,7 +4725,7 @@ select {
 .city-placement-editor__board-names-toggle {
   position: absolute;
   left: auto;
-  right: var(--space-3);
+  right: calc(var(--space-3) + 2.5rem);
   bottom: var(--space-3);
   z-index: 3;
   display: inline-flex;
