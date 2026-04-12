@@ -8,6 +8,7 @@ import type {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getPieceDisplayName } from "../chessPresentation";
 import { PieceArt } from "./PieceArt";
+import { Panel } from "./Panel";
 
 type CharacterDetailPanelProps = {
   focusedSquare: Square | null;
@@ -47,40 +48,35 @@ export function CharacterDetailPanel({
   const traits = focusedCharacter?.traits.length ? focusedCharacter.traits : [blankValue];
   const actions = focusedCharacter?.verbs.length ? focusedCharacter.verbs : [blankValue];
 
+  const pieceAction = (
+    <div className="character-detail-container__piece-meta">
+      <span className="character-detail-container__piece-text">{pieceText}</span>
+      <span
+        className={[
+          "piece-badge__icon",
+          focusedPiece ? `piece-badge__icon--${focusedPiece.side}` : "",
+          "character-detail-container__piece-icon",
+          focusedPiece ? "" : "character-detail-container__piece-icon--placeholder"
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        aria-hidden={!focusedPiece}
+      >
+        {focusedPiece ? (
+          <PieceArt
+            side={focusedPiece.side}
+            kind={focusedPiece.kind}
+            className="board-piece-art board-piece-art--badge"
+          />
+        ) : (
+          blankValue
+        )}
+      </span>
+    </div>
+  );
+
   return (
-    <div className="character-detail-shell">
-      <div className="character-detail-shell__header">
-        <div className="character-detail-container__top-row">
-          <div className="character-detail-container__identity">
-            <h3 className="character-detail-container__name">{detailName}</h3>
-            <span className="character-detail-container__role-inline">{detailRole}</span>
-          </div>
-          <div className="character-detail-container__piece-meta">
-            <span className="character-detail-container__piece-text">{pieceText}</span>
-            <span
-              className={[
-                "piece-badge__icon",
-                focusedPiece ? `piece-badge__icon--${focusedPiece.side}` : "",
-                "character-detail-container__piece-icon",
-                focusedPiece ? "" : "character-detail-container__piece-icon--placeholder"
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              aria-hidden={!focusedPiece}
-            >
-              {focusedPiece ? (
-                <PieceArt
-                  side={focusedPiece.side}
-                  kind={focusedPiece.kind}
-                  className="board-piece-art board-piece-art--badge"
-                />
-              ) : (
-                blankValue
-              )}
-            </span>
-          </div>
-        </div>
-      </div>
+    <Panel title={detailName} eyebrow={detailRole} action={pieceAction}>
       <Tabs defaultValue="details" className="character-tabs">
         <TabsList className="character-tabs-list">
           <TabsTrigger value="details">Details</TabsTrigger>
@@ -180,6 +176,6 @@ export function CharacterDetailPanel({
           </TabsContent>
         ) : null}
       </Tabs>
-    </div>
+    </Panel>
   );
 }

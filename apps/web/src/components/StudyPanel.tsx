@@ -1,6 +1,13 @@
-import type { ChangeEvent } from "react";
 import type { ReferenceGame } from "@narrative-chess/content-schema";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ChevronDown } from "lucide-react";
 import { Panel } from "./Panel";
 
 type StudySession = {
@@ -43,26 +50,31 @@ export function StudyPanel({
   onExitStudy,
   embedded = false
 }: StudyPanelProps) {
-  const handleSelectChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    onSelectReferenceGame(event.currentTarget.value);
-  };
+  const selectedGame = referenceGames.find((g) => g.id === selectedReferenceGameId);
+  const currentLabel = selectedGame
+    ? `${selectedGame.title} (${selectedGame.white} vs ${selectedGame.black})`
+    : "Select a game";
 
   const content = (
     <div className="study-panel">
       <div className="study-panel__block">
         <div className="study-panel__row">
-          <select
-            id="reference-game-select"
-            className="field-select"
-            value={selectedReferenceGameId}
-            onChange={handleSelectChange}
-          >
-            {referenceGames.map((game) => (
-              <option key={game.id} value={game.id}>
-                {game.title} ({game.white} vs {game.black})
-              </option>
-            ))}
-          </select>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="field-select" id="reference-game-select">
+                {currentLabel} <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuRadioGroup value={selectedReferenceGameId} onValueChange={onSelectReferenceGame}>
+                {referenceGames.map((game) => (
+                  <DropdownMenuRadioItem key={game.id} value={game.id}>
+                    {game.title} ({game.white} vs {game.black})
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button type="button" variant="outline" size="sm" onClick={onLoadReferenceGame}>
             Load
           </Button>

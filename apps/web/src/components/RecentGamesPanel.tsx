@@ -70,6 +70,9 @@ function RecentGameRow({
   );
 }
 
+// Note: RecentGamesPanel does not wrap itself in <Panel> because App.tsx already
+// renders it inside <Panel title="Saved Games">. Adding another Panel here would
+// double-nest the card chrome.
 export function RecentGamesPanel({
   savedMatches,
   selectedSavedMatchId,

@@ -4,7 +4,7 @@ import type {
   PieceKind,
   ReviewStatus
 } from "@narrative-chess/content-schema";
-import { FolderOpen, FolderTree, RotateCcw, Save } from "lucide-react";
+import { ChevronDown, FolderOpen, FolderTree, RotateCcw, Save } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +15,13 @@ import {
   CardTitle
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -394,21 +401,29 @@ export function RoleCatalogPage({
                   placeholder="Search by role, trait, verb, or summary"
                   ariaLabel="Search piece roles"
                 />
-                <label className="grid gap-2">
+                <div className="grid gap-2">
                   <span className="text-sm font-medium">Sort by</span>
-                  <select
-                    name="role-sort"
-                    className="field-select"
-                    value={sortMode}
-                    onChange={(event) => setSortMode(event.currentTarget.value as RoleSortMode)}
-                  >
-                    {roleSortOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="field-select">
+                        {roleSortOptions.find((o) => o.value === sortMode)?.label ?? sortMode}{" "}
+                        <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-60" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuRadioGroup
+                        value={sortMode}
+                        onValueChange={(value) => setSortMode(value as RoleSortMode)}
+                      >
+                        {roleSortOptions.map((option) => (
+                          <DropdownMenuRadioItem key={option.value} value={option.value}>
+                            {option.label}
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </div>
           </CardHeader>
@@ -486,27 +501,31 @@ export function RoleCatalogPage({
                       }
                     />
                   </label>
-                  <label className="grid gap-2">
+                  <div className="grid gap-2">
                     <span className="text-sm font-medium">Piece type</span>
-                    <select
-                      name="role-piece-kind"
-                      className="field-select"
-                      value={selectedRole.pieceKind}
-                      onChange={(event) =>
-                        onRoleCatalogChange(
-                          selectedRole.id,
-                          "pieceKind",
-                          event.currentTarget.value as PieceKind
-                        )
-                      }
-                    >
-                      {pieceKinds.map((pieceKind) => (
-                        <option key={pieceKind} value={pieceKind}>
-                          {getPieceKindLabel(pieceKind)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="field-select">
+                          {getPieceKindLabel(selectedRole.pieceKind)}{" "}
+                          <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-60" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuRadioGroup
+                          value={selectedRole.pieceKind}
+                          onValueChange={(value) =>
+                            onRoleCatalogChange(selectedRole.id, "pieceKind", value as PieceKind)
+                          }
+                        >
+                          {pieceKinds.map((pieceKind) => (
+                            <DropdownMenuRadioItem key={pieceKind} value={pieceKind}>
+                              {getPieceKindLabel(pieceKind)}
+                            </DropdownMenuRadioItem>
+                          ))}
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                   <label className="grid gap-2 lg:col-span-2">
                     <span className="text-sm font-medium">Summary</span>
                     <Textarea
@@ -581,48 +600,56 @@ export function RoleCatalogPage({
                 <Separator />
 
                 <div className="grid gap-4 lg:grid-cols-3">
-                  <label className="grid gap-2">
+                  <div className="grid gap-2">
                     <span className="text-sm font-medium">Content status</span>
-                    <select
-                      name="role-content-status"
-                      className="field-select"
-                      value={selectedRole.contentStatus}
-                      onChange={(event) =>
-                        onRoleCatalogChange(
-                          selectedRole.id,
-                          "contentStatus",
-                          event.currentTarget.value as ContentStatus
-                        )
-                      }
-                    >
-                      {contentStatusOptions.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="grid gap-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="field-select">
+                          {selectedRole.contentStatus}{" "}
+                          <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-60" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuRadioGroup
+                          value={selectedRole.contentStatus}
+                          onValueChange={(value) =>
+                            onRoleCatalogChange(selectedRole.id, "contentStatus", value as ContentStatus)
+                          }
+                        >
+                          {contentStatusOptions.map((status) => (
+                            <DropdownMenuRadioItem key={status} value={status}>
+                              {status}
+                            </DropdownMenuRadioItem>
+                          ))}
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="grid gap-2">
                     <span className="text-sm font-medium">Review status</span>
-                    <select
-                      name="role-review-status"
-                      className="field-select"
-                      value={selectedRole.reviewStatus}
-                      onChange={(event) =>
-                        onRoleCatalogChange(
-                          selectedRole.id,
-                          "reviewStatus",
-                          event.currentTarget.value as ReviewStatus
-                        )
-                      }
-                    >
-                      {reviewStatusOptions.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="field-select">
+                          {selectedRole.reviewStatus}{" "}
+                          <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-60" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuRadioGroup
+                          value={selectedRole.reviewStatus}
+                          onValueChange={(value) =>
+                            onRoleCatalogChange(selectedRole.id, "reviewStatus", value as ReviewStatus)
+                          }
+                        >
+                          {reviewStatusOptions.map((status) => (
+                            <DropdownMenuRadioItem key={status} value={status}>
+                              {status}
+                            </DropdownMenuRadioItem>
+                          ))}
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                   <label className="grid gap-2">
                     <span className="text-sm font-medium">Last reviewed</span>
                     <Input

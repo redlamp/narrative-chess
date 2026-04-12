@@ -2,6 +2,12 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Download, Menu, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { FloatingActionNotice, type FloatingActionNoticeState } from "./FloatingActionNotice";
 
 type AppMenuProps = {
@@ -65,18 +71,24 @@ export function AppMenu({
 
   return (
     <div className="app-menu" ref={menuRef}>
-      <Button
-        variant="outline"
-        size="icon-sm"
-        aria-expanded={isOpen}
-        aria-controls={panelId}
-        aria-haspopup="dialog"
-        aria-label="Open menu"
-        title="Open menu"
-        onClick={() => onOpenChange(!isOpen)}
-      >
-        <Menu />
-      </Button>
+      <TooltipProvider delayDuration={150}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              aria-expanded={isOpen}
+              aria-controls={panelId}
+              aria-haspopup="dialog"
+              aria-label="Open menu"
+              onClick={() => onOpenChange(!isOpen)}
+            >
+              <Menu />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Open menu</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
       {isOpen ? (
         <Card
