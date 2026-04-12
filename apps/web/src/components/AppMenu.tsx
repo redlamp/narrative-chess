@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { Download, Menu, Save, X } from "lucide-react";
+import { Download, Menu, RotateCcw, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -14,8 +14,10 @@ import { highlightColorOptions, type HighlightColor } from "../appSettings";
 type AppMenuProps = {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  onResetEverything: () => void;
   onSaveEverything: () => void;
   onLoadEverything: () => void;
+  isResettingEverything: boolean;
   isSavingEverything: boolean;
   isLoadingEverything: boolean;
   saveEverythingNotice: FloatingActionNoticeState | null;
@@ -27,8 +29,10 @@ type AppMenuProps = {
 export function AppMenu({
   isOpen,
   onOpenChange,
+  onResetEverything,
   onSaveEverything,
   onLoadEverything,
+  isResettingEverything,
   isSavingEverything,
   isLoadingEverything,
   saveEverythingNotice,
@@ -128,22 +132,31 @@ export function AppMenu({
 
             <div className="app-menu__actions">
               <Button
-                variant="secondary"
+                variant="outline"
                 size="sm"
-                onClick={onSaveEverything}
-                disabled={isSavingEverything || isLoadingEverything}
+                onClick={onResetEverything}
+                disabled={isResettingEverything || isSavingEverything || isLoadingEverything}
               >
-                <Save data-icon="inline-start" />
-                {isSavingEverything ? "Saving..." : "Save"}
+                <RotateCcw data-icon="inline-start" />
+                {isResettingEverything ? "Resetting..." : "Reset"}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={onLoadEverything}
-                disabled={isSavingEverything || isLoadingEverything}
+                disabled={isResettingEverything || isSavingEverything || isLoadingEverything}
               >
                 <Download data-icon="inline-start" />
                 {isLoadingEverything ? "Loading..." : "Load"}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onSaveEverything}
+                disabled={isResettingEverything || isSavingEverything || isLoadingEverything}
+              >
+                <Save data-icon="inline-start" />
+                {isSavingEverything ? "Saving..." : "Save"}
               </Button>
             </div>
 

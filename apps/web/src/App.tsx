@@ -99,6 +99,7 @@ import { cityBoardDefinitions } from "./cityBoards";
 import { listCityBoardDraft, saveCityBoardDraft } from "./cityReviewState";
 import { getAnimatedPieceFrames } from "./chessMotion";
 import { listPageLayoutState, savePageLayoutState, type PageLayoutPanelId, type PageLayoutVariant } from "./pageLayoutState";
+import { getBundledPageLayout, getBundledWorkspaceLayout } from "./bundledLayouts";
 import { Board } from "./components/Board";
 import { CityMapLibrePanel } from "./components/CityMapLibrePanel";
 import { CityMapPanel } from "./components/CityMapPanel";
@@ -415,6 +416,7 @@ export default function App() {
   const [saveEverythingNotice, setSaveEverythingNotice] = useState<SaveEverythingNotice | null>(null);
   const [isSavingEverything, setIsSavingEverything] = useState(false);
   const [isLoadingEverything, setIsLoadingEverything] = useState(false);
+  const [isResettingEverything, setIsResettingEverything] = useState(false);
   const [knownLayoutFiles, setKnownLayoutFiles] = useState<WorkspaceLayoutFileReference[]>(() =>
     listKnownWorkspaceLayoutFiles()
   );
@@ -1485,6 +1487,45 @@ export default function App() {
     setPieceStyleSheet(savePieceStyleSheet(value));
   };
 
+  const handleResetEverything = () => {
+    if (isSavingEverything || isLoadingEverything || isResettingEverything) {
+      return;
+    }
+
+    setIsResettingEverything(true);
+
+    try {
+      // Restore workspace layout from the committed/bundled default
+      const bundledWorkspace = getBundledWorkspaceLayout("match-workspace");
+      if (bundledWorkspace) {
+        saveWorkspaceLayoutState(bundledWorkspace.layoutState);
+        setWorkspaceLayout(bundledWorkspace.layoutState);
+      }
+
+      // Restore each page layout from its committed/bundled default
+      for (const target of pageLayoutSaveTargets) {
+        const bundledLayout = getBundledPageLayout({
+          layoutKey: target.layoutKey,
+          layoutVariant: target.layoutVariant,
+          panelIds: target.panelIds
+        });
+        if (bundledLayout) {
+          savePageLayoutState({
+            layoutKey: target.layoutKey,
+            layoutState: bundledLayout.layoutState,
+            variant: target.layoutVariant,
+            panelIds: target.panelIds
+          });
+        }
+      }
+
+      // Reload so all IndexedWorkspace components re-initialize from the restored state
+      window.location.reload();
+    } finally {
+      setIsResettingEverything(false);
+    }
+  };
+
   const handleSaveEverything = () => {
     if (isSavingEverything || isLoadingEverything) {
       return;
@@ -1928,8 +1969,10 @@ export default function App() {
             <AppMenu
               isOpen={isMenuOpen}
               onOpenChange={setIsMenuOpen}
+              onResetEverything={handleResetEverything}
               onSaveEverything={handleSaveEverything}
               onLoadEverything={handleLoadEverything}
+              isResettingEverything={isResettingEverything}
               isSavingEverything={isSavingEverything}
               isLoadingEverything={isLoadingEverything}
               saveEverythingNotice={saveEverythingNotice}
