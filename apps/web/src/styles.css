@@ -148,7 +148,7 @@ select {
   border: 1px solid var(--border);
   background: var(--card);
   border-radius: var(--radius-card);
-  box-shadow: 0 1px 2px rgb(15 23 42 / 0.06);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--foreground) 6%, transparent);
 }
 
 .layout-toolbar,
@@ -240,7 +240,7 @@ select {
   padding: var(--space-2) var(--space-2_5);
   border: 1px solid var(--border);
   border-radius: calc(var(--radius) + 0.1rem);
-  background: color-mix(in srgb, var(--muted) 72%, white 28%);
+  background: color-mix(in srgb, var(--muted) 72%, var(--background) 28%);
   min-height: 2.75rem;
   min-width: 0;
   align-content: center;
@@ -773,7 +773,7 @@ select {
 .memory-item,
 .study-panel__disclosure {
   border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--muted) 72%, white 28%);
+  background: color-mix(in srgb, var(--muted) 72%, var(--background) 28%);
   border-radius: var(--workspace-card-radius);
 }
 
@@ -861,7 +861,7 @@ select {
   width: min(26rem, calc(100vw - 2rem));
   max-height: calc(100vh - 2rem);
   border: 1px solid var(--border);
-  box-shadow: 0 16px 40px rgb(15 23 42 / 0.14);
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--foreground) 14%, transparent);
   overflow: auto;
   overscroll-behavior: contain;
 }
@@ -1196,7 +1196,7 @@ select {
 
 .workspace-notice-card--neutral,
 .workspace-notice-card--success {
-  background: color-mix(in srgb, var(--muted) 72%, white 28%);
+  background: color-mix(in srgb, var(--muted) 72%, var(--background) 28%);
   color: var(--muted-foreground);
 }
 
@@ -1318,7 +1318,7 @@ select {
 
 .layout-toolbar__notice--neutral,
 .layout-toolbar__notice--success {
-  background: color-mix(in srgb, var(--muted) 72%, white 28%);
+  background: color-mix(in srgb, var(--muted) 72%, var(--background) 28%);
   color: var(--muted-foreground);
 }
 
@@ -1826,7 +1826,7 @@ select {
 .workspace-item.is-editing > .board-panel {
   box-shadow:
     0 0 0 1px var(--ring),
-    0 8px 24px rgb(15 23 42 / 0.08);
+    0 8px 24px color-mix(in srgb, var(--foreground) 8%, transparent);
 }
 
 .workspace-item__move-surface {
@@ -2335,11 +2335,11 @@ select {
 }
 
 .match-history__piece-icon--white {
-  color: #ffffff;
+  color: var(--primary-foreground);
 }
 
 .match-history__piece-icon--black {
-  color: #111827;
+  color: var(--foreground);
 }
 
 .dark .match-history__move-button--white {
@@ -2569,7 +2569,7 @@ select {
   aspect-ratio: 1;
   border: 1px solid var(--border);
   border-radius: 0;
-  box-shadow: 0 2px 10px rgb(15 23 42 / 0.08);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--foreground) 8%, transparent);
   overflow: hidden;
 }
 
@@ -2593,12 +2593,12 @@ select {
 
 .board-square--light {
   background: var(--board-light-square);
-  color: #111827;
+  color: var(--foreground);
 }
 
 .board-square--dark {
   background: var(--board-dark-square);
-  color: #f8fafc;
+  color: var(--primary-foreground);
 }
 
 .board-square--map {
@@ -2623,15 +2623,15 @@ select {
 }
 
 .board-square__square-label--light {
-  border-color: rgb(15 23 42 / 0.28);
-  background: rgb(255 255 255 / 0.92);
-  color: #111827;
+  border-color: color-mix(in srgb, var(--foreground) 28%, transparent);
+  background: color-mix(in srgb, var(--background) 92%, transparent);
+  color: var(--foreground);
 }
 
 .board-square__square-label--dark {
-  border-color: rgb(248 250 252 / 0.32);
-  background: rgb(17 24 39 / 0.88);
-  color: #f8fafc;
+  border-color: color-mix(in srgb, var(--background) 32%, transparent);
+  background: color-mix(in srgb, var(--foreground) 88%, transparent);
+  color: var(--primary-foreground);
 }
 
 .board-square--hovered {
@@ -2663,7 +2663,7 @@ select {
   position: absolute;
   inset: 33%;
   border-radius: 999px;
-  background: rgb(17 24 39 / 0.18);
+  background: color-mix(in srgb, var(--foreground) 18%, transparent);
 }
 
 .board-square__piece {
@@ -2681,11 +2681,11 @@ select {
 }
 
 .board-square__piece.is-white {
-  color: #ffffff;
+  color: var(--primary-foreground);
 }
 
 .board-square__piece.is-black {
-  color: #111827;
+  color: var(--foreground);
 }
 
 .board-square__piece.is-map.is-white,
@@ -2885,7 +2885,7 @@ select {
   inset: 38%;
   z-index: 0;
   border-radius: 999px;
-  background: rgb(17 24 39 / 0.18);
+  background: color-mix(in srgb, var(--foreground) 18%, transparent);
 }
 
 .hover-panel {
@@ -2943,12 +2943,12 @@ select {
 }
 
 .piece-badge__icon--white {
-  color: #ffffff;
+  color: var(--primary-foreground);
 }
 
 .piece-badge__icon--black,
 .role-card__icon {
-  color: #111827;
+  color: var(--foreground);
 }
 
 .field-select {
@@ -3506,7 +3506,7 @@ select {
 .story-layout__item--editing {
   box-shadow:
     0 0 0 1px var(--ring),
-    0 8px 24px rgb(15 23 42 / 0.08);
+    0 8px 24px color-mix(in srgb, var(--foreground) 8%, transparent);
 }
 
 .story-layout__move-surface {
@@ -3901,9 +3901,9 @@ select {
   position: relative;
   z-index: 1;
   border-radius: 999px;
-  border: 2px solid rgba(17, 24, 39, 0.28);
-  background: #bfbfbf;
-  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.18);
+  border: 2px solid color-mix(in srgb, var(--foreground) 28%, transparent);
+  background: var(--muted-foreground);
+  box-shadow: 0 10px 18px color-mix(in srgb, var(--foreground) 18%, transparent);
   transition:
     transform 120ms ease,
     border-color 120ms ease,
@@ -3914,11 +3914,11 @@ select {
 .city-map-piece-marker:hover .city-map-piece-marker__disc,
 .city-map-piece-marker:focus-visible .city-map-piece-marker__disc {
   transform: scale(1.06);
-  box-shadow: 0 12px 22px rgba(15, 23, 42, 0.24);
+  box-shadow: 0 12px 22px color-mix(in srgb, var(--foreground) 24%, transparent);
 }
 
 .city-map-piece-marker.is-active .city-map-piece-marker__disc {
-  border-color: #111827;
+  border-color: var(--foreground);
 }
 
 .city-map-piece-marker.is-attacking .city-map-piece-marker__disc {
@@ -4092,7 +4092,7 @@ select {
 
 .character-action-item {
   border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--muted) 72%, white 28%);
+  background: color-mix(in srgb, var(--muted) 72%, var(--background) 28%);
   border-radius: var(--workspace-card-radius);
   padding: var(--space-3);
   display: grid;
@@ -4278,14 +4278,14 @@ select {
 
 .cities-page__list-item--square-light {
   background: color-mix(in srgb, var(--board-light-square) 82%, var(--card) 18%);
-  color: #111827;
+  color: var(--foreground);
 }
 
 .cities-page__list-item--square-light:hover,
 .cities-page__list-item--square-light:focus-visible,
 .cities-page__list-item--square-light.cities-page__list-item--hovered {
-  background: color-mix(in srgb, var(--board-light-square) 92%, white 8%);
-  box-shadow: inset 0 0 0 1px rgb(15 23 42 / 0.12);
+  background: color-mix(in srgb, var(--board-light-square) 92%, var(--background) 8%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--foreground) 12%, transparent);
 }
 
 .cities-page__list-item--square-light.is-selected {
@@ -4297,20 +4297,20 @@ select {
 
 .cities-page__list-item--square-dark {
   background: color-mix(in srgb, var(--board-dark-square) 86%, #1f2937 14%);
-  color: #f8fafc;
+  color: var(--primary-foreground);
 }
 
 .cities-page__list-item--square-dark:hover,
 .cities-page__list-item--square-dark:focus-visible,
 .cities-page__list-item--square-dark.cities-page__list-item--hovered {
   background: color-mix(in srgb, var(--board-dark-square) 92%, #1f2937 8%);
-  box-shadow: inset 0 0 0 1px rgb(248 250 252 / 0.18);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--background) 18%, transparent);
 }
 
 .cities-page__list-item--square-dark.is-selected {
   background: color-mix(in srgb, var(--board-dark-square) 64%, var(--selection) 36%);
   box-shadow:
-    inset 0 0 0 1px rgb(248 250 252 / 0.2),
+    inset 0 0 0 1px color-mix(in srgb, var(--background) 20%, transparent),
     0 0 0 1px color-mix(in srgb, var(--ring) 24%, transparent 76%);
 }
 
@@ -4330,14 +4330,14 @@ select {
 
 .cities-page__district-square-pill--light {
   background: var(--board-light-square);
-  color: #111827;
-  border-color: color-mix(in srgb, #111827 20%, transparent 80%);
+  color: var(--foreground);
+  border-color: color-mix(in srgb, var(--foreground) 20%, transparent);
 }
 
 .cities-page__district-square-pill--dark {
   background: var(--board-dark-square);
-  color: #f8fafc;
-  border-color: color-mix(in srgb, #f8fafc 20%, transparent 80%);
+  color: var(--primary-foreground);
+  border-color: color-mix(in srgb, var(--primary-foreground) 20%, transparent);
 }
 
 .cities-page__dirty-indicator {
