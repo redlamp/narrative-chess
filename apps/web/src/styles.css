@@ -58,6 +58,7 @@
   --piece-attacked: #dc2626;
   --space-px: 1px;
   --space-0_5: 0.125rem;
+  --field-label-gap: var(--space-0_5); /* gap between label text and form control, app-wide */
   --space-1: 0.25rem;
   --space-1_5: 0.375rem;
   --space-2: 0.5rem;
@@ -130,6 +131,15 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+/*
+ * Form field label-to-control gap — one value, whole app.
+ * Targets any <label> wrapping a text-sm font-medium span + a form control.
+ * Adjust --field-label-gap in :root to respace all form fields at once.
+ */
+label:has(> .text-sm.font-medium) {
+  gap: var(--field-label-gap, var(--space-0_5));
 }
 
 .app-shell {
