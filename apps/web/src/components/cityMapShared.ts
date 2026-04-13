@@ -432,7 +432,7 @@ export function syncDistrictMapLayers(input: {
           "match",
           ["get", "squareTone"],
           "light",
-          `${palette.lightSquare}99`,
+          `${palette.darkSquare}cc`,
           `${palette.darkSquare}99`
         ],
         "line-width": [

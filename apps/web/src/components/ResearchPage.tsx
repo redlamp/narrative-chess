@@ -44,7 +44,7 @@ export function ResearchPage({
               <CardTitle>Competitive analysis</CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="page-card__content page-card__content--scroll pt-0">
+          <CardContent className="page-card__content page-card__content--scroll">
             <div className="grid gap-3">
               <Badge variant="secondary" className="w-fit">Competition</Badge>
             </div>

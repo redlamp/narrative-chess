@@ -1417,7 +1417,7 @@ export function EdinburghReviewPage({
               <CardTitle>Cities</CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="page-card__content page-card__content--scroll pt-0">
+          <CardContent className="page-card__content page-card__content--scroll">
             <ul className="cities-page__list">
               {trackedCities.map((city) => {
                 const contentStatusMeta = getContentStatusMeta(city.contentStatus);
@@ -1605,7 +1605,7 @@ export function EdinburghReviewPage({
               </div>
             </div>
           </CardHeader>
-          <CardContent className="page-card__content page-card__content--scroll pt-0">
+          <CardContent className="page-card__content page-card__content--scroll">
             <div className="cities-page__groups">
               {showDistrictGroups
                 ? groupedDistricts.map((group) => {

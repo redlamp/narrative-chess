@@ -344,7 +344,7 @@ export function RoleCatalogPage({
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="page-card__content page-card__content--scroll pt-0">
+          <CardContent className="page-card__content page-card__content--scroll">
             <ul className="workspace-list">
               {pieceKinds.map((pieceKind) => {
                 const totalCount = groupedRoles[pieceKind].length;
@@ -420,7 +420,7 @@ export function RoleCatalogPage({
               </div>
             </div>
           </CardHeader>
-          <CardContent className="page-card__content page-card__content--scroll pt-0">
+          <CardContent className="page-card__content page-card__content--scroll">
             <ul className="workspace-list">
               {selectedPieceRoles.map((role) => (
                 <WorkspaceListItem

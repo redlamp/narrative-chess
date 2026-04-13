@@ -49,8 +49,8 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: #2563eb;
-  --board-light-square: #f5f5f4;
-  --board-dark-square: #78716c;
+  --board-light-square: #e7e5e4;
+  --board-dark-square: #57534e;
   --board-light-piece-stroke: rgb(17 24 39 / 0.92);
   --board-dark-piece-stroke: rgb(255 255 255 / 0.96);
   --king-check: #fbbf24;
@@ -484,7 +484,6 @@ label:has(> .text-sm.font-medium) {
 }
 
 .page-card--detail[data-slot="card"] {
-  padding-block-start: var(--space-3);
   gap: var(--space-2);
 }
 
@@ -742,13 +741,11 @@ label:has(> .text-sm.font-medium) {
   flex: 1 1 auto;
   gap: var(--space-3);
   min-height: 0;
-  padding: var(--space-2) var(--space-4) var(--space-4);
 }
 
 .page-card__content--scroll {
   flex: 1 1 auto;
   overflow: auto;
-  padding-right: var(--space-4);
   scrollbar-gutter: stable;
 }
 
@@ -2470,13 +2467,8 @@ label:has(> .text-sm.font-medium) {
   display: grid;
   min-height: 0;
   flex: 1 1 auto;
-  padding-top: 0;
   overflow: hidden;
   border-radius: inherit;
-}
-
-.board-panel__content[data-slot="card-content"] {
-  padding-top: 0;
 }
 
 .board-panel__content .board-shell {
@@ -3925,6 +3917,16 @@ label:has(> .text-sm.font-medium) {
     background-color 120ms ease;
 }
 
+.city-map-piece-marker.is-white .city-map-piece-marker__disc {
+  background: color-mix(in srgb, var(--board-light-square) 70%, var(--board-dark-square) 30%);
+  border-color: color-mix(in srgb, var(--board-dark-square) 50%, transparent);
+}
+
+.city-map-piece-marker.is-black .city-map-piece-marker__disc {
+  background: color-mix(in srgb, var(--board-dark-square) 65%, var(--board-light-square) 35%);
+  border-color: color-mix(in srgb, var(--board-light-square) 40%, transparent);
+}
+
 .city-map-piece-marker:hover .city-map-piece-marker__disc,
 .city-map-piece-marker:focus-visible .city-map-piece-marker__disc {
   transform: scale(1.06);
@@ -4181,7 +4183,6 @@ label:has(> .text-sm.font-medium) {
 }
 
 .app-menu__section-header {
-  padding: var(--space-3) var(--space-3) 0;
   display: grid;
   gap: var(--space-2);
 }
@@ -4197,9 +4198,6 @@ label:has(> .text-sm.font-medium) {
   flex: 0 0 auto;
 }
 
-.app-menu__section {
-  padding: var(--space-3);
-}
 
 .app-menu__panel-section {
   display: grid;
@@ -5225,8 +5223,8 @@ label:has(> .text-sm.font-medium) {
   --sidebar-accent-foreground: #eff6ff;
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: #2563eb;
-  --board-light-square: #d4cbc0;
-  --board-dark-square: #6b5f58;
+  --board-light-square: #c9bfb4;
+  --board-dark-square: #574f49;
   --board-light-piece-stroke: rgb(15 23 42 / 0.95);
   --board-dark-piece-stroke: rgb(248 250 252 / 0.94);
 }

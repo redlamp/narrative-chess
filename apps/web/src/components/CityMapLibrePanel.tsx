@@ -335,7 +335,7 @@ export function CityMapLibrePanel({
       map.flyTo({
         center: activeLocation.center,
         zoom: focusedZoom,
-        duration: 1000,
+        duration: 3,
         essential: true,
         curve: 0.5,
         speed: 1
@@ -345,7 +345,7 @@ export function CityMapLibrePanel({
 
     map.fitBounds(cityBoardBounds, {
       padding: 40,
-      duration: 500,
+      duration: 3,
       essential: true,
       maxZoom: 12.25
     });
@@ -389,6 +389,7 @@ export function CityMapLibrePanel({
                   type="button"
                   className={[
                     "city-map-piece-marker",
+                    piece.side === "white" ? "is-white" : "is-black",
                     piece.isActive ? "is-active" : "",
                     piece.isAttackingPiece ? "is-attacking" : "",
                     piece.isKingCheck ? "is-king-check" : "",

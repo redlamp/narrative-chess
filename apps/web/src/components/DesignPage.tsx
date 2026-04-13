@@ -301,7 +301,7 @@ export function DesignPage({
               <CardTitle>Design sections</CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="page-card__content page-card__content--scroll pt-0">
+          <CardContent className="page-card__content page-card__content--scroll">
             <ul className="workspace-list">
               <WorkspaceListItem
                 type="button"

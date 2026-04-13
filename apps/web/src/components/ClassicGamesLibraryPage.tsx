@@ -525,7 +525,7 @@ export function ClassicGamesLibraryPage({
               ariaLabel="Search classic chess games"
             />
           </CardHeader>
-          <CardContent className="page-card__content page-card__content--scroll pt-0">
+          <CardContent className="page-card__content page-card__content--scroll">
             <ul className="classic-games-page__list">
               {filteredGames.map((game) => (
                 <WorkspaceListItem
