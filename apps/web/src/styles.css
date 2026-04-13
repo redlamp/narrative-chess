@@ -4816,6 +4816,11 @@ label:has(> .text-sm.font-medium) {
   gap: var(--space-1);
 }
 
+.city-placement-editor__detail-content [data-slot="tabs-content"],
+.city-placement-editor__detail-content [data-slot="tabs-content"] > * {
+  align-content: start;
+}
+
 .city-placement-editor__editor-heading {
   display: grid;
   min-width: 0;
