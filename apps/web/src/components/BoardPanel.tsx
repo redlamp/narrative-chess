@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { Square } from "@narrative-chess/content-schema";
-import { DistrictBadge } from "./DistrictBadge";
+import { LocationBadge } from "./LocationBadge";
 import { Panel } from "./Panel";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -64,7 +64,7 @@ export function BoardPanel({
       bodyClassName="board-panel__content"
       title="Board"
       action={
-        <DistrictBadge
+        <LocationBadge
           name={districtName ?? null}
           square={districtSquare ?? null}
           className="district-badge--header"

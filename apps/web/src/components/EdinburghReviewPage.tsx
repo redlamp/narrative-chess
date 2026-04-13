@@ -83,7 +83,7 @@ import { WorkspaceListItem } from "./WorkspaceListItem";
 import { WorkspaceNoticeCard } from "./WorkspaceNoticeCard";
 import { ClearableSearchField } from "./ClearableSearchField";
 import { BoardPanel } from "./BoardPanel";
-import { DistrictBadge } from "./DistrictBadge";
+import { LocationBadge } from "./LocationBadge";
 import {
   CityDistrictBoardEditor,
   CityDistrictMapEditor
@@ -535,7 +535,7 @@ function getReviewStatusMeta(status: DistrictCell["reviewStatus"] | CityBoard["r
       };
     case "needs review":
       return {
-        label: "Needs review",
+        label: "Review",
         icon: OctagonAlert,
         toneClassName: "status-tone--needs-review"
       };
@@ -569,7 +569,7 @@ function StatusDropdownField<Value extends string>({
   const ActiveIcon = activeMeta.icon;
 
   return (
-    <label className="grid gap-1">
+    <label className="grid gap-1 status-dropdown-field">
       <span className="text-sm font-medium">{label}</span>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -775,7 +775,7 @@ export function EdinburghReviewPage({
   const [expandedDistrictGroups, setExpandedDistrictGroups] = useState<Record<string, boolean>>({});
   const [showDistrictSquareColors, setShowDistrictSquareColors] = useState(false);
   const [showCityBoardNames, setShowCityBoardNames] = useState(true);
-  const [showBoardPieces, setShowBoardPieces] = useState(false);
+  const showBoardPieces = false;
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState<SaveNotice | null>(null);
   const [isDirectorySupported, setIsDirectorySupported] = useState(false);
@@ -1212,6 +1212,22 @@ export function EdinburghReviewPage({
   };
 
   const handleDistrictListItemClick = (districtId: string, event: ReactMouseEvent<HTMLButtonElement>) => {
+    if (
+      !event.shiftKey &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      selectedDistrictIds.length === 1 &&
+      selectedDistrictIds[0] === districtId
+    ) {
+      setSelectedDistrictIds([]);
+      setDistrictSelectionAnchorId(null);
+      setSelectedRecordId(cityOverviewId);
+      setIsMapImportArmed(false);
+      setHoveredDistrictId(null);
+      setHoveredBoardSquare(null);
+      return;
+    }
+
     const nextSelection = getNextMultiSelection({
       orderedIds: filteredDistricts.map((district) => district.id),
       currentIds: selectedDistrictIds,
@@ -1772,23 +1788,32 @@ export function EdinburghReviewPage({
           <Card className="page-card page-card--detail">
             <CardHeader className="panel__header city-placement-editor__panel-header gap-3">
               <div className="panel__heading">
-                <div className="grid min-w-0 gap-2">
+                <div className="city-placement-editor__editor-heading">
                   <CardTitle className="panel__title">City Editor</CardTitle>
                   <div className="flex flex-wrap items-center gap-2">
                     {isBulkCitySelection ? (
                       <Badge variant="secondary">{selectedCityIds.length} selected</Badge>
-                    ) : selectedCity ? (
-                      <Badge variant="outline">{selectedCity.name}</Badge>
                     ) : null}
-                    {!isBulkCitySelection && cityDraftStatus === "saved" && (
-                      <Badge variant="secondary">Saved to file</Badge>
-                    )}
-                    {!isBulkCitySelection && cityDraftStatus === "draft" && (
-                      <Badge variant="outline">Unsaved draft</Badge>
-                    )}
                   </div>
                 </div>
               </div>
+              <CardAction className="panel__action city-placement-editor__header-action">
+                {!isBulkCitySelection && cityDraftStatus === "draft" ? (
+                  <span
+                    className="cities-page__dirty-indicator"
+                    aria-label="City has unsaved edits"
+                    title="City has unsaved edits"
+                  >
+                    <Asterisk />
+                  </span>
+                ) : null}
+                <LocationBadge
+                  name={selectedCity?.name ?? null}
+                  square="XX"
+                  ghost
+                  className="district-badge--header"
+                />
+              </CardAction>
             </CardHeader>
             <CardContent className="page-card__content city-placement-editor__detail-content">
               <Tabs value={selectedCityTab} onValueChange={(value) => setSelectedCityTab(value as CityEditorTab)}>
@@ -1798,7 +1823,7 @@ export function EdinburghReviewPage({
                   <TabsTrigger value="info">Info</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="basics" className="grid gap-2">
+                <TabsContent value="basics" className="flex flex-col gap-2">
                   <div className="grid gap-3 lg:grid-cols-3">
                     <label className="grid gap-1 lg:col-span-3">
                       <span className="text-sm font-medium">City name</span>
@@ -1810,21 +1835,21 @@ export function EdinburghReviewPage({
                       />
                     </label>
                     <StatusDropdownField
-                      label="Content status"
+                      label="Content"
                       value={draft.contentStatus}
                       options={statusOptions}
                       getMeta={getContentStatusMeta}
                       onChange={(value) => setCityField("contentStatus", value as CityBoard["contentStatus"])}
                     />
                     <StatusDropdownField
-                      label="Review status"
+                      label="Review"
                       value={draft.reviewStatus}
                       options={reviewOptions}
                       getMeta={getReviewStatusMeta}
                       onChange={(value) => setCityField("reviewStatus", value as CityBoard["reviewStatus"])}
                     />
                     <label className="grid gap-1">
-                      <span className="text-sm font-medium">Last reviewed</span>
+                      <span className="text-sm font-medium">Reviewed</span>
                       <Input
                         name="city-last-reviewed-at"
                         autoComplete="off"
@@ -1833,21 +1858,21 @@ export function EdinburghReviewPage({
                         onChange={(event) => setCityField("lastReviewedAt", event.currentTarget.value || null)}
                       />
                     </label>
-                    <label className="grid gap-1 lg:col-span-3">
-                      <span className="text-sm font-medium">Review notes</span>
-                      <Textarea
-                        name="city-review-notes"
-                        autoComplete="off"
-                        value={draft.reviewNotes ?? ""}
-                        onChange={(event) => setCityField("reviewNotes", event.currentTarget.value || null)}
-                        rows={3}
-                      />
-                    </label>
                   </div>
+                  <label className="flex flex-col gap-1 flex-1 min-h-0">
+                    <span className="text-sm font-medium">Review notes</span>
+                    <Textarea
+                      name="city-review-notes"
+                      autoComplete="off"
+                      className="flex-1 resize-none"
+                      value={draft.reviewNotes ?? ""}
+                      onChange={(event) => setCityField("reviewNotes", event.currentTarget.value || null)}
+                    />
+                  </label>
                 </TabsContent>
 
                 <TabsContent value="narrative" className="grid gap-2">
-                  <div className="grid gap-4">
+                  <div className="grid gap-3">
                     <label className="grid gap-1">
                       <span className="text-sm font-medium">Summary</span>
                       <Textarea
@@ -1953,23 +1978,23 @@ export function EdinburghReviewPage({
                   <div className="city-placement-editor__editor-heading">
                     <CardTitle className="panel__title">District Editor</CardTitle>
                     <div className="flex flex-wrap items-center gap-2">
-                      {selectedCity ? <Badge variant="outline">{selectedCity.name}</Badge> : null}
                       {isBulkDistrictSelection && !isDistrictHoverPreview ? (
                         <Badge variant="secondary">{selectedDistrictIds.length} selected</Badge>
-                      ) : isEditorDistrictDirty ? (
-                        <span
-                          className="cities-page__dirty-indicator"
-                          aria-label="District has unsaved edits"
-                          title="District has unsaved edits"
-                        >
-                          <Asterisk />
-                        </span>
                       ) : null}
                     </div>
                   </div>
                 </div>
                 <CardAction className="panel__action city-placement-editor__header-action">
-                  <DistrictBadge
+                  {!(isBulkDistrictSelection && !isDistrictHoverPreview) && isEditorDistrictDirty ? (
+                    <span
+                      className="cities-page__dirty-indicator"
+                      aria-label="District has unsaved edits"
+                      title="District has unsaved edits"
+                    >
+                      <Asterisk />
+                    </span>
+                  ) : null}
+                  <LocationBadge
                     name={isBulkDistrictSelection && !isDistrictHoverPreview ? null : editorDistrict.name}
                     square={isBulkDistrictSelection && !isDistrictHoverPreview ? null : editorDistrict.square}
                     className="district-badge--header"
@@ -1984,7 +2009,7 @@ export function EdinburghReviewPage({
                     <TabsTrigger value="location">Location</TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="basics" className="grid gap-2">
+                  <TabsContent value="basics" className="flex flex-col gap-2">
                     <div className="grid gap-3 lg:grid-cols-3">
                       <label className="grid gap-1 lg:col-span-3">
                         <span className="text-sm font-medium">District name</span>
@@ -2003,7 +2028,7 @@ export function EdinburghReviewPage({
                         />
                       </label>
                       <StatusDropdownField
-                        label="Content status"
+                        label="Content"
                         value={editorDistrict.contentStatus}
                         options={statusOptions}
                         getMeta={getContentStatusMeta}
@@ -2016,7 +2041,7 @@ export function EdinburghReviewPage({
                         }
                       />
                       <StatusDropdownField
-                        label="Review status"
+                        label="Review"
                         value={editorDistrict.reviewStatus}
                         options={reviewOptions}
                         getMeta={getReviewStatusMeta}
@@ -2029,7 +2054,7 @@ export function EdinburghReviewPage({
                         }
                       />
                       <label className="grid gap-1">
-                        <span className="text-sm font-medium">Last reviewed</span>
+                        <span className="text-sm font-medium">Reviewed</span>
                         <Input
                           name="district-last-reviewed-at"
                           autoComplete="off"
@@ -2045,24 +2070,24 @@ export function EdinburghReviewPage({
                           }}
                         />
                       </label>
-                      <label className="grid gap-1 lg:col-span-3">
-                        <span className="text-sm font-medium">Review notes</span>
-                        <Textarea
-                          name="district-review-notes"
-                          autoComplete="off"
-                          disabled={!canEditEditorDistrict}
-                          value={editorDistrict.reviewNotes ?? ""}
-                          onChange={(event) => {
-                            const nextReviewNotes = event.currentTarget.value || null;
-                            updateSelectedDistricts((district) => ({
-                              ...district,
-                              reviewNotes: nextReviewNotes
-                            }));
-                          }}
-                          rows={4}
-                        />
-                      </label>
                     </div>
+                    <label className="flex flex-col gap-1 flex-1 min-h-0">
+                      <span className="text-sm font-medium">Review notes</span>
+                      <Textarea
+                        name="district-review-notes"
+                        autoComplete="off"
+                        className="flex-1 resize-none"
+                        disabled={!canEditEditorDistrict}
+                        value={editorDistrict.reviewNotes ?? ""}
+                        onChange={(event) => {
+                          const nextReviewNotes = event.currentTarget.value || null;
+                          updateSelectedDistricts((district) => ({
+                            ...district,
+                            reviewNotes: nextReviewNotes
+                          }));
+                        }}
+                      />
+                    </label>
                   </TabsContent>
 
                   <TabsContent value="narrative" className="grid gap-2">
@@ -2382,7 +2407,6 @@ export function EdinburghReviewPage({
           showDistrictLabels={showCityBoardNames}
           onShowDistrictLabelsChange={setShowCityBoardNames}
           showPieces={showBoardPieces}
-          onShowPiecesChange={setShowBoardPieces}
           layoutMode={layoutMode}
         >
           {selectedDistrict ? (
@@ -2421,7 +2445,7 @@ export function EdinburghReviewPage({
               <CardTitle className="panel__title">Map</CardTitle>
             </div>
             <CardAction className="panel__action city-placement-editor__header-action">
-              <DistrictBadge
+              <LocationBadge
                 name={(highlightedDistrict ?? selectedDistrict)?.name ?? null}
                 square={(highlightedDistrict ?? selectedDistrict)?.square ?? null}
                 className="district-badge--header"

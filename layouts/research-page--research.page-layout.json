@@ -3,7 +3,7 @@
   "layoutKey": "research-page",
   "layoutVariant": "two-pane",
   "name": "research",
-  "savedAt": "2026-04-12T14:43:00.306Z",
+  "savedAt": "2026-04-13T07:41:44.507Z",
   "layoutState": {
     "version": 2,
     "columnCount": 14,
@@ -32,7 +32,7 @@
         "x": 4,
         "y": 2,
         "w": 11,
-        "h": 39
+        "h": 14
       },
       "tertiary": {
         "x": 5,
