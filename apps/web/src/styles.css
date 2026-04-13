@@ -140,6 +140,7 @@ select {
  */
 label:has(> .text-sm.font-medium) {
   gap: var(--field-label-gap, var(--space-0_5));
+  align-content: start;
 }
 
 .app-shell {
