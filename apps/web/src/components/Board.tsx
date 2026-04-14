@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type DragEvent, type KeyboardEvent, type MouseEvent } from "react";
 import { gsap } from "gsap";
 import { getPieceAtSquare } from "@narrative-chess/game-core";
 import type {
@@ -48,6 +48,7 @@ type BoardProps = {
   onSquareClick: (square: Square) => void;
   onSquareHover: (square: Square) => void;
   onSquareLeave: () => void;
+  onSquareDrop?: (fromSquare: Square, toSquare: Square) => void;
 };
 
 function formatDistrictLabel(name: string) {
@@ -80,7 +81,8 @@ export function Board({
   showPieces = true,
   onSquareClick,
   onSquareHover,
-  onSquareLeave
+  onSquareLeave,
+  onSquareDrop
 }: BoardProps) {
   const cellMap = new Map(cells.map((cell) => [cell.square, cell]));
   const shellRef = useRef<HTMLDivElement | null>(null);
@@ -91,6 +93,8 @@ export function Board({
     selectedSquare ?? hoveredSquare ?? squareName(files[0], ranks[0])
   );
   const [boardSize, setBoardSize] = useState<number | null>(null);
+  const [dragOverSquare, setDragOverSquare] = useState<Square | null>(null);
+  const dragSourceSquareRef = useRef<Square | null>(null);
 
   useEffect(() => {
     if (selectedSquare) {
@@ -254,6 +258,52 @@ export function Board({
     buttonRefs.current.get(nextSquare)?.focus();
   };
 
+  const handleDragStart = onSquareDrop
+    ? (event: DragEvent<HTMLButtonElement>) => {
+        const square = event.currentTarget.dataset.square as Square | undefined;
+        if (!square) return;
+        dragSourceSquareRef.current = square;
+        event.dataTransfer.effectAllowed = "move";
+      }
+    : undefined;
+
+  const handleDragOver = onSquareDrop
+    ? (event: DragEvent<HTMLButtonElement>) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        const square = event.currentTarget.dataset.square as Square | undefined;
+        if (square && square !== dragSourceSquareRef.current) {
+          setDragOverSquare(square);
+        }
+      }
+    : undefined;
+
+  const handleDragLeave = onSquareDrop
+    ? () => {
+        setDragOverSquare(null);
+      }
+    : undefined;
+
+  const handleDrop = onSquareDrop
+    ? (event: DragEvent<HTMLButtonElement>) => {
+        event.preventDefault();
+        setDragOverSquare(null);
+        const toSquare = event.currentTarget.dataset.square as Square | undefined;
+        const fromSquare = dragSourceSquareRef.current;
+        dragSourceSquareRef.current = null;
+        if (fromSquare && toSquare && fromSquare !== toSquare) {
+          onSquareDrop(fromSquare, toSquare);
+        }
+      }
+    : undefined;
+
+  const handleDragEnd = onSquareDrop
+    ? () => {
+        dragSourceSquareRef.current = null;
+        setDragOverSquare(null);
+      }
+    : undefined;
+
   return (
     <div className="board-shell" ref={shellRef}>
       <div
@@ -293,6 +343,9 @@ export function Board({
               const isLegalTarget = legalMoves.includes(square);
               const showSquareLabel = showSquareLabels || (showActiveSquareLabel && (isSelected || isHovered || isInspected));
 
+              const isDragOver = dragOverSquare === square;
+              const isDragSource = dragSourceSquareRef.current === square;
+
               return (
                 <button
                   key={square}
@@ -304,11 +357,14 @@ export function Board({
                     isSelected ? "board-square--selected" : "",
                     isHovered ? "board-square--hovered" : "",
                     isInspected ? "board-square--inspected" : "",
-                    isLegalTarget ? "board-square--target" : ""
+                    isLegalTarget ? "board-square--target" : "",
+                    isDragOver ? "board-square--drag-over" : "",
+                    isDragSource ? "board-square--drag-source" : ""
                   ]
                     .filter(Boolean)
                     .join(" ")}
                   data-square={square}
+                  draggable={!!onSquareDrop}
                   aria-pressed={isSelected}
                   aria-colindex={files.indexOf(file) + 1}
                   aria-label={`${square}${labelPiece ? `, ${getPieceDisplayName(labelPiece)}` : ""}${district ? `, ${district.name}` : ""}`}
@@ -323,6 +379,11 @@ export function Board({
                   }}
                   onBlur={onSquareLeave}
                   onKeyDown={handleKeyDown}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onDragEnd={handleDragEnd}
                   ref={(node) => {
                     if (!node) {
                       buttonRefs.current.delete(square);

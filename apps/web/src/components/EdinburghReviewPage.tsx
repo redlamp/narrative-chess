@@ -935,6 +935,16 @@ export function EdinburghReviewPage({
     });
   }, [groupedDistricts]);
 
+  useEffect(() => {
+    if (selectedDistrictIds.length === 0) return;
+    const targetId = selectedDistrictIds[0];
+    requestAnimationFrame(() => {
+      document
+        .querySelector(`[data-district-id="${CSS.escape(targetId)}"]`)
+        ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+  }, [selectedDistrictIds]);
+
   const selectedDistrictIdSet = useMemo(() => new Set(selectedDistrictIds), [selectedDistrictIds]);
   const selectedDistrict =
     selectedDistrictIds.length === 0
@@ -995,6 +1005,19 @@ export function EdinburghReviewPage({
     setIsMapImportArmed(false);
     setHoveredDistrictId(null);
     setHoveredBoardSquare(null);
+
+    if (showDistrictGroups) {
+      const group = groupedDistricts.find((g) => g.districts.some((d) => d.id === districtId));
+      if (group && expandedDistrictGroups[group.key] === false) {
+        setExpandedDistrictGroups((current) => ({ ...current, [group.key]: true }));
+      }
+    }
+  };
+  const handleBoardSquareSwap = (fromSquare: Square, toSquare: Square) => {
+    const district = draft.districts.find((d) => d.square === fromSquare);
+    if (district) {
+      setDraft((current) => reassignDistrictSquare(current, district.id, toSquare));
+    }
   };
 
   const applyToSelectedCities = (updater: (board: CityBoard) => CityBoard) => {
@@ -1642,6 +1665,7 @@ export function EdinburghReviewPage({
                           return (
                             <WorkspaceListItem
                               key={district.id}
+                              data-district-id={district.id}
                               type="button"
                               onClick={(event) => handleDistrictListItemClick(district.id, event)}
                               onMouseEnter={() => setHoveredDistrictId(district.id)}
@@ -1715,6 +1739,7 @@ export function EdinburghReviewPage({
                       return (
                         <WorkspaceListItem
                           key={district.id}
+                          data-district-id={district.id}
                           type="button"
                           onClick={(event) => handleDistrictListItemClick(district.id, event)}
                           onMouseEnter={() => setHoveredDistrictId(district.id)}
@@ -2422,6 +2447,7 @@ export function EdinburghReviewPage({
               onSquareChange={(square) => {
                 setDraft((current) => reassignDistrictSquare(current, selectedDistrict.id, square));
               }}
+              onSquareSwap={handleBoardSquareSwap}
             />
           ) : (
             <CityDistrictBoardEditor
@@ -2434,6 +2460,7 @@ export function EdinburghReviewPage({
               onHoveredSquareChange={setHoveredBoardSquare}
               onSelectDistrict={selectDistrictById}
               onSquareChange={() => {}}
+              onSquareSwap={handleBoardSquareSwap}
             />
           )}
         </BoardPanel>

@@ -28,6 +28,7 @@ type CityDistrictBoardEditorProps = {
   onHoveredSquareChange: (square: Square | null) => void;
   onSquareChange: (square: Square) => void;
   onSelectDistrict: (districtId: string) => void;
+  onSquareSwap?: (fromSquare: Square, toSquare: Square) => void;
 };
 
 type CityDistrictMapEditorProps = {
@@ -263,7 +264,8 @@ export function CityDistrictBoardEditor({
   showPieces = false,
   onHoveredSquareChange,
   onSquareChange,
-  onSelectDistrict
+  onSelectDistrict,
+  onSquareSwap
 }: CityDistrictBoardEditorProps) {
   const previewSnapshot = useMemo(() => createSnapshotFromFen(previewBoardFen), []);
   const previewCells = useMemo(() => getBoardSquares(previewSnapshot), [previewSnapshot]);
@@ -289,18 +291,20 @@ export function CityDistrictBoardEditor({
       showSquareLabels={false}
       showPieces={showPieces}
       onSquareClick={(square) => {
-        if (selectedDistrict) {
-          onSquareChange(square);
+        const district = districtsBySquare.get(square);
+
+        if (district) {
+          onSelectDistrict(district.id);
           return;
         }
 
-        const district = districtsBySquare.get(square);
-        if (district) {
-          onSelectDistrict(district.id);
+        if (selectedDistrict) {
+          onSquareChange(square);
         }
       }}
       onSquareHover={(square) => onHoveredSquareChange(square)}
       onSquareLeave={() => onHoveredSquareChange(null)}
+      onSquareDrop={onSquareSwap}
     />
   );
 }

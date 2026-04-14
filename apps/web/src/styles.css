@@ -2626,6 +2626,7 @@ label:has(> .text-sm.font-medium) {
   font-weight: var(--font-weight-semibold);
   line-height: 1;
   letter-spacing: 0.01em;
+  pointer-events: none;
 }
 
 .board-square__square-label--light {
@@ -2662,6 +2663,14 @@ label:has(> .text-sm.font-medium) {
   box-shadow:
     inset 0 0 0 3px color-mix(in srgb, var(--ring) 46%, transparent 54%),
     inset 0 0 0 5px rgb(255 255 255 / 0.55);
+}
+
+.board-square--drag-source {
+  opacity: 0.4;
+}
+
+.board-square--drag-over {
+  box-shadow: inset 0 0 0 3px var(--selection);
 }
 
 .board-square--target::after {
@@ -2872,6 +2881,7 @@ label:has(> .text-sm.font-medium) {
   left: var(--space-2);
   font-weight: var(--font-weight-semibold);
   text-align: left;
+  pointer-events: none;
 }
 
 .board-square__district--board {
