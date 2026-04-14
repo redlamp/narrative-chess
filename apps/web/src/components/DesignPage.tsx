@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { IndexedWorkspace } from "./IndexedWorkspace";
+import { IndexedWorkspace, type LayoutNavigation } from "./IndexedWorkspace";
 import { PieceAssetsPage } from "./PieceAssetsPage";
 import { PieceStyleReferencePage } from "./PieceStyleReferencePage";
 import { WorkspaceIntroCard } from "./WorkspaceIntroCard";
@@ -239,6 +239,7 @@ function TypographyZooPage() {
 type DesignPageProps = {
   layoutMode: boolean;
   showLayoutGrid: boolean;
+  layoutNavigation?: LayoutNavigation;
   pieceStyleSheet: string;
   pieceStyleDirectoryName: string | null;
   isPieceStyleDirectorySupported: boolean;
@@ -256,6 +257,7 @@ type DesignPageProps = {
 export function DesignPage({
   layoutMode,
   showLayoutGrid,
+  layoutNavigation,
   pieceStyleSheet,
   pieceStyleDirectoryName,
   isPieceStyleDirectorySupported,
@@ -281,6 +283,7 @@ export function DesignPage({
       layoutKey="design-page"
       layoutVariant="two-pane"
       showLayoutGrid={showLayoutGrid}
+      layoutNavigation={layoutNavigation}
       onToggleLayoutMode={onToggleLayoutMode}
       onToggleLayoutGrid={onToggleLayoutGrid}
       intro={

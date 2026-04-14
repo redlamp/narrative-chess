@@ -3,7 +3,7 @@
   "layoutKey": "roles-page",
   "layoutVariant": "three-pane",
   "name": "roles",
-  "savedAt": "2026-04-13T07:52:41.224Z",
+  "savedAt": "2026-04-14T08:31:51.764Z",
   "layoutState": {
     "version": 2,
     "columnCount": 14,
@@ -33,27 +33,13 @@
         "y": 2,
         "w": 8,
         "h": 14
-      },
-      "tertiary": {
-        "x": 7,
-        "y": 19,
-        "w": 3,
-        "h": 8
-      },
-      "quaternary": {
-        "x": 10,
-        "y": 19,
-        "w": 3,
-        "h": 8
       }
     },
     "visible": {
       "intro": true,
       "index": true,
       "secondary": true,
-      "detail": true,
-      "tertiary": true,
-      "quaternary": true
+      "detail": true
     }
   }
 }

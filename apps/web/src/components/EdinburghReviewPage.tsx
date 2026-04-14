@@ -77,7 +77,7 @@ import {
   saveCityDraftToDirectory,
   supportsLocalContentDirectory
 } from "../fileSystemAccess";
-import { IndexedWorkspace } from "./IndexedWorkspace";
+import { IndexedWorkspace, type LayoutNavigation } from "./IndexedWorkspace";
 import { WorkspaceIntroCard } from "./WorkspaceIntroCard";
 import { WorkspaceListItem } from "./WorkspaceListItem";
 import { WorkspaceNoticeCard } from "./WorkspaceNoticeCard";
@@ -742,6 +742,7 @@ function MapPositionMoveButton({
 type EdinburghReviewPageProps = {
   layoutMode: boolean;
   showLayoutGrid: boolean;
+  layoutNavigation?: LayoutNavigation;
   onCityBoardDraftChange?: (board: CityBoard) => void;
   onToggleLayoutMode: () => void;
   onToggleLayoutGrid: (checked: boolean) => void;
@@ -750,6 +751,7 @@ type EdinburghReviewPageProps = {
 export function EdinburghReviewPage({
   layoutMode,
   showLayoutGrid,
+  layoutNavigation,
   onCityBoardDraftChange,
   onToggleLayoutMode,
   onToggleLayoutGrid
@@ -1288,6 +1290,7 @@ export function EdinburghReviewPage({
         quaternary: "Map"
       }}
       showLayoutGrid={showLayoutGrid}
+      layoutNavigation={layoutNavigation}
       onToggleLayoutMode={onToggleLayoutMode}
       onToggleLayoutGrid={onToggleLayoutGrid}
       intro={

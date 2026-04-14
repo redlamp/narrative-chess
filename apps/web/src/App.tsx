@@ -3,16 +3,12 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState,
-  type CSSProperties,
-  type KeyboardEvent as ReactKeyboardEvent,
-  type PointerEvent as ReactPointerEvent
+  useState
 } from "react";
 import {
   Building2,
   ChessPawn,
   ChevronDown,
-  Cog,
   LayoutDashboard,
   Moon,
   Pencil,
@@ -98,19 +94,17 @@ import {
 import { cityBoardDefinitions } from "./cityBoards";
 import { listCityBoardDraft, saveCityBoardDraft } from "./cityReviewState";
 import { getAnimatedPieceFrames } from "./chessMotion";
-import { listPageLayoutState, savePageLayoutState, type PageLayoutPanelId, type PageLayoutVariant } from "./pageLayoutState";
+import { allPageLayoutTargets, listPageLayoutState, savePageLayoutState } from "./pageLayoutState";
 import { getBundledPageLayout, getBundledWorkspaceLayout } from "./bundledLayouts";
 import { Board } from "./components/Board";
 import { BoardPanel } from "./components/BoardPanel";
 import { CityMapLibrePanel } from "./components/CityMapLibrePanel";
-import { CityMapPanel } from "./components/CityMapPanel";
 import { Panel } from "./components/Panel";
 import { AppMenu } from "./components/AppMenu";
 import { ClassicGamesLibraryPage } from "./components/ClassicGamesLibraryPage";
 import { DesignPage } from "./components/DesignPage";
+import { IndexedWorkspace, type LayoutNavigation } from "./components/IndexedWorkspace";
 import { EdinburghReviewPage } from "./components/EdinburghReviewPage";
-import { LayoutToolbar } from "./components/LayoutToolbar";
-import { FloatingLayoutPanel } from "./components/FloatingLayoutPanel";
 import { MatchHistoryPanel } from "./components/MatchHistoryPanel";
 import { ResearchPage } from "./components/ResearchPage";
 import { RoleCatalogPage } from "./components/RoleCatalogPage";
@@ -150,13 +144,6 @@ type LayoutFileNotice = {
 
 type SaveEverythingNotice = LayoutFileNotice;
 
-type PageLayoutSaveTarget = {
-  layoutKey: string;
-  layoutVariant: PageLayoutVariant;
-  panelIds: PageLayoutPanelId[];
-  name: string;
-};
-
 type PanelSizeConstraint = {
   minW: number;
   maxW: number;
@@ -187,38 +174,7 @@ const pageOptions: Array<{ value: AppPage; label: string; icon?: React.ReactNode
   { value: "design", label: "Design", icon: <Pencil className="size-4" /> }
 ];
 
-const pageLayoutSaveTargets: PageLayoutSaveTarget[] = [
-  {
-    layoutKey: "cities-page",
-    layoutVariant: "three-pane",
-    panelIds: ["intro", "index", "secondary", "detail", "tertiary", "quaternary"],
-    name: "cities"
-  },
-  {
-    layoutKey: "classics-page",
-    layoutVariant: "two-pane",
-    panelIds: ["intro", "index", "detail"],
-    name: "classics"
-  },
-  {
-    layoutKey: "roles-page",
-    layoutVariant: "three-pane",
-    panelIds: ["intro", "index", "secondary", "detail"],
-    name: "roles"
-  },
-  {
-    layoutKey: "design-page",
-    layoutVariant: "two-pane",
-    panelIds: ["intro", "index", "detail"],
-    name: "design"
-  },
-  {
-    layoutKey: "research-page",
-    layoutVariant: "two-pane",
-    panelIds: ["intro", "index", "detail"],
-    name: "research"
-  }
-];
+const pageLayoutSaveTargets = allPageLayoutTargets;
 
 function isAppPage(value: string | null): value is AppPage {
   return (
@@ -601,6 +557,16 @@ export default function App() {
   }, [goToPly]);
 
   const effectiveLayoutMode = isLayoutMode && !isCompactViewport;
+  const layoutNavigation = useMemo<LayoutNavigation>(
+    () => ({
+      pages: pageOptions,
+      activePage: page,
+      onPageChange: (nextPage: string) => {
+        if (isAppPage(nextPage)) setPage(nextPage);
+      }
+    }),
+    [page]
+  );
   const useFreeformWorkspaceLayout = !isCompactViewport;
   const workspaceRowCount = useMemo(
     () => getWorkspaceLayoutRowCount(workspaceLayout, effectiveLayoutMode ? 18 : 1),
@@ -2021,6 +1987,7 @@ export default function App() {
         <EdinburghReviewPage
           layoutMode={effectiveLayoutMode}
           showLayoutGrid={settings.showLayoutGrid}
+          layoutNavigation={layoutNavigation}
           onCityBoardDraftChange={handleCityBoardDraftChange}
           onToggleLayoutMode={() => setIsLayoutMode(false)}
           onToggleLayoutGrid={(checked) => handleBooleanSettingChange("showLayoutGrid", checked)}
@@ -2031,6 +1998,7 @@ export default function App() {
           selectedReferenceGameId={selectedReferenceGameId}
           layoutMode={effectiveLayoutMode}
           showLayoutGrid={settings.showLayoutGrid}
+          layoutNavigation={layoutNavigation}
           onSelectReferenceGame={setSelectedReferenceGameId}
           onLoadReferenceGame={(game) => handleLoadReferenceGameFromLibrary(game.id)}
           onReferenceGamesChange={setReferenceGamesLibrary}
@@ -2042,6 +2010,7 @@ export default function App() {
           roleCatalog={roleCatalog}
           layoutMode={effectiveLayoutMode}
           showLayoutGrid={settings.showLayoutGrid}
+          layoutNavigation={layoutNavigation}
           roleCatalogDirectoryName={roleCatalogDirectoryName}
           isRoleCatalogDirectorySupported={isRoleCatalogDirectorySupported}
           roleCatalogFileBusyAction={roleCatalogFileBusyAction}
@@ -2061,6 +2030,7 @@ export default function App() {
         <DesignPage
           layoutMode={effectiveLayoutMode}
           showLayoutGrid={settings.showLayoutGrid}
+          layoutNavigation={layoutNavigation}
           pieceStyleSheet={pieceStyleSheet}
           pieceStyleDirectoryName={pieceStyleDirectoryName}
           isPieceStyleDirectorySupported={isPieceStyleDirectorySupported}
@@ -2078,409 +2048,173 @@ export default function App() {
         <ResearchPage
           layoutMode={effectiveLayoutMode}
           showLayoutGrid={settings.showLayoutGrid}
+          layoutNavigation={layoutNavigation}
           onToggleLayoutMode={() => setIsLayoutMode(false)}
           onToggleLayoutGrid={(checked) => handleBooleanSettingChange("showLayoutGrid", checked)}
         />
       ) : (
-        <div className={`workspace-layout-shell ${effectiveLayoutMode ? "workspace-layout-shell--editing" : ""}`}>
-          {page === "match" && effectiveLayoutMode ? (
-            <FloatingLayoutPanel>
-              {({ onDragHandlePointerDown, isDragging }) => (
-                <LayoutToolbar
-                  columnCount={workspaceLayout.columnCount}
-                  columnGap={workspaceLayout.columnGap}
-                  rowHeight={workspaceLayout.rowHeight}
-                  showLayoutGrid={settings.showLayoutGrid}
-                  layoutFileName={layoutFileName}
-                  layoutDirectoryName={layoutDirectoryName}
-                  layoutFileNotice={layoutFileNotice}
-                  isLayoutDirectorySupported={isLayoutDirectorySupported}
-                  layoutFileBusyAction={layoutFileBusyAction}
-                  knownLayoutFiles={knownLayoutFiles}
-                  components={layoutToolbarComponents}
-                  onDragHandlePointerDown={onDragHandlePointerDown}
-                  isDragging={isDragging}
-                  onToggleLayoutMode={() => setIsLayoutMode(false)}
-                  onColumnCountChange={handleWorkspaceColumnCountChange}
-                  onColumnGapChange={handleWorkspaceColumnGapChange}
-                  onRowHeightChange={handleWorkspaceRowHeightChange}
-                  onToggleLayoutGrid={(checked) => handleBooleanSettingChange("showLayoutGrid", checked)}
-                  onLayoutFileNameChange={setLayoutFileName}
-                  onConnectLayoutDirectory={handleConnectLayoutDirectory}
-                  onLoadLayoutFile={handleLoadLayoutFile}
-                  onSaveLayoutFile={handleSaveLayoutFile}
-                  onDeleteLayoutFile={handleDeleteLayoutFile}
-                  onSelectKnownLayoutFile={setLayoutFileName}
-                  onRestoreComponent={(panelId) => handleRestoreWorkspaceComponent(panelId as WorkspacePanelId)}
-                  onToggleComponentVisibility={(panelId, visible) =>
-                    handleWorkspacePanelVisibilityChange(panelId as WorkspacePanelId, visible)
-                  }
-                  onResetLayout={handleResetLayout}
-                />
-              )}
-            </FloatingLayoutPanel>
-          ) : null}
-
-          <main
-            ref={workspaceRef}
-            className={`workspace-grid ${useFreeformWorkspaceLayout ? "workspace-grid--freeform" : ""} ${effectiveLayoutMode ? "workspace-grid--layout-mode" : ""}`}
-            style={workspaceGridStyle}
-          >
-            {!isCompactViewport ? (
-              <div
-                className="workspace-grid__sizer"
-                style={{
-                  gridColumn: "1 / -1",
-                  gridRow: `1 / span ${workspaceRowCount}`
-                }}
-                aria-hidden="true"
-              />
-            ) : null}
-
-            {effectiveLayoutMode && settings.showLayoutGrid && !isCompactViewport ? (
-              <div
-                className="workspace-grid__overlay"
-                style={{ gridTemplateRows: `repeat(${workspaceRowCount}, var(--workspace-row-height))` }}
-                aria-hidden="true"
-              >
-                {gridOverlayCells.map((cellIndex) => (
-                  <span key={cellIndex} className="workspace-grid__overlay-cell" />
-                ))}
-              </div>
-            ) : null}
-
-            {workspaceLayout.visible.board ? (
-            <div
-              className={[
-                "workspace-item",
-                "workspace-item--board",
-                activeLayoutEdit?.panelId === "board" ? "is-editing" : ""
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              style={getWorkspacePanelStyle(
-                workspaceLayout,
-                "board",
-                isCompactViewport,
-                useFreeformWorkspaceLayout
-              )}
-            >
-              <BoardPanel
-                districtName={playHeaderDistrict?.name ?? null}
-                districtSquare={playHeaderDistrict?.square ?? null}
-                showDistrictLabels={settings.showDistrictLabels}
-                onShowDistrictLabelsChange={(v) => handleBooleanSettingChange("showDistrictLabels", v)}
-                showPieces={true}
-                onShowPiecesChange={null}
-                layoutMode={!!effectiveLayoutMode}
-              >
-                <Board
-                  snapshot={snapshot}
-                  cells={boardSquares}
-                  selectedSquare={selectedSquare}
-                  hoveredSquare={hoveredSquare}
-                  inspectedSquare={inspectedSquare}
-                  legalMoves={legalMoves}
-                  viewMode={settings.defaultViewMode}
-                  districtsBySquare={playDistrictsBySquare}
-                  showCoordinates={true}
+        <IndexedWorkspace
+          className="match-workspace"
+          layoutMode={effectiveLayoutMode}
+          layoutKey="match-workspace"
+          layoutVariant="match"
+          showLayoutGrid={settings.showLayoutGrid}
+          layoutNavigation={layoutNavigation}
+          onToggleLayoutMode={() => setIsLayoutMode(false)}
+          onToggleLayoutGrid={(checked: boolean) => handleBooleanSettingChange("showLayoutGrid", checked)}
+          panels={[
+            {
+              id: "board",
+              label: "Board",
+              content: (
+                <BoardPanel
+                  districtName={playHeaderDistrict?.name ?? null}
+                  districtSquare={playHeaderDistrict?.square ?? null}
                   showDistrictLabels={settings.showDistrictLabels}
-                  animatedPieces={animatedPieces}
-                  onSquareClick={handleSquareClick}
-                  onSquareHover={setHoveredSquare}
-                  onSquareLeave={() => setHoveredSquare(null)}
+                  onShowDistrictLabelsChange={(v) => handleBooleanSettingChange("showDistrictLabels", v)}
+                  showPieces={true}
+                  onShowPiecesChange={null}
+                  layoutMode={!!effectiveLayoutMode}
+                >
+                  <Board
+                    snapshot={snapshot}
+                    cells={boardSquares}
+                    selectedSquare={selectedSquare}
+                    hoveredSquare={hoveredSquare}
+                    inspectedSquare={inspectedSquare}
+                    legalMoves={legalMoves}
+                    viewMode={settings.defaultViewMode}
+                    districtsBySquare={playDistrictsBySquare}
+                    showCoordinates={true}
+                    showDistrictLabels={settings.showDistrictLabels}
+                    animatedPieces={animatedPieces}
+                    onSquareClick={handleSquareClick}
+                    onSquareHover={setHoveredSquare}
+                    onSquareLeave={() => setHoveredSquare(null)}
+                  />
+                </BoardPanel>
+              )
+            },
+            {
+              id: "moves",
+              label: "Match History",
+              content: (
+                <MatchHistoryPanel
+                  moves={moveHistory}
+                  characters={snapshot.characters}
+                  selectedPly={selectedPly}
+                  totalPlies={totalPlies}
+                  onJumpToStart={handleHistoryJumpToStart}
+                  onStepBackward={handleHistoryStepBackward}
+                  isPlaying={isHistoryPlaying}
+                  onTogglePlayback={handleToggleHistoryPlayback}
+                  onStepForward={handleHistoryStepForward}
+                  onJumpToEnd={handleHistoryJumpToEnd}
+                  onSelectPly={handleHistorySelectPly}
                 />
-              </BoardPanel>
-
-              {renderMoveSurface("board")}
-              {renderResizeHandle("board")}
-              {renderConstraintHandle("board")}
-            </div>
-            ) : null}
-
-            {workspaceLayout.visible.moves ? (
-            <div
-              className={[
-                "workspace-item",
-                "workspace-item--moves",
-                activeLayoutEdit?.panelId === "moves" ? "is-editing" : ""
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              style={getWorkspacePanelStyle(
-                workspaceLayout,
-                "moves",
-                isCompactViewport,
-                useFreeformWorkspaceLayout
-              )}
-            >
-              <MatchHistoryPanel
-                moves={moveHistory}
-                characters={snapshot.characters}
-                selectedPly={selectedPly}
-                totalPlies={totalPlies}
-                onJumpToStart={handleHistoryJumpToStart}
-                onStepBackward={handleHistoryStepBackward}
-                isPlaying={isHistoryPlaying}
-                onTogglePlayback={handleToggleHistoryPlayback}
-                onStepForward={handleHistoryStepForward}
-                onJumpToEnd={handleHistoryJumpToEnd}
-                onSelectPly={handleHistorySelectPly}
-              />
-              {renderMoveSurface("moves")}
-              {renderResizeHandle("moves")}
-              {renderConstraintHandle("moves")}
-            </div>
-            ) : null}
-
-            {workspaceLayout.visible["city-map"] ? (
-            <div
-              className={[
-                "workspace-item",
-                "workspace-item--city-map",
-                activeLayoutEdit?.panelId === "city-map" ? "is-editing" : ""
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              style={getWorkspacePanelStyle(
-                workspaceLayout,
-                "city-map",
-                isCompactViewport,
-                useFreeformWorkspaceLayout
-              )}
-            >
-              <Panel
-                title="City Map (Google)"
-                action={renderPlayHeaderDistrictBadge()}
-                collapsed={workspaceLayout.collapsed["city-map"]}
-                onToggleCollapse={() => handleTogglePanelCollapse("city-map")}
-              >
-                <CityMapPanel
-                  cityBoard={playCityBoard}
-                  selectedDistrict={selectedDistrict}
-                  hoveredDistrict={hoveredSquare ? focusedDistrict : null}
-                  lastMoveDistrict={lastMoveDistrict}
-                  lastMove={lastMove}
-                />
-              </Panel>
-              {renderMoveSurface("city-map")}
-              {renderResizeHandle("city-map")}
-              {renderConstraintHandle("city-map")}
-            </div>
-            ) : null}
-
-            {workspaceLayout.visible["city-map-maplibre"] ? (
-            <div
-              className={[
-                "workspace-item",
-                "workspace-item--city-map-maplibre",
-                activeLayoutEdit?.panelId === "city-map-maplibre" ? "is-editing" : ""
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              style={getWorkspacePanelStyle(
-                workspaceLayout,
-                "city-map-maplibre",
-                isCompactViewport,
-                useFreeformWorkspaceLayout
-              )}
-            >
-              <Panel title={playMapCityMenu} action={renderPlayHeaderDistrictBadge()}>
-                <CityMapLibrePanel
-                  cityBoard={playCityBoard}
-                  pieces={animatedPieces}
-                  selectedDistrict={selectedDistrict}
-                  hoveredDistrict={hoveredSquare ? focusedDistrict : null}
-                  lastMoveDistrict={lastMoveDistrict}
-                  lastMove={lastMove}
-                  onPieceSquareHover={setHoveredSquare}
-                />
-              </Panel>
-              {renderMoveSurface("city-map-maplibre")}
-              {renderResizeHandle("city-map-maplibre")}
-              {renderConstraintHandle("city-map-maplibre")}
-            </div>
-            ) : null}
-
-            {workspaceLayout.visible["story-beat"] ? (
-            <div
-              className={[
-                "workspace-item",
-                "workspace-item--story-beat",
-                activeLayoutEdit?.panelId === "story-beat" ? "is-editing" : ""
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              style={getWorkspacePanelStyle(
-                workspaceLayout,
-                "story-beat",
-                isCompactViewport,
-                useFreeformWorkspaceLayout
-              )}
-            >
-              <Panel
-                title="Story Beat"
-                collapsed={workspaceLayout.collapsed["story-beat"]}
-                onToggleCollapse={() => handleTogglePanelCollapse("story-beat")}
-              >
-                <StoryBeatSection
-                  selectedMove={selectedMove}
-                  selectedEvent={selectedEvent}
-                  showLabel={false}
-                />
-              </Panel>
-              {renderMoveSurface("story-beat")}
-              {renderResizeHandle("story-beat")}
-              {renderConstraintHandle("story-beat")}
-            </div>
-            ) : null}
-
-            {workspaceLayout.visible["story-tile"] ? (
-            <div
-              className={[
-                "workspace-item",
-                "workspace-item--story-tile",
-                activeLayoutEdit?.panelId === "story-tile" ? "is-editing" : ""
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              style={getWorkspacePanelStyle(
-                workspaceLayout,
-                "story-tile",
-                isCompactViewport,
-                useFreeformWorkspaceLayout
-              )}
-            >
-              <Panel
-                title="District"
-                action={renderPlayHeaderDistrictBadge()}
-                collapsed={workspaceLayout.collapsed["story-tile"]}
-                onToggleCollapse={() => handleTogglePanelCollapse("story-tile")}
-              >
-                <StoryCityTileSection
-                  cityBoard={playCityBoard}
-                  focusedDistrict={focusedDistrict}
-                  selectedDistrict={selectedDistrict}
+              )
+            },
+            {
+              id: "city-map-maplibre",
+              label: "Map",
+              content: (
+                <Panel title={playMapCityMenu} action={renderPlayHeaderDistrictBadge()}>
+                  <CityMapLibrePanel
+                    cityBoard={playCityBoard}
+                    pieces={animatedPieces}
+                    selectedDistrict={selectedDistrict}
+                    hoveredDistrict={hoveredSquare ? focusedDistrict : null}
+                    lastMoveDistrict={lastMoveDistrict}
+                    lastMove={lastMove}
+                    onPieceSquareHover={setHoveredSquare}
+                  />
+                </Panel>
+              )
+            },
+            {
+              id: "story-beat",
+              label: "Story Beat",
+              content: (
+                <Panel title="Story Beat">
+                  <StoryBeatSection
+                    selectedMove={selectedMove}
+                    selectedEvent={selectedEvent}
+                    showLabel={false}
+                  />
+                </Panel>
+              )
+            },
+            {
+              id: "story-tile",
+              label: "District",
+              content: (
+                <Panel title="District" action={renderPlayHeaderDistrictBadge()}>
+                  <StoryCityTileSection
+                    cityBoard={playCityBoard}
+                    focusedDistrict={focusedDistrict}
+                    selectedDistrict={selectedDistrict}
+                    focusedPiece={focusedPiece}
+                    focusedCharacter={focusedCharacter}
+                    isHoverPreview={Boolean(hoveredSquare)}
+                    showLabel={false}
+                  />
+                </Panel>
+              )
+            },
+            {
+              id: "story-character",
+              label: "Character",
+              content: (
+                <CharacterDetailPanel
+                  focusedSquare={storyFocusedSquare}
                   focusedPiece={focusedPiece}
                   focusedCharacter={focusedCharacter}
-                  isHoverPreview={Boolean(hoveredSquare)}
-                  showLabel={false}
+                  focusedCharacterMoments={focusedCharacterMoments}
+                  moveHistory={moveHistory}
+                  showRecentCharacterActions={settings.showRecentCharacterActions}
                 />
-              </Panel>
-              {renderMoveSurface("story-tile")}
-              {renderResizeHandle("story-tile")}
-              {renderConstraintHandle("story-tile")}
-            </div>
-            ) : null}
-
-            {workspaceLayout.visible["story-character"] ? (
-            <div
-              className={[
-                "workspace-item",
-                "workspace-item--story-character",
-                activeLayoutEdit?.panelId === "story-character" ? "is-editing" : ""
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              style={getWorkspacePanelStyle(
-                workspaceLayout,
-                "story-character",
-                isCompactViewport,
-                useFreeformWorkspaceLayout
-              )}
-            >
-              <CharacterDetailPanel
-                focusedSquare={storyFocusedSquare}
-                focusedPiece={focusedPiece}
-                focusedCharacter={focusedCharacter}
-                focusedCharacterMoments={focusedCharacterMoments}
-                moveHistory={moveHistory}
-                showRecentCharacterActions={settings.showRecentCharacterActions}
-                collapsed={workspaceLayout.collapsed["story-character"]}
-                onToggleCollapse={() => handleTogglePanelCollapse("story-character")}
-              />
-              {renderMoveSurface("story-character")}
-              {renderResizeHandle("story-character")}
-              {renderConstraintHandle("story-character")}
-            </div>
-            ) : null}
-
-            {workspaceLayout.visible["story-tone"] ? (
-            <div
-              className={[
-                "workspace-item",
-                "workspace-item--story-tone",
-                activeLayoutEdit?.panelId === "story-tone" ? "is-editing" : ""
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              style={getWorkspacePanelStyle(
-                workspaceLayout,
-                "story-tone",
-                isCompactViewport,
-                useFreeformWorkspaceLayout
-              )}
-            >
-              <Panel
-                title="Narrative Tone"
-                action={
-                  <StoryToneSection
-                    tonePreset={tonePreset}
-                    onToneChange={updateTonePreset}
-                    showLabel={false}
-                    inline
+              )
+            },
+            {
+              id: "story-tone",
+              label: "Narrative Tone",
+              content: (
+                <Panel
+                  title="Narrative Tone"
+                  action={
+                    <StoryToneSection
+                      tonePreset={tonePreset}
+                      onToneChange={updateTonePreset}
+                      showLabel={false}
+                      inline
+                    />
+                  }
+                >
+                  <p className="muted">Set the narration style for generated beats and summaries.</p>
+                </Panel>
+              )
+            },
+            {
+              id: "recent-games",
+              label: "Saved Games",
+              content: (
+                <Panel title="Saved Games">
+                  <RecentGamesPanel
+                    savedMatches={savedMatches}
+                    selectedSavedMatchId={selectedSavedMatchId}
+                    onSelectSavedMatch={setSelectedSavedMatchId}
+                    onLoadSavedMatch={handleLoadSelectedSavedMatch}
+                    onDeleteSelectedSavedMatch={handleRemoveSelectedSavedMatch}
+                    referenceGames={referenceGamesLibrary}
+                    selectedReferenceGameId={selectedReferenceGameId}
+                    onSelectReferenceGame={setSelectedReferenceGameId}
+                    onLoadReferenceGame={handleLoadReferenceGame}
                   />
-                }
-              >
-                <p className="muted">Set the narration style for generated beats and summaries.</p>
-              </Panel>
-              {renderMoveSurface("story-tone")}
-              {renderResizeHandle("story-tone")}
-              {renderConstraintHandle("story-tone")}
-            </div>
-            ) : null}
-
-            {workspaceLayout.visible["recent-games"] ? (
-            <div
-              className={[
-                "workspace-item",
-                "workspace-item--recent-games",
-                activeLayoutEdit?.panelId === "recent-games" ? "is-editing" : ""
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              style={getWorkspacePanelStyle(
-                workspaceLayout,
-                "recent-games",
-                isCompactViewport,
-                useFreeformWorkspaceLayout
-              )}
-            >
-              <Panel
-                title="Saved Games"
-                collapsed={workspaceLayout.collapsed["recent-games"]}
-                onToggleCollapse={() => handleTogglePanelCollapse("recent-games")}
-              >
-                <RecentGamesPanel
-                  savedMatches={savedMatches}
-                  selectedSavedMatchId={selectedSavedMatchId}
-                  onSelectSavedMatch={setSelectedSavedMatchId}
-                  onLoadSavedMatch={handleLoadSelectedSavedMatch}
-                  onDeleteSelectedSavedMatch={handleRemoveSelectedSavedMatch}
-                  referenceGames={referenceGamesLibrary}
-                  selectedReferenceGameId={selectedReferenceGameId}
-                  onSelectReferenceGame={setSelectedReferenceGameId}
-                  onLoadReferenceGame={handleLoadReferenceGame}
-                />
-              </Panel>
-              {renderMoveSurface("recent-games")}
-              {renderResizeHandle("recent-games")}
-              {renderConstraintHandle("recent-games")}
-            </div>
-            ) : null}
-
-          </main>
-        </div>
+                </Panel>
+              )
+            }
+          ]}
+        />
       )}
     </div>
   );

@@ -34,7 +34,7 @@ import {
   verbPool,
   type RoleCatalog
 } from "../roleCatalog";
-import { IndexedWorkspace } from "./IndexedWorkspace";
+import { IndexedWorkspace, type LayoutNavigation } from "./IndexedWorkspace";
 import { ClearableSearchField } from "./ClearableSearchField";
 import { AutocompleteTagList } from "./AutocompleteTagList";
 import { PieceArt } from "./PieceArt";
@@ -80,6 +80,7 @@ type RoleCatalogPageProps = {
   onConnectRoleCatalogDirectory: () => void;
   onLoadRoleCatalogFromDirectory: () => void;
   onSaveRoleCatalogToDirectory: () => void;
+  layoutNavigation?: LayoutNavigation;
   onToggleLayoutMode: () => void;
   onToggleLayoutGrid: (checked: boolean) => void;
 };
@@ -154,6 +155,7 @@ export function RoleCatalogPage({
   onConnectRoleCatalogDirectory,
   onLoadRoleCatalogFromDirectory,
   onSaveRoleCatalogToDirectory,
+  layoutNavigation,
   onToggleLayoutMode,
   onToggleLayoutGrid
 }: RoleCatalogPageProps) {
@@ -252,6 +254,7 @@ export function RoleCatalogPage({
       layoutKey="roles-page"
       layoutVariant="three-pane"
       showLayoutGrid={showLayoutGrid}
+      layoutNavigation={layoutNavigation}
       onToggleLayoutMode={onToggleLayoutMode}
       onToggleLayoutGrid={onToggleLayoutGrid}
       intro={

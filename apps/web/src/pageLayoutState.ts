@@ -7,9 +7,9 @@ export const pageLayoutPanelIds = [
   "quaternary"
 ] as const;
 
-export type PageLayoutPanelId = (typeof pageLayoutPanelIds)[number];
+export type PageLayoutPanelId = string;
 
-export type PageLayoutVariant = "two-pane" | "three-pane" | "research";
+export type PageLayoutVariant = "two-pane" | "three-pane" | "research" | "match";
 
 export type PageLayoutRect = {
   x: number;
@@ -23,8 +23,8 @@ export type PageLayoutState = {
   columnCount: number;
   columnGap: number;
   rowHeight: number;
-  panels: Record<PageLayoutPanelId, PageLayoutRect>;
-  visible: Record<PageLayoutPanelId, boolean>;
+  panels: Record<string, PageLayoutRect>;
+  visible: Record<string, boolean>;
 };
 
 const pageLayoutDefaultColumnCount = 12;
@@ -37,25 +37,7 @@ const pageLayoutMinimumRowHeight = 8;
 const pageLayoutMaximumRowHeight = 256;
 const pageLayoutMinimumRows = 18;
 
-const minimumPanelWidth: Record<PageLayoutPanelId, number> = {
-  intro: 1,
-  index: 1,
-  secondary: 1,
-  detail: 1,
-  tertiary: 1,
-  quaternary: 1
-};
-
-const minimumPanelHeight: Record<PageLayoutPanelId, number> = {
-  intro: 1,
-  index: 1,
-  secondary: 1,
-  detail: 1,
-  tertiary: 1,
-  quaternary: 1
-};
-
-const defaultPanelsByVariant: Record<PageLayoutVariant, Record<PageLayoutPanelId, PageLayoutRect>> = {
+const defaultPanelsByVariant: Record<PageLayoutVariant, Record<string, PageLayoutRect>> = {
   "two-pane": {
     intro: { x: 1, y: 1, w: 12, h: 5 },
     index: { x: 1, y: 6, w: 4, h: 15 },
@@ -79,6 +61,16 @@ const defaultPanelsByVariant: Record<PageLayoutVariant, Record<PageLayoutPanelId
     detail: { x: 5, y: 5, w: 8, h: 14 },
     tertiary: { x: 5, y: 19, w: 4, h: 7 },
     quaternary: { x: 9, y: 19, w: 4, h: 7 }
+  },
+  match: {
+    board: { x: 7, y: 1, w: 4, h: 8 },
+    moves: { x: 11, y: 1, w: 2, h: 15 },
+    "city-map-maplibre": { x: 7, y: 12, w: 4, h: 10 },
+    "story-beat": { x: 1, y: 9, w: 6, h: 3 },
+    "story-tile": { x: 1, y: 12, w: 3, h: 5 },
+    "story-character": { x: 4, y: 12, w: 3, h: 5 },
+    "story-tone": { x: 7, y: 9, w: 4, h: 3 },
+    "recent-games": { x: 1, y: 1, w: 3, h: 8 }
   }
 };
 
@@ -118,34 +110,31 @@ function normalizeColumnGap(value: unknown) {
   );
 }
 
+const defaultPanelRect: PageLayoutRect = { x: 1, y: 1, w: 4, h: 4 };
+
+function getDefaultPanelRect(variant: PageLayoutVariant, panelId: string): PageLayoutRect {
+  return defaultPanelsByVariant[variant]?.[panelId] ?? defaultPanelRect;
+}
+
 function normalizePanelRect(
   variant: PageLayoutVariant,
-  panelId: PageLayoutPanelId,
+  panelId: string,
   value: unknown,
   columnCount: number
 ): PageLayoutRect {
-  const fallback = defaultPanelsByVariant[variant][panelId];
+  const fallback = getDefaultPanelRect(variant, panelId);
   const candidate = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
-  const width = clamp(
-    roundOrFallback(candidate.w, fallback.w),
-    minimumPanelWidth[panelId],
-    columnCount
-  );
+  const width = clamp(roundOrFallback(candidate.w, fallback.w), 1, columnCount);
   const x = clamp(roundOrFallback(candidate.x, fallback.x), 1, columnCount - width + 1);
-  const height = clamp(roundOrFallback(candidate.h, fallback.h), minimumPanelHeight[panelId], 256);
+  const height = clamp(roundOrFallback(candidate.h, fallback.h), 1, 256);
   const y = clamp(roundOrFallback(candidate.y, fallback.y), 1, 256);
 
-  return {
-    x,
-    y,
-    w: width,
-    h: height
-  };
+  return { x, y, w: width, h: height };
 }
 
 function scalePanelRect(
   variant: PageLayoutVariant,
-  panelId: PageLayoutPanelId,
+  panelId: string,
   panel: PageLayoutRect,
   fromColumnCount: number,
   toColumnCount: number
@@ -156,7 +145,7 @@ function scalePanelRect(
 
   const scaledWidth = clamp(
     Math.round((panel.w / fromColumnCount) * toColumnCount),
-    minimumPanelWidth[panelId],
+    1,
     toColumnCount
   );
   const scaledX = clamp(
@@ -165,46 +154,39 @@ function scalePanelRect(
     toColumnCount - scaledWidth + 1
   );
 
-  return normalizePanelRect(
-    variant,
-    panelId,
-    {
-      ...panel,
-      x: scaledX,
-      w: scaledWidth
-    },
-    toColumnCount
-  );
+  return normalizePanelRect(variant, panelId, { ...panel, x: scaledX, w: scaledWidth }, toColumnCount);
 }
 
 function getStorageKey(layoutKey: string) {
   return `narrative-chess:page-layout:${layoutKey}:v1`;
 }
 
-export function getDefaultPageLayoutState(variant: PageLayoutVariant): PageLayoutState {
+export function getDefaultPageLayoutState(variant: PageLayoutVariant, panelIds?: string[]): PageLayoutState {
+  const ids = panelIds ?? Object.keys(defaultPanelsByVariant[variant] ?? defaultPanelsByVariant["two-pane"]);
+
   return {
     version: 2,
     columnCount: pageLayoutDefaultColumnCount,
     columnGap: pageLayoutDefaultColumnGap,
-    rowHeight: 44,
-    panels: pageLayoutPanelIds.reduce((nextPanels, panelId) => {
-      nextPanels[panelId] = { ...defaultPanelsByVariant[variant][panelId] };
-      return nextPanels;
-    }, {} as Record<PageLayoutPanelId, PageLayoutRect>),
-    visible: pageLayoutPanelIds.reduce((nextVisible, panelId) => {
-      nextVisible[panelId] = true;
-      return nextVisible;
-    }, {} as Record<PageLayoutPanelId, boolean>)
+    rowHeight: variant === "match" ? 64 : 44,
+    panels: ids.reduce((next, panelId) => {
+      next[panelId] = { ...getDefaultPanelRect(variant, panelId) };
+      return next;
+    }, {} as Record<string, PageLayoutRect>),
+    visible: ids.reduce((next, panelId) => {
+      next[panelId] = true;
+      return next;
+    }, {} as Record<string, boolean>)
   };
 }
 
 export function normalizePageLayoutState(input: {
   value: unknown;
   variant: PageLayoutVariant;
-  panelIds: PageLayoutPanelId[];
+  panelIds: string[];
 }): PageLayoutState {
   if (!input.value || typeof input.value !== "object") {
-    return getDefaultPageLayoutState(input.variant);
+    return getDefaultPageLayoutState(input.variant, input.panelIds);
   }
 
   const candidate = input.value as Record<string, unknown>;
@@ -217,49 +199,43 @@ export function normalizePageLayoutState(input: {
       ? (candidate.visible as Record<string, unknown>)
       : {};
   const columnCount = normalizeColumnCount(candidate.columnCount);
-  const normalizedPanels = pageLayoutPanelIds.reduce((nextPanels, panelId) => {
-    nextPanels[panelId] = normalizePanelRect(
-      input.variant,
-      panelId,
-      candidatePanels[panelId],
-      columnCount
-    );
-    return nextPanels;
-  }, {} as Record<PageLayoutPanelId, PageLayoutRect>);
 
   return {
     version: 2,
     columnCount,
     columnGap: normalizeColumnGap(candidate.columnGap),
     rowHeight: clamp(
-      numberOrFallback(candidate.rowHeight, 44),
+      numberOrFallback(candidate.rowHeight, input.variant === "match" ? 64 : 44),
       pageLayoutMinimumRowHeight,
       pageLayoutMaximumRowHeight
     ),
-    panels: normalizedPanels,
-    visible: pageLayoutPanelIds.reduce((nextVisible, panelId) => {
-      nextVisible[panelId] =
+    panels: input.panelIds.reduce((next, panelId) => {
+      next[panelId] = normalizePanelRect(input.variant, panelId, candidatePanels[panelId], columnCount);
+      return next;
+    }, {} as Record<string, PageLayoutRect>),
+    visible: input.panelIds.reduce((next, panelId) => {
+      next[panelId] =
         typeof candidateVisible[panelId] === "boolean"
           ? (candidateVisible[panelId] as boolean)
           : true;
-      return nextVisible;
-    }, {} as Record<PageLayoutPanelId, boolean>)
+      return next;
+    }, {} as Record<string, boolean>)
   };
 }
 
 export function listPageLayoutState(input: {
   layoutKey: string;
   variant: PageLayoutVariant;
-  panelIds: PageLayoutPanelId[];
+  panelIds: string[];
 }): PageLayoutState {
   const storage = getStorage();
   if (!storage) {
-    return getDefaultPageLayoutState(input.variant);
+    return getDefaultPageLayoutState(input.variant, input.panelIds);
   }
 
   const rawValue = storage.getItem(getStorageKey(input.layoutKey));
   if (!rawValue) {
-    return getDefaultPageLayoutState(input.variant);
+    return getDefaultPageLayoutState(input.variant, input.panelIds);
   }
 
   try {
@@ -269,7 +245,7 @@ export function listPageLayoutState(input: {
       panelIds: input.panelIds
     });
   } catch {
-    return getDefaultPageLayoutState(input.variant);
+    return getDefaultPageLayoutState(input.variant, input.panelIds);
   }
 }
 
@@ -277,7 +253,7 @@ export function savePageLayoutState(input: {
   layoutKey: string;
   layoutState: PageLayoutState;
   variant: PageLayoutVariant;
-  panelIds: PageLayoutPanelId[];
+  panelIds: string[];
 }): PageLayoutState {
   const nextState = normalizePageLayoutState({
     value: input.layoutState,
@@ -296,8 +272,9 @@ export function savePageLayoutState(input: {
 export function resetPageLayoutState(input: {
   layoutKey: string;
   variant: PageLayoutVariant;
+  panelIds?: string[];
 }): PageLayoutState {
-  const nextState = getDefaultPageLayoutState(input.variant);
+  const nextState = getDefaultPageLayoutState(input.variant, input.panelIds);
   const storage = getStorage();
 
   if (storage) {
@@ -309,13 +286,13 @@ export function resetPageLayoutState(input: {
 
 export function restorePageLayoutPanel(input: {
   layoutState: PageLayoutState;
-  panelId: PageLayoutPanelId;
+  panelId: string;
   variant: PageLayoutVariant;
 }): PageLayoutState {
   const restoredRect = scalePanelRect(
     input.variant,
     input.panelId,
-    defaultPanelsByVariant[input.variant][input.panelId],
+    getDefaultPanelRect(input.variant, input.panelId),
     pageLayoutDefaultColumnCount,
     input.layoutState.columnCount
   );
@@ -335,7 +312,7 @@ export function restorePageLayoutPanel(input: {
 
 export function setPageLayoutPanelVisible(input: {
   layoutState: PageLayoutState;
-  panelId: PageLayoutPanelId;
+  panelId: string;
   visible: boolean;
 }) {
   return {
@@ -349,8 +326,8 @@ export function setPageLayoutPanelVisible(input: {
 
 export function canPlacePageLayoutPanel(input: {
   layoutState: PageLayoutState;
-  panelIds: PageLayoutPanelId[];
-  panelId: PageLayoutPanelId;
+  panelIds: string[];
+  panelId: string;
   variant: PageLayoutVariant;
   nextRect: PageLayoutRect;
 }) {
@@ -360,13 +337,13 @@ export function canPlacePageLayoutPanel(input: {
     input.nextRect,
     input.layoutState.columnCount
   );
-  return normalizedRect.w >= minimumPanelWidth[input.panelId] && normalizedRect.h >= minimumPanelHeight[input.panelId];
+  return normalizedRect.w >= 1 && normalizedRect.h >= 1;
 }
 
 export function updatePageLayoutPanelRect(input: {
   layoutState: PageLayoutState;
-  panelIds: PageLayoutPanelId[];
-  panelId: PageLayoutPanelId;
+  panelIds: string[];
+  panelId: string;
   variant: PageLayoutVariant;
   nextRect: PageLayoutRect;
 }) {
@@ -388,7 +365,7 @@ export function updatePageLayoutPanelRect(input: {
 
 export function updatePageLayoutColumnCount(input: {
   layoutState: PageLayoutState;
-  panelIds: PageLayoutPanelId[];
+  panelIds: string[];
   variant: PageLayoutVariant;
   value: number;
 }) {
@@ -410,7 +387,7 @@ export function updatePageLayoutColumnCount(input: {
         nextColumnCount
       );
       return nextPanels;
-    }, {} as Record<PageLayoutPanelId, PageLayoutRect>)
+    }, {} as Record<string, PageLayoutRect>)
   };
 }
 
@@ -462,7 +439,7 @@ export function getSnappedPageLayoutRow(input: {
 
 export function getPageLayoutRowCount(input: {
   layoutState: PageLayoutState;
-  panelIds: PageLayoutPanelId[];
+  panelIds: string[];
   minimumRows?: number;
 }) {
   const minimumRows = Math.max(1, input.minimumRows ?? pageLayoutMinimumRows);
@@ -472,8 +449,58 @@ export function getPageLayoutRowCount(input: {
     }
 
     const panel = input.layoutState.panels[panelId];
+    if (!panel) return currentMax;
     return Math.max(currentMax, panel.y + panel.h - 1);
   }, minimumRows);
 
   return Math.max(minimumRows, maxRow);
 }
+
+export type PageLayoutTarget = {
+  layoutKey: string;
+  layoutVariant: PageLayoutVariant;
+  panelIds: string[];
+  name: string;
+};
+
+export const allPageLayoutTargets: PageLayoutTarget[] = [
+  {
+    layoutKey: "match-workspace",
+    layoutVariant: "match",
+    panelIds: [
+      "board", "moves", "city-map-maplibre",
+      "story-beat", "story-tile", "story-character", "story-tone", "recent-games"
+    ],
+    name: "match"
+  },
+  {
+    layoutKey: "cities-page",
+    layoutVariant: "three-pane",
+    panelIds: ["intro", "index", "secondary", "detail", "tertiary", "quaternary"],
+    name: "cities"
+  },
+  {
+    layoutKey: "classics-page",
+    layoutVariant: "two-pane",
+    panelIds: ["intro", "index", "detail"],
+    name: "classics"
+  },
+  {
+    layoutKey: "roles-page",
+    layoutVariant: "three-pane",
+    panelIds: ["intro", "index", "secondary", "detail"],
+    name: "roles"
+  },
+  {
+    layoutKey: "design-page",
+    layoutVariant: "two-pane",
+    panelIds: ["intro", "index", "detail"],
+    name: "design"
+  },
+  {
+    layoutKey: "research-page",
+    layoutVariant: "two-pane",
+    panelIds: ["intro", "index", "detail"],
+    name: "research"
+  }
+];

@@ -1,13 +1,26 @@
-import { useState, type PointerEvent as ReactPointerEvent } from "react";
+import { type ReactNode, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FloatingActionNotice } from "./FloatingActionNotice";
-import { ChevronDown, FolderOpen, FolderTree, RefreshCw, Save, Trash2, X } from "lucide-react";
+import {
+  ChevronDown,
+  Eye,
+  EyeOff,
+  FolderOpen,
+  FolderTree,
+  GripHorizontal,
+  Plus,
+  RefreshCw,
+  Save,
+  Trash2,
+  X
+} from "lucide-react";
 import { NumberStepperField } from "./NumberStepperField";
 
 export type SharedLayoutFileNotice = {
@@ -27,19 +40,53 @@ export type SharedLayoutFileReference = {
   fileName: string;
 };
 
+export type SharedLayoutPageOption = {
+  value: string;
+  label: string;
+  icon?: ReactNode;
+};
+
+export type SharedLayoutPresetEntry = {
+  id: string;
+  name: string;
+  active: boolean;
+  hidden: boolean;
+};
+
 type SharedLayoutToolbarProps = {
   columnCount: number;
   columnGap: number;
   rowHeight: number;
   showLayoutGrid: boolean;
+  components: SharedLayoutToolbarComponent[];
+
+  // Page navigation
+  pages?: SharedLayoutPageOption[];
+  activePage?: string;
+  onPageChange?: (page: string) => void;
+
+  // Presets
+  presets: SharedLayoutPresetEntry[];
+  onCreatePreset: () => void;
+  onSavePreset: () => void;
+  onActivatePreset: (id: string) => void;
+  onTogglePresetHidden: (id: string) => void;
+  onDeletePreset: (id: string) => void;
+  onRenamePreset: (id: string, name: string) => void;
+  onReorderPreset: (id: string, targetId: string) => void;
+
+  // File (single bundle)
   layoutFileName: string;
-  layoutFilePlaceholder: string;
   layoutDirectoryName: string | null;
   layoutFileNotice: SharedLayoutFileNotice | null;
   isLayoutDirectorySupported: boolean;
   layoutFileBusyAction: string | null;
-  knownLayoutFiles: SharedLayoutFileReference[];
-  components: SharedLayoutToolbarComponent[];
+  onLayoutFileNameChange: (value: string) => void;
+  onConnectLayoutDirectory: () => void;
+  onSaveLayoutBundle: () => void;
+  onLoadLayoutBundle: () => void;
+
+  // Toolbar chrome
   onDragHandlePointerDown?: (event: ReactPointerEvent<HTMLElement>) => void;
   isDragging?: boolean;
   onToggleLayoutMode: () => void;
@@ -47,27 +94,23 @@ type SharedLayoutToolbarProps = {
   onColumnGapChange: (value: number) => void;
   onRowHeightChange: (value: number) => void;
   onToggleLayoutGrid: (checked: boolean) => void;
-  onLayoutFileNameChange: (value: string) => void;
-  onConnectLayoutDirectory: () => void;
-  onLoadLayoutFile: () => void;
-  onSaveLayoutFile: () => void;
-  onDeleteLayoutFile: () => void;
-  onSelectKnownLayoutFile: (name: string) => void;
   onRestoreComponent: (id: string) => void;
   onToggleComponentVisibility: (id: string, visible: boolean) => void;
   onResetLayout: () => void;
 };
 
 type LayoutToolbarOpenSections = {
+  layouts: boolean;
   grid: boolean;
   components: boolean;
-  layouts: boolean;
+  file: boolean;
 };
 
 const defaultOpenSections: LayoutToolbarOpenSections = {
+  layouts: true,
   grid: false,
   components: false,
-  layouts: false
+  file: false
 };
 
 let sharedOpenSections: LayoutToolbarOpenSections = { ...defaultOpenSections };
@@ -77,14 +120,27 @@ export function SharedLayoutToolbar({
   columnGap,
   rowHeight,
   showLayoutGrid,
+  components,
+  pages,
+  activePage,
+  onPageChange,
+  presets,
+  onCreatePreset,
+  onSavePreset,
+  onActivatePreset,
+  onTogglePresetHidden,
+  onDeletePreset,
+  onRenamePreset,
+  onReorderPreset,
   layoutFileName,
-  layoutFilePlaceholder,
   layoutDirectoryName,
   layoutFileNotice,
   isLayoutDirectorySupported,
   layoutFileBusyAction,
-  knownLayoutFiles,
-  components,
+  onLayoutFileNameChange,
+  onConnectLayoutDirectory,
+  onSaveLayoutBundle,
+  onLoadLayoutBundle,
   onDragHandlePointerDown,
   isDragging = false,
   onToggleLayoutMode,
@@ -92,12 +148,6 @@ export function SharedLayoutToolbar({
   onColumnGapChange,
   onRowHeightChange,
   onToggleLayoutGrid,
-  onLayoutFileNameChange,
-  onConnectLayoutDirectory,
-  onLoadLayoutFile,
-  onSaveLayoutFile,
-  onDeleteLayoutFile,
-  onSelectKnownLayoutFile,
   onRestoreComponent,
   onToggleComponentVisibility,
   onResetLayout
@@ -119,6 +169,14 @@ export function SharedLayoutToolbar({
     });
   };
 
+  const [editingPresetId, setEditingPresetId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const [draggedPresetId, setDraggedPresetId] = useState<string | null>(null);
+  const [dragOverPresetId, setDragOverPresetId] = useState<string | null>(null);
+  const activePreset = presets.find((p) => p.active);
+  const visiblePresets = presets.filter((p) => !p.hidden);
+  const hiddenPresets = presets.filter((p) => p.hidden);
+
   return (
     <TooltipProvider delayDuration={150}>
       <Card className="layout-toolbar">
@@ -129,7 +187,7 @@ export function SharedLayoutToolbar({
               onPointerDown={onDragHandlePointerDown}
               data-dragging={isDragging ? "true" : "false"}
             >
-              <h2 className="layout-toolbar__title">Layout mode</h2>
+              <h2 className="layout-toolbar__title">Layout Manager</h2>
             </div>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -139,17 +197,265 @@ export function SharedLayoutToolbar({
                   size="icon-sm"
                   className="layout-toolbar__close-button"
                   onClick={onToggleLayoutMode}
-                  aria-label="Close layout mode"
+                  aria-label="Close layout manager"
                 >
                   <X />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Close layout mode</TooltipContent>
+              <TooltipContent>Close layout manager</TooltipContent>
             </Tooltip>
           </div>
+
+          {pages && pages.length > 0 && activePage && onPageChange ? (
+            <Tabs
+              value={activePage}
+              onValueChange={onPageChange}
+              className="layout-toolbar__page-tabs"
+            >
+              <TabsList className="layout-toolbar__page-tabs-list">
+                {pages.map((page) => (
+                  <Tooltip key={page.value}>
+                    <TooltipTrigger asChild>
+                      <TabsTrigger
+                        value={page.value}
+                        className="layout-toolbar__page-tab"
+                        aria-label={page.label}
+                      >
+                        {page.icon}
+                      </TabsTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>{page.label}</TooltipContent>
+                  </Tooltip>
+                ))}
+              </TabsList>
+            </Tabs>
+          ) : null}
         </CardHeader>
 
         <CardContent className="layout-toolbar__body">
+          {/* Layouts section — sub-layouts / presets for this page */}
+          <Collapsible
+            open={openSections.layouts}
+            onOpenChange={(open) => updateOpenSections((current) => ({ ...current, layouts: open }))}
+            className="layout-toolbar__section"
+          >
+            <CollapsibleTrigger className="layout-toolbar__section-header">
+              <span className="layout-toolbar__section-toggle" aria-hidden="true">
+                <ChevronDown
+                  className={`layout-toolbar__section-chevron ${openSections.layouts ? "is-open" : ""}`}
+                />
+              </span>
+              <div className="layout-toolbar__section-meta">
+                <h3 className="layout-toolbar__section-title">Layouts</h3>
+                {presets.length > 0 ? <Badge variant="outline">{presets.length}</Badge> : null}
+              </div>
+            </CollapsibleTrigger>
+
+            <CollapsibleContent className="layout-toolbar__section-content">
+              <div className="layout-toolbar__preset-list">
+                {visiblePresets.map((preset) => (
+                  <div
+                    key={preset.id}
+                    draggable
+                    className={[
+                      "layout-toolbar__preset-row",
+                      preset.active ? "is-active" : "",
+                      dragOverPresetId === preset.id ? "is-drag-over" : "",
+                      draggedPresetId === preset.id ? "is-dragging" : ""
+                    ].filter(Boolean).join(" ")}
+                    onDragStart={() => setDraggedPresetId(preset.id)}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      if (draggedPresetId && draggedPresetId !== preset.id) {
+                        setDragOverPresetId(preset.id);
+                      }
+                    }}
+                    onDragLeave={() => setDragOverPresetId(null)}
+                    onDrop={() => {
+                      if (draggedPresetId && draggedPresetId !== preset.id) {
+                        onReorderPreset(draggedPresetId, preset.id);
+                      }
+                      setDraggedPresetId(null);
+                      setDragOverPresetId(null);
+                    }}
+                    onDragEnd={() => {
+                      setDraggedPresetId(null);
+                      setDragOverPresetId(null);
+                    }}
+                  >
+                    <span className="layout-toolbar__preset-grip" aria-hidden="true">
+                      <GripHorizontal />
+                    </span>
+                    {editingPresetId === preset.id ? (
+                      <input
+                        className="layout-toolbar__preset-rename-input"
+                        autoFocus
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.currentTarget.value)}
+                        onBlur={() => {
+                          if (editingName.trim()) onRenamePreset(preset.id, editingName);
+                          setEditingPresetId(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            if (editingName.trim()) onRenamePreset(preset.id, editingName);
+                            setEditingPresetId(null);
+                          } else if (e.key === "Escape") {
+                            setEditingPresetId(null);
+                          }
+                        }}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        className="layout-toolbar__preset-label"
+                        onClick={() => onActivatePreset(preset.id)}
+                        onDoubleClick={() => {
+                          setEditingPresetId(preset.id);
+                          setEditingName(preset.name);
+                        }}
+                        aria-pressed={preset.active}
+                      >
+                        <span className="layout-toolbar__preset-name">{preset.name}</span>
+                        <span
+                          className={`layout-toolbar__preset-indicator ${preset.active ? "is-active" : ""}`}
+                          aria-hidden="true"
+                        />
+                      </button>
+                    )}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => onTogglePresetHidden(preset.id)}
+                          aria-label="Hide"
+                        >
+                          <Eye />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Hide</TooltipContent>
+                    </Tooltip>
+                  </div>
+                ))}
+                {hiddenPresets.length > 0 ? (
+                  <div className="layout-toolbar__preset-hidden-group">
+                    <span className="layout-toolbar__preset-hidden-label">
+                      Hidden ({hiddenPresets.length})
+                    </span>
+                    {hiddenPresets.map((preset) => (
+                      <div
+                        key={preset.id}
+                        className="layout-toolbar__preset-row layout-toolbar__preset-row--hidden"
+                      >
+                        <button
+                          type="button"
+                          className="layout-toolbar__preset-label"
+                          onClick={() => onActivatePreset(preset.id)}
+                        >
+                          <span className="layout-toolbar__preset-name">{preset.name}</span>
+                        </button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => onTogglePresetHidden(preset.id)}
+                              aria-label="Show"
+                            >
+                              <EyeOff />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Show</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="layout-toolbar__preset-actions-row">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon-sm"
+                      onClick={() => activePreset && onDeletePreset(activePreset.id)}
+                      disabled={!activePreset || presets.length <= 1}
+                      aria-label="Delete active layout"
+                    >
+                      <Trash2 />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Delete active layout</TooltipContent>
+                </Tooltip>
+                <span className="layout-toolbar__preset-actions-spacer" />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      onClick={onCreatePreset}
+                      aria-label="New layout"
+                    >
+                      <Plus />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>New layout</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      onClick={() => activePreset && onActivatePreset(activePreset.id)}
+                      disabled={!activePreset}
+                      aria-label="Load active layout"
+                    >
+                      <FolderOpen />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Load active layout</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      onClick={onResetLayout}
+                      aria-label="Reset to default"
+                    >
+                      <RefreshCw />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Reset to default</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      onClick={onSavePreset}
+                      disabled={!activePreset}
+                      aria-label="Save to active layout"
+                    >
+                      <Save />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Save to active layout</TooltipContent>
+                </Tooltip>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Grid section */}
           <Collapsible
             open={openSections.grid}
             onOpenChange={(open) => updateOpenSections((current) => ({ ...current, grid: open }))}
@@ -199,6 +505,7 @@ export function SharedLayoutToolbar({
             </CollapsibleContent>
           </Collapsible>
 
+          {/* Components section */}
           <Collapsible
             open={openSections.components}
             onOpenChange={(open) => updateOpenSections((current) => ({ ...current, components: open }))}
@@ -247,20 +554,21 @@ export function SharedLayoutToolbar({
             </CollapsibleContent>
           </Collapsible>
 
+          {/* File section — single bundle for all pages */}
           <Collapsible
-            open={openSections.layouts}
-            onOpenChange={(open) => updateOpenSections((current) => ({ ...current, layouts: open }))}
+            open={openSections.file}
+            onOpenChange={(open) => updateOpenSections((current) => ({ ...current, file: open }))}
             className="layout-toolbar__section layout-toolbar__file-section"
           >
             <CollapsibleTrigger className="layout-toolbar__section-header">
               <span className="layout-toolbar__section-toggle" aria-hidden="true">
                 <ChevronDown
-                  className={`layout-toolbar__section-chevron ${openSections.layouts ? "is-open" : ""}`}
+                  className={`layout-toolbar__section-chevron ${openSections.file ? "is-open" : ""}`}
                 />
               </span>
               <div className="layout-toolbar__section-meta">
-                <h3 className="layout-toolbar__section-title">Layouts</h3>
-                {layoutDirectoryName ? <Badge variant="outline">Connected: {layoutDirectoryName}</Badge> : null}
+                <h3 className="layout-toolbar__section-title">File</h3>
+                {layoutDirectoryName ? <Badge variant="outline">{layoutDirectoryName}</Badge> : null}
               </div>
             </CollapsibleTrigger>
 
@@ -268,18 +576,17 @@ export function SharedLayoutToolbar({
               <div className="layout-toolbar__file-controls">
                 <label className="slider-field">
                   <div className="slider-field__header">
-                    <span>File name</span>
-                    <strong>{layoutFileName.trim() || layoutFilePlaceholder}</strong>
+                    <span>Bundle name</span>
+                    <strong>{layoutFileName.trim() || "workspace-layout"}</strong>
                   </div>
                   <Input
                     name="layout-file-name"
                     autoComplete="off"
-                    placeholder={layoutFilePlaceholder}
+                    placeholder="workspace-layout"
                     value={layoutFileName}
                     onChange={(event) => onLayoutFileNameChange(event.currentTarget.value)}
                   />
                 </label>
-
                 <div className="layout-toolbar__icon-actions">
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -303,14 +610,14 @@ export function SharedLayoutToolbar({
                         type="button"
                         variant="outline"
                         size="icon-sm"
-                        onClick={onLoadLayoutFile}
+                        onClick={onLoadLayoutBundle}
                         disabled={!layoutDirectoryName || layoutFileBusyAction !== null}
-                        aria-label="Open layout file"
+                        aria-label="Load layout bundle"
                       >
                         <FolderOpen />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Open file</TooltipContent>
+                    <TooltipContent>Load all page layouts from file</TooltipContent>
                   </Tooltip>
 
                   <Tooltip>
@@ -319,66 +626,18 @@ export function SharedLayoutToolbar({
                         type="button"
                         variant="outline"
                         size="icon-sm"
-                        onClick={onResetLayout}
-                        disabled={layoutFileBusyAction !== null}
-                        aria-label="Reset layout"
-                      >
-                        <RefreshCw />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Reset layout</TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        onClick={onSaveLayoutFile}
+                        onClick={onSaveLayoutBundle}
                         disabled={!layoutDirectoryName || layoutFileBusyAction !== null}
-                        aria-label="Save layout file"
+                        aria-label="Save layout bundle"
                       >
                         <Save />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Save named file</TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon-sm"
-                        onClick={onDeleteLayoutFile}
-                        disabled={!layoutDirectoryName || layoutFileBusyAction !== null}
-                        aria-label="Remove layout file"
-                      >
-                        <Trash2 />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Remove named file</TooltipContent>
+                    <TooltipContent>Save all page layouts to file</TooltipContent>
                   </Tooltip>
                   <FloatingActionNotice notice={layoutFileNotice} />
                 </div>
               </div>
-
-              {knownLayoutFiles.length ? (
-                <div className="layout-toolbar__saved-files">
-                  {knownLayoutFiles.map((file) => (
-                    <Button
-                      key={file.fileName}
-                      type="button"
-                      variant={file.name === layoutFileName ? "secondary" : "outline"}
-                      size="sm"
-                      onClick={() => onSelectKnownLayoutFile(file.name)}
-                    >
-                      {file.name}
-                    </Button>
-                  ))}
-                </div>
-              ) : null}
 
               {!isLayoutDirectorySupported ? (
                 <p className="muted">Folder save requires the File System Access API on localhost or HTTPS.</p>

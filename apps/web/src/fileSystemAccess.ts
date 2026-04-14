@@ -30,6 +30,12 @@ import {
   type PageLayoutState,
   type PageLayoutVariant
 } from "./pageLayoutState";
+import {
+  createWorkspaceLayoutBundle,
+  applyWorkspaceLayoutBundle,
+  normalizeWorkspaceLayoutBundle,
+  type WorkspaceLayoutBundle
+} from "./pageLayoutBundle";
 
 type LocalPermissionState = "granted" | "denied" | "prompt";
 
@@ -1522,6 +1528,66 @@ export async function loadPageLayoutFileFromDirectory(input: {
   }
 
   return null;
+}
+
+export async function saveLayoutBundleToDirectory(input: {
+  name: string;
+}) {
+  const handle = await requireWorkspaceLayoutDirectoryHandle();
+  const bundle = createWorkspaceLayoutBundle(input.name);
+  const fileName = `${toKebabCase(bundle.name || "workspace-layout")}.layout-bundle.json`;
+
+  await ensureReadWritePermission(handle);
+  const target = await resolveWorkspaceLayoutTarget(handle, fileName);
+  await ensureReadWritePermission(target.directoryHandle);
+
+  const fileHandle = await target.directoryHandle.getFileHandle(fileName, { create: true });
+  const writable = await fileHandle.createWritable();
+  await writable.write(`${JSON.stringify(bundle, null, 2)}\n`);
+  await writable.close();
+
+  return {
+    directoryName: handle.name,
+    fileName,
+    bundleName: bundle.name,
+    relativePath: target.displayPath,
+    savedAt: bundle.savedAt
+  } as const;
+}
+
+export async function loadLayoutBundleFromDirectory(input: {
+  name: string;
+}): Promise<{ directoryName: string; bundleName: string; relativePath: string; bundle: WorkspaceLayoutBundle } | null> {
+  const handle = await requireWorkspaceLayoutDirectoryHandle();
+  const fileName = `${toKebabCase(input.name || "workspace-layout")}.layout-bundle.json`;
+
+  await ensureReadWritePermission(handle);
+  const targets = await resolveWorkspaceLayoutSearchTargets(handle, fileName);
+
+  for (const target of targets) {
+    const raw = await readJsonFile(target.directoryHandle, fileName);
+    const bundle = normalizeWorkspaceLayoutBundle(raw);
+    if (!bundle) continue;
+
+    applyWorkspaceLayoutBundle(bundle);
+
+    return {
+      directoryName: handle.name,
+      bundleName: bundle.name,
+      relativePath: target.displayPath,
+      bundle
+    };
+  }
+
+  return null;
+}
+
+function toKebabCase(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "untitled";
 }
 
 async function requirePieceStylesDirectoryHandle() {

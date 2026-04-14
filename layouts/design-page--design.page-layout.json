@@ -3,7 +3,7 @@
   "layoutKey": "design-page",
   "layoutVariant": "two-pane",
   "name": "design",
-  "savedAt": "2026-04-13T07:52:41.279Z",
+  "savedAt": "2026-04-14T08:31:51.825Z",
   "layoutState": {
     "version": 2,
     "columnCount": 14,
@@ -22,38 +22,17 @@
         "w": 3,
         "h": 14
       },
-      "secondary": {
-        "x": 5,
-        "y": 6,
-        "w": 3,
-        "h": 15
-      },
       "detail": {
         "x": 4,
         "y": 2,
         "w": 11,
         "h": 14
-      },
-      "tertiary": {
-        "x": 5,
-        "y": 21,
-        "w": 4,
-        "h": 7
-      },
-      "quaternary": {
-        "x": 9,
-        "y": 21,
-        "w": 4,
-        "h": 7
       }
     },
     "visible": {
       "intro": true,
       "index": true,
-      "secondary": true,
-      "detail": true,
-      "tertiary": true,
-      "quaternary": true
+      "detail": true
     }
   }
 }

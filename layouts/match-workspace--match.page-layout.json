@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "layoutKey": "match-workspace",
+  "layoutVariant": "match",
+  "name": "match",
+  "savedAt": "2026-04-14T08:31:51.528Z",
+  "layoutState": {
+    "version": 2,
+    "columnCount": 12,
+    "columnGap": 8,
+    "rowHeight": 64,
+    "panels": {
+      "board": {
+        "x": 6,
+        "y": 1,
+        "w": 4,
+        "h": 8
+      },
+      "moves": {
+        "x": 10,
+        "y": 1,
+        "w": 3,
+        "h": 15
+      },
+      "city-map-maplibre": {
+        "x": 1,
+        "y": 1,
+        "w": 5,
+        "h": 8
+      },
+      "story-beat": {
+        "x": 1,
+        "y": 9,
+        "w": 6,
+        "h": 3
+      },
+      "story-tile": {
+        "x": 1,
+        "y": 12,
+        "w": 3,
+        "h": 5
+      },
+      "story-character": {
+        "x": 4,
+        "y": 12,
+        "w": 3,
+        "h": 5
+      },
+      "story-tone": {
+        "x": 7,
+        "y": 9,
+        "w": 4,
+        "h": 3
+      },
+      "recent-games": {
+        "x": 1,
+        "y": 9,
+        "w": 9,
+        "h": 7
+      }
+    },
+    "visible": {
+      "board": true,
+      "moves": true,
+      "city-map-maplibre": true,
+      "story-beat": false,
+      "story-tile": false,
+      "story-character": false,
+      "story-tone": false,
+      "recent-games": true
+    }
+  }
+}

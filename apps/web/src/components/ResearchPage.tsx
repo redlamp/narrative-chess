@@ -1,12 +1,13 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CompetitiveLandscapePage } from "./CompetitiveLandscapePage";
-import { IndexedWorkspace } from "./IndexedWorkspace";
+import { IndexedWorkspace, type LayoutNavigation } from "./IndexedWorkspace";
 import { WorkspaceIntroCard } from "./WorkspaceIntroCard";
 
 type ResearchPageProps = {
   layoutMode: boolean;
   showLayoutGrid: boolean;
+  layoutNavigation?: LayoutNavigation;
   onToggleLayoutMode: () => void;
   onToggleLayoutGrid: (checked: boolean) => void;
 };
@@ -14,6 +15,7 @@ type ResearchPageProps = {
 export function ResearchPage({
   layoutMode,
   showLayoutGrid,
+  layoutNavigation,
   onToggleLayoutMode,
   onToggleLayoutGrid
 }: ResearchPageProps) {
@@ -25,6 +27,7 @@ export function ResearchPage({
       layoutKey="research-page"
       layoutVariant="two-pane"
       showLayoutGrid={showLayoutGrid}
+      layoutNavigation={layoutNavigation}
       onToggleLayoutMode={onToggleLayoutMode}
       onToggleLayoutGrid={onToggleLayoutGrid}
       intro={

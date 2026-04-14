@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Board } from "./Board";
 import { ClearableSearchField } from "./ClearableSearchField";
-import { IndexedWorkspace } from "./IndexedWorkspace";
+import { IndexedWorkspace, type LayoutNavigation } from "./IndexedWorkspace";
 import { WorkspaceIntroCard } from "./WorkspaceIntroCard";
 import { WorkspaceListItem } from "./WorkspaceListItem";
 import { WorkspaceNoticeCard } from "./WorkspaceNoticeCard";
@@ -41,6 +41,7 @@ type ClassicGamesLibraryPageProps = {
   selectedReferenceGameId: string;
   layoutMode: boolean;
   showLayoutGrid: boolean;
+  layoutNavigation?: LayoutNavigation;
   onSelectReferenceGame: (value: string) => void;
   onLoadReferenceGame: (game: ReferenceGame) => void;
   onReferenceGamesChange: (games: ReferenceGame[]) => void;
@@ -161,6 +162,7 @@ export function ClassicGamesLibraryPage({
   selectedReferenceGameId,
   layoutMode,
   showLayoutGrid,
+  layoutNavigation,
   onSelectReferenceGame,
   onLoadReferenceGame,
   onReferenceGamesChange,
@@ -414,6 +416,7 @@ export function ClassicGamesLibraryPage({
         detail: "Game Details"
       }}
       showLayoutGrid={showLayoutGrid}
+      layoutNavigation={layoutNavigation}
       onToggleLayoutMode={onToggleLayoutMode}
       onToggleLayoutGrid={onToggleLayoutGrid}
       intro={

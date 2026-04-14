@@ -17,13 +17,23 @@ import { FloatingLayoutPanel } from "./FloatingLayoutPanel";
 import { PageLayoutToolbar } from "./PageLayoutToolbar";
 import {
   connectWorkspaceLayoutDirectory,
-  deletePageLayoutFileFromDirectory,
   getConnectedWorkspaceLayoutDirectoryName,
-  loadPageLayoutFileFromDirectory,
-  savePageLayoutFileToDirectory,
+  loadLayoutBundleFromDirectory,
+  saveLayoutBundleToDirectory,
   supportsWorkspaceLayoutDirectory
 } from "../fileSystemAccess";
-import { listKnownPageLayoutFiles, type PageLayoutFileReference } from "../pageLayoutFiles";
+import {
+  activatePreset,
+  createPageLayoutPreset,
+  deletePreset,
+  listPageLayoutPresets,
+  renamePreset,
+  reorderPreset,
+  saveActivePreset,
+  togglePresetHidden,
+  type PageLayoutPresetStore
+} from "../pageLayoutPresets";
+import type { SharedLayoutPresetEntry, SharedLayoutPageOption } from "./SharedLayoutToolbar";
 import {
   getDefaultPageLayoutState,
   getPageLayoutRowCount,
@@ -55,25 +65,39 @@ type ActivePageLayoutEdit = {
   initialRect: PageLayoutRect;
 };
 
+export type IndexedWorkspacePanel = {
+  id: string;
+  label: string;
+  content: ReactNode;
+};
+
 type IndexedWorkspaceProps = {
-  intro: ReactNode;
-  index: ReactNode;
+  intro?: ReactNode;
+  index?: ReactNode;
   secondaryIndex?: ReactNode;
-  detail: ReactNode;
+  detail?: ReactNode;
   tertiary?: ReactNode;
   quaternary?: ReactNode;
-  panelLabels?: Partial<Record<PageLayoutPanelId, string>>;
+  panels?: IndexedWorkspacePanel[];
+  panelLabels?: Partial<Record<string, string>>;
   className?: string;
   scrollMode?: "panel" | "page";
   layoutMode?: boolean;
   layoutKey?: string;
   layoutVariant?: PageLayoutVariant;
   showLayoutGrid?: boolean;
+  layoutNavigation?: LayoutNavigation;
   onToggleLayoutMode?: () => void;
   onToggleLayoutGrid?: (checked: boolean) => void;
 };
 
-const panelLabels: Record<PageLayoutPanelId, string> = {
+export type LayoutNavigation = {
+  pages: SharedLayoutPageOption[];
+  activePage: string;
+  onPageChange: (page: string) => void;
+};
+
+const defaultPanelLabels: Record<string, string> = {
   intro: "Header",
   index: "Primary column",
   secondary: "Secondary column",
@@ -98,14 +122,14 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
-function createDefaultPanelSizeConstraints(input: {
-  maxWidth: number;
-  maxHeight: number;
-}) {
+function createDefaultPanelSizeConstraints(
+  panelIds: string[],
+  input: { maxWidth: number; maxHeight: number }
+) {
   const safeMaxWidth = Math.max(1, input.maxWidth);
   const safeMaxHeight = Math.max(1, input.maxHeight);
 
-  return pageLayoutPanelIds.reduce((next, panelId) => {
+  return panelIds.reduce((next, panelId) => {
     next[panelId] = {
       minW: 1,
       maxW: safeMaxWidth,
@@ -113,7 +137,7 @@ function createDefaultPanelSizeConstraints(input: {
       maxH: safeMaxHeight
     };
     return next;
-  }, {} as Record<PageLayoutPanelId, PanelSizeConstraint>);
+  }, {} as Record<string, PanelSizeConstraint>);
 }
 
 function normalizePanelSizeConstraint(
@@ -178,6 +202,7 @@ export function IndexedWorkspace({
   detail,
   tertiary,
   quaternary,
+  panels: dynamicPanels,
   panelLabels: panelLabelsOverride,
   className,
   scrollMode = "panel",
@@ -185,20 +210,48 @@ export function IndexedWorkspace({
   layoutKey,
   layoutVariant,
   showLayoutGrid = false,
+  layoutNavigation,
   onToggleLayoutMode,
   onToggleLayoutGrid
 }: IndexedWorkspaceProps) {
   const resolvedLayoutVariant = layoutVariant ?? (secondaryIndex ? "three-pane" : "two-pane");
   const resolvedPanelLabels = useMemo(
-    () => ({
-      ...panelLabels,
-      ...panelLabelsOverride
-    }),
-    [panelLabelsOverride]
-  );
-  const activePanelIds = useMemo<PageLayoutPanelId[]>(
     () => {
-      const nextIds: PageLayoutPanelId[] = ["intro", "index"];
+      if (dynamicPanels) {
+        const dynamicLabels: Record<string, string> = {};
+        for (const panel of dynamicPanels) {
+          dynamicLabels[panel.id] = panel.label;
+        }
+        return { ...dynamicLabels, ...panelLabelsOverride };
+      }
+      return { ...defaultPanelLabels, ...panelLabelsOverride };
+    },
+    [dynamicPanels, panelLabelsOverride]
+  );
+  const panelContentMap = useMemo(() => {
+    if (dynamicPanels) {
+      const map: Record<string, ReactNode> = {};
+      for (const panel of dynamicPanels) {
+        map[panel.id] = panel.content;
+      }
+      return map;
+    }
+    const map: Record<string, ReactNode> = {};
+    if (intro) map.intro = intro;
+    if (index) map.index = index;
+    if (secondaryIndex) map.secondary = secondaryIndex;
+    if (detail) map.detail = detail;
+    if (tertiary) map.tertiary = tertiary;
+    if (quaternary) map.quaternary = quaternary;
+    return map;
+  }, [dynamicPanels, intro, index, secondaryIndex, detail, tertiary, quaternary]);
+  const activePanelIds = useMemo<string[]>(
+    () => {
+      if (dynamicPanels) {
+        return dynamicPanels.map((p) => p.id);
+      }
+
+      const nextIds: string[] = ["intro", "index"];
 
       if (secondaryIndex) {
         nextIds.push("secondary");
@@ -216,7 +269,7 @@ export function IndexedWorkspace({
 
       return nextIds;
     },
-    [quaternary, secondaryIndex, tertiary]
+    [dynamicPanels, quaternary, secondaryIndex, tertiary]
   );
   const [isCompactViewport, setIsCompactViewport] = useState(false);
   const [layoutState, setLayoutState] = useState<PageLayoutState>(() =>
@@ -239,7 +292,7 @@ export function IndexedWorkspace({
         })
       : getDefaultPageLayoutState(resolvedLayoutVariant);
 
-    return createDefaultPanelSizeConstraints({
+    return createDefaultPanelSizeConstraints(activePanelIds, {
       maxWidth: initialLayout.columnCount,
       maxHeight: Math.max(24, getPageLayoutRowCount({ layoutState: initialLayout, panelIds: activePanelIds }) + 12)
     });
@@ -249,11 +302,11 @@ export function IndexedWorkspace({
   const [layoutDirectoryName, setLayoutDirectoryName] = useState<string | null>(null);
   const [layoutFileBusyAction, setLayoutFileBusyAction] = useState<string | null>(null);
   const [layoutFileNotice, setLayoutFileNotice] = useState<LayoutFileNotice | null>(null);
-  const [knownLayoutFiles, setKnownLayoutFiles] = useState<PageLayoutFileReference[]>(() =>
-    layoutKey ? listKnownPageLayoutFiles(layoutKey) : []
-  );
   const [isLayoutDirectorySupported, setIsLayoutDirectorySupported] = useState(false);
   const [activeLayoutEdit, setActiveLayoutEdit] = useState<ActivePageLayoutEdit | null>(null);
+  const [presetStore, setPresetStore] = useState<PageLayoutPresetStore>(() =>
+    layoutKey ? listPageLayoutPresets(layoutKey) : { version: 1, activePresetId: null, presets: [] }
+  );
   const layoutRef = useRef<HTMLDivElement | null>(null);
   const effectiveLayoutMode = layoutMode && !isCompactViewport;
   const useFreeformLayout = !isCompactViewport;
@@ -285,11 +338,27 @@ export function IndexedWorkspace({
     () =>
       activePanelIds.map((panelId) => ({
         id: panelId,
-        label: resolvedPanelLabels[panelId],
+        label: resolvedPanelLabels[panelId] ?? panelId,
         visible: layoutState.visible[panelId]
       })),
     [activePanelIds, layoutState.visible, resolvedPanelLabels]
   );
+  const presetEntries = useMemo<SharedLayoutPresetEntry[]>(
+    () =>
+      presetStore.presets.map((p) => ({
+        id: p.id,
+        name: p.name,
+        active: p.id === presetStore.activePresetId,
+        hidden: p.hidden
+      })),
+    [presetStore]
+  );
+
+  useEffect(() => {
+    if (layoutKey) {
+      setPresetStore(listPageLayoutPresets(layoutKey));
+    }
+  }, [layoutKey]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -339,12 +408,15 @@ export function IndexedWorkspace({
 
   useEffect(() => {
     setPanelSizeConstraints((current) =>
-      pageLayoutPanelIds.reduce((next, panelId) => {
-        next[panelId] = normalizePanelSizeConstraint(current[panelId], panelConstraintMaxSize);
+      activePanelIds.reduce((next, panelId) => {
+        next[panelId] = normalizePanelSizeConstraint(
+          current[panelId] ?? { minW: 1, maxW: panelConstraintMaxSize.maxWidth, minH: 1, maxH: panelConstraintMaxSize.maxHeight },
+          panelConstraintMaxSize
+        );
         return next;
-      }, {} as Record<PageLayoutPanelId, PanelSizeConstraint>)
+      }, {} as Record<string, PanelSizeConstraint>)
     );
-  }, [panelConstraintMaxSize]);
+  }, [activePanelIds, panelConstraintMaxSize]);
 
   useEffect(() => {
     if (!effectiveLayoutMode) {
@@ -354,15 +426,7 @@ export function IndexedWorkspace({
 
   useEffect(() => {
     setIsLayoutDirectorySupported(supportsWorkspaceLayoutDirectory());
-
-    if (layoutKey) {
-      const rememberedFiles = listKnownPageLayoutFiles(layoutKey);
-      setKnownLayoutFiles(rememberedFiles);
-      setLayoutFileName(rememberedFiles[0]?.name ?? getDefaultLayoutFileName(layoutKey));
-    } else {
-      setKnownLayoutFiles([]);
-      setLayoutFileName(getDefaultLayoutFileName());
-    }
+    setLayoutFileName(getDefaultLayoutFileName(layoutKey));
 
     let cancelled = false;
 
@@ -589,6 +653,59 @@ export function IndexedWorkspace({
           })
         : getDefaultPageLayoutState(resolvedLayoutVariant)
     );
+    if (layoutKey) {
+      setPresetStore((current) => ({ ...current, activePresetId: null }));
+    }
+  };
+
+  const handleCreatePreset = () => {
+    if (!layoutKey) return;
+    const name = `Layout ${presetStore.presets.length + 1}`;
+    setPresetStore(createPageLayoutPreset(layoutKey, name, layoutState));
+  };
+
+  // Ensure a "Default" preset exists on first open
+  useEffect(() => {
+    if (!layoutKey) return;
+    const store = listPageLayoutPresets(layoutKey);
+    if (store.presets.length === 0) {
+      const nextStore = createPageLayoutPreset(layoutKey, "Default", layoutState);
+      setPresetStore(nextStore);
+    }
+  }, [layoutKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSavePreset = () => {
+    if (!layoutKey) return;
+    setPresetStore(saveActivePreset(layoutKey, layoutState));
+  };
+
+  const handleActivatePreset = (presetId: string) => {
+    if (!layoutKey) return;
+    const result = activatePreset(layoutKey, presetId);
+    setPresetStore(result.store);
+    if (result.layoutState) {
+      setLayoutState(result.layoutState);
+    }
+  };
+
+  const handleTogglePresetHidden = (presetId: string) => {
+    if (!layoutKey) return;
+    setPresetStore(togglePresetHidden(layoutKey, presetId));
+  };
+
+  const handleDeletePreset = (presetId: string) => {
+    if (!layoutKey) return;
+    setPresetStore(deletePreset(layoutKey, presetId));
+  };
+
+  const handleRenamePreset = (presetId: string, name: string) => {
+    if (!layoutKey) return;
+    setPresetStore(renamePreset(layoutKey, presetId, name));
+  };
+
+  const handleReorderPreset = (presetId: string, targetId: string) => {
+    if (!layoutKey) return;
+    setPresetStore(reorderPreset(layoutKey, presetId, targetId));
   };
 
   const handleRestorePanel = (panelId: PageLayoutPanelId) => {
@@ -688,85 +805,42 @@ export function IndexedWorkspace({
     });
   };
 
-  const handleSaveLayoutFile = () => {
-    if (!layoutKey) {
-      return;
-    }
-
-    void runLayoutFileAction("save-layout-file", async () => {
-      const result = await savePageLayoutFileToDirectory({
-        layoutKey,
-        layoutVariant: resolvedLayoutVariant,
-        panelIds: activePanelIds,
-        name: layoutFileName,
-        layoutState
-      });
-      setKnownLayoutFiles(result.knownFiles);
+  const handleSaveLayoutBundle = () => {
+    void runLayoutFileAction("save-layout-bundle", async () => {
+      const result = await saveLayoutBundleToDirectory({ name: layoutFileName });
       setLayoutDirectoryName(result.directoryName);
-      setLayoutFileName(result.layoutName);
+      setLayoutFileName(result.bundleName);
       setLayoutFileNotice({
         tone: "success",
-        text: `Saved ${result.layoutName} to ${result.relativePath}.`
+        text: `Saved all layouts to ${result.relativePath}.`
       });
     });
   };
 
-  const handleLoadLayoutFile = () => {
-    if (!layoutKey) {
-      return;
-    }
-
-    void runLayoutFileAction("load-layout-file", async () => {
-      const result = await loadPageLayoutFileFromDirectory({
-        layoutKey,
-        layoutVariant: resolvedLayoutVariant,
-        panelIds: activePanelIds,
-        name: layoutFileName
-      });
+  const handleLoadLayoutBundle = () => {
+    void runLayoutFileAction("load-layout-bundle", async () => {
+      const result = await loadLayoutBundleFromDirectory({ name: layoutFileName });
       if (!result) {
         setLayoutFileNotice({
           tone: "neutral",
-          text: "No named layout file matched that name in the connected folder."
+          text: "No layout bundle matched that name in the connected folder."
         });
         return;
       }
 
-      const nextState = layoutKey
-        ? savePageLayoutState({
-            layoutKey,
-            layoutState: result.layoutState,
-            variant: resolvedLayoutVariant,
-            panelIds: activePanelIds
-          })
-        : result.layoutState;
-      setLayoutState(nextState);
-      setKnownLayoutFiles(result.knownFiles);
+      // Reload this page's layout from localStorage (bundle already applied)
+      if (layoutKey) {
+        const currentPageLayout = result.bundle.pages[layoutKey];
+        if (currentPageLayout) {
+          setLayoutState(currentPageLayout.layoutState);
+        }
+      }
+
       setLayoutDirectoryName(result.directoryName);
-      setLayoutFileName(result.layoutName);
+      setLayoutFileName(result.bundleName);
       setLayoutFileNotice({
         tone: "success",
-        text: `Loaded ${result.layoutName} from ${result.relativePath}.`
-      });
-    });
-  };
-
-  const handleDeleteLayoutFile = () => {
-    if (!layoutKey) {
-      return;
-    }
-
-    void runLayoutFileAction("delete-layout-file", async () => {
-      const result = await deletePageLayoutFileFromDirectory({
-        layoutKey,
-        name: layoutFileName
-      });
-      setKnownLayoutFiles(result.knownFiles);
-      setLayoutDirectoryName(result.directoryName);
-      setLayoutFileName(getDefaultLayoutFileName(layoutKey));
-      handleResetLayout();
-      setLayoutFileNotice({
-        tone: "neutral",
-        text: `Removed ${result.layoutName} from ${result.relativePath} and restored the default layout.`
+        text: `Loaded all layouts from ${result.relativePath}.`
       });
     });
   };
@@ -801,10 +875,11 @@ export function IndexedWorkspace({
     }
 
     const isOpen = activePanelConstraintEditor === panelId;
-    const constraint = normalizePanelSizeConstraint(
-      panelSizeConstraints[panelId],
-      panelConstraintMaxSize
-    );
+    const rawConstraint = panelSizeConstraints[panelId] ?? {
+      minW: 1, maxW: panelConstraintMaxSize.maxWidth,
+      minH: 1, maxH: panelConstraintMaxSize.maxHeight
+    };
+    const constraint = normalizePanelSizeConstraint(rawConstraint, panelConstraintMaxSize);
 
     return (
       <>
@@ -870,25 +945,15 @@ export function IndexedWorkspace({
           className
         )}
       >
-        {layoutState.visible.intro ? <div className="indexed-workspace__intro">{intro}</div> : null}
-        <div
-          className={cn(
-            "indexed-workspace__columns",
-            secondaryIndex ? "indexed-workspace__columns--three-pane" : null
-          )}
-        >
-          {layoutState.visible.index ? <div className="indexed-workspace__index">{index}</div> : null}
-          {secondaryIndex && layoutState.visible.secondary ? (
-            <div className="indexed-workspace__secondary-index">{secondaryIndex}</div>
-          ) : null}
-          {layoutState.visible.detail ? <div className="indexed-workspace__detail">{detail}</div> : null}
-          {tertiary && layoutState.visible.tertiary ? (
-            <div className="indexed-workspace__detail">{tertiary}</div>
-          ) : null}
-          {quaternary && layoutState.visible.quaternary ? (
-            <div className="indexed-workspace__detail">{quaternary}</div>
-          ) : null}
-        </div>
+        {activePanelIds.map((panelId) => {
+          const content = panelContentMap[panelId];
+          if (!content || !layoutState.visible[panelId]) return null;
+          return (
+            <div key={panelId} className={`indexed-workspace__${panelId}`}>
+              {content}
+            </div>
+          );
+        })}
       </main>
     );
   }
@@ -908,8 +973,18 @@ export function IndexedWorkspace({
               layoutFileNotice={layoutFileNotice}
               isLayoutDirectorySupported={isLayoutDirectorySupported}
               layoutFileBusyAction={layoutFileBusyAction}
-              knownLayoutFiles={knownLayoutFiles}
               components={componentOptions}
+              pages={layoutNavigation?.pages}
+              activePage={layoutNavigation?.activePage}
+              onPageChange={layoutNavigation?.onPageChange}
+              presets={presetEntries}
+              onCreatePreset={handleCreatePreset}
+              onSavePreset={handleSavePreset}
+              onActivatePreset={handleActivatePreset}
+              onTogglePresetHidden={handleTogglePresetHidden}
+              onDeletePreset={handleDeletePreset}
+              onRenamePreset={handleRenamePreset}
+              onReorderPreset={handleReorderPreset}
               onDragHandlePointerDown={onDragHandlePointerDown}
               isDragging={isDragging}
               onToggleLayoutMode={() => onToggleLayoutMode?.()}
@@ -942,10 +1017,8 @@ export function IndexedWorkspace({
               onToggleLayoutGrid={(checked) => onToggleLayoutGrid?.(checked)}
               onLayoutFileNameChange={setLayoutFileName}
               onConnectLayoutDirectory={handleConnectLayoutDirectory}
-              onLoadLayoutFile={handleLoadLayoutFile}
-              onSaveLayoutFile={handleSaveLayoutFile}
-              onDeleteLayoutFile={handleDeleteLayoutFile}
-              onSelectKnownLayoutFile={setLayoutFileName}
+              onSaveLayoutBundle={handleSaveLayoutBundle}
+              onLoadLayoutBundle={handleLoadLayoutBundle}
               onRestoreComponent={(panelId) => handleRestorePanel(panelId as PageLayoutPanelId)}
               onToggleComponentVisibility={(panelId, visible) =>
                 handlePanelVisibilityChange(panelId as PageLayoutPanelId, visible)
@@ -994,107 +1067,28 @@ export function IndexedWorkspace({
             </div>
           ) : null}
 
-          {layoutState.visible.intro ? (
-            <div
-              className={cn(
-                "workspace-item",
-                "page-layout-panel",
-                "page-layout-panel--intro",
-                activeLayoutEdit?.panelId === "intro" ? "is-editing" : null
-              )}
-              style={getPagePanelStyle(layoutState, "intro")}
-            >
-              <div className="page-layout-panel__content">{intro}</div>
-              {renderMoveSurface("intro")}
-              {renderConstraintHandle("intro")}
-              {renderResizeHandle("intro")}
-            </div>
-          ) : null}
+          {activePanelIds.map((panelId) => {
+            const content = panelContentMap[panelId];
+            if (!content || !layoutState.visible[panelId]) return null;
 
-          {layoutState.visible.index ? (
-            <div
-              className={cn(
-                "workspace-item",
-                "page-layout-panel",
-                "page-layout-panel--index",
-                activeLayoutEdit?.panelId === "index" ? "is-editing" : null
-              )}
-              style={getPagePanelStyle(layoutState, "index")}
-            >
-              <div className="page-layout-panel__content">{index}</div>
-              {renderMoveSurface("index")}
-              {renderConstraintHandle("index")}
-              {renderResizeHandle("index")}
-            </div>
-          ) : null}
-
-          {secondaryIndex && layoutState.visible.secondary ? (
-            <div
-              className={cn(
-                "workspace-item",
-                "page-layout-panel",
-                "page-layout-panel--secondary",
-                activeLayoutEdit?.panelId === "secondary" ? "is-editing" : null
-              )}
-              style={getPagePanelStyle(layoutState, "secondary")}
-            >
-              <div className="page-layout-panel__content">{secondaryIndex}</div>
-              {renderMoveSurface("secondary")}
-              {renderConstraintHandle("secondary")}
-              {renderResizeHandle("secondary")}
-            </div>
-          ) : null}
-
-          {layoutState.visible.detail ? (
-            <div
-              className={cn(
-                "workspace-item",
-                "page-layout-panel",
-                "page-layout-panel--detail",
-                activeLayoutEdit?.panelId === "detail" ? "is-editing" : null
-              )}
-              style={getPagePanelStyle(layoutState, "detail")}
-            >
-              <div className="page-layout-panel__content">{detail}</div>
-              {renderMoveSurface("detail")}
-              {renderConstraintHandle("detail")}
-              {renderResizeHandle("detail")}
-            </div>
-          ) : null}
-
-          {tertiary && layoutState.visible.tertiary ? (
-            <div
-              className={cn(
-                "workspace-item",
-                "page-layout-panel",
-                "page-layout-panel--tertiary",
-                activeLayoutEdit?.panelId === "tertiary" ? "is-editing" : null
-              )}
-              style={getPagePanelStyle(layoutState, "tertiary")}
-            >
-              <div className="page-layout-panel__content">{tertiary}</div>
-              {renderMoveSurface("tertiary")}
-              {renderConstraintHandle("tertiary")}
-              {renderResizeHandle("tertiary")}
-            </div>
-          ) : null}
-
-          {quaternary && layoutState.visible.quaternary ? (
-            <div
-              className={cn(
-                "workspace-item",
-                "page-layout-panel",
-                "page-layout-panel--quaternary",
-                activeLayoutEdit?.panelId === "quaternary" ? "is-editing" : null
-              )}
-              style={getPagePanelStyle(layoutState, "quaternary")}
-            >
-              <div className="page-layout-panel__content">{quaternary}</div>
-              {renderMoveSurface("quaternary")}
-              {renderConstraintHandle("quaternary")}
-              {renderResizeHandle("quaternary")}
-            </div>
-          ) : null}
+            return (
+              <div
+                key={panelId}
+                className={cn(
+                  "workspace-item",
+                  "page-layout-panel",
+                  `page-layout-panel--${panelId}`,
+                  activeLayoutEdit?.panelId === panelId ? "is-editing" : null
+                )}
+                style={getPagePanelStyle(layoutState, panelId)}
+              >
+                <div className="page-layout-panel__content">{content}</div>
+                {renderMoveSurface(panelId)}
+                {renderConstraintHandle(panelId)}
+                {renderResizeHandle(panelId)}
+              </div>
+            );
+          })}
         </div>
       </main>
     </div>
