@@ -759,75 +759,6 @@ export default function App() {
   }, [clearActiveMultiplayerSession, sessionEmail]);
 
   useEffect(() => {
-    if (
-      !activeMultiplayerSession ||
-      isStudyMode ||
-      isSyncingActiveMultiplayerMove ||
-      snapshot.moveHistory.length <= activeMultiplayerSession.syncedMoveCount
-    ) {
-      return;
-    }
-
-    const latestMove = snapshot.moveHistory.at(-1);
-    if (!latestMove || latestMove.side !== activeMultiplayerSession.yourSide) {
-      return;
-    }
-
-    if (activeMultiplayerMoveSyncRef.current === latestMove.id) {
-      return;
-    }
-
-    let cancelled = false;
-    activeMultiplayerMoveSyncRef.current = latestMove.id;
-    setIsSyncingActiveMultiplayerMove(true);
-
-    void appendActiveGameMoveInSupabase({
-      gameId: activeMultiplayerSession.gameId,
-      move: latestMove,
-      snapshot
-    })
-      .then((result) => {
-        if (cancelled) {
-          return;
-        }
-
-        setActiveMultiplayerSession((current) =>
-          current && current.gameId === activeMultiplayerSession.gameId
-            ? {
-                ...current,
-                status: result.status,
-                currentTurn: result.currentTurn,
-                deadlineAt: result.deadlineAt,
-                syncedMoveCount: result.nextPlyNumber,
-                result: result.result,
-                whiteRatingDelta: result.whiteRatingDelta,
-                blackRatingDelta: result.blackRatingDelta
-              }
-            : current
-        );
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          console.warn("[supabase] Could not sync multiplayer move.", error);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsSyncingActiveMultiplayerMove(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    activeMultiplayerSession,
-    isStudyMode,
-    isSyncingActiveMultiplayerMove,
-    snapshot
-  ]);
-
-  useEffect(() => {
     const allowedViewAsRoles =
       sessionRole === "admin"
         ? (["admin", "author", "player"] as AppRole[])
@@ -967,6 +898,76 @@ export default function App() {
     totalPlies,
     resetKey: timelineKey
   });
+
+  useEffect(() => {
+    if (
+      !activeMultiplayerSession ||
+      isStudyMode ||
+      isSyncingActiveMultiplayerMove ||
+      snapshot.moveHistory.length <= activeMultiplayerSession.syncedMoveCount
+    ) {
+      return;
+    }
+
+    const latestMove = snapshot.moveHistory.at(-1);
+    if (!latestMove || latestMove.side !== activeMultiplayerSession.yourSide) {
+      return;
+    }
+
+    if (activeMultiplayerMoveSyncRef.current === latestMove.id) {
+      return;
+    }
+
+    let cancelled = false;
+    activeMultiplayerMoveSyncRef.current = latestMove.id;
+    setIsSyncingActiveMultiplayerMove(true);
+
+    void appendActiveGameMoveInSupabase({
+      gameId: activeMultiplayerSession.gameId,
+      move: latestMove,
+      snapshot
+    })
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+
+        setActiveMultiplayerSession((current) =>
+          current && current.gameId === activeMultiplayerSession.gameId
+            ? {
+                ...current,
+                status: result.status,
+                currentTurn: result.currentTurn,
+                deadlineAt: result.deadlineAt,
+                syncedMoveCount: result.nextPlyNumber,
+                result: result.result,
+                whiteRatingDelta: result.whiteRatingDelta,
+                blackRatingDelta: result.blackRatingDelta
+              }
+            : current
+        );
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.warn("[supabase] Could not sync multiplayer move.", error);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsSyncingActiveMultiplayerMove(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeMultiplayerSession,
+    isStudyMode,
+    isSyncingActiveMultiplayerMove,
+    snapshot
+  ]);
+
   const animatedPieces = useMemo(
     () => getAnimatedPieceFrames({ snapshots: historySnapshots, playhead: motionPlayhead }),
     [historySnapshots, motionPlayhead]
