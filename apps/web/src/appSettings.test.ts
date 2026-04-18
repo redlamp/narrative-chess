@@ -12,7 +12,8 @@ describe("appSettings", () => {
       showBoardCoordinates: true,
       showDistrictLabels: true,
       showRecentCharacterActions: true,
-      showLayoutGrid: true
+      showLayoutGrid: true,
+      highlightColor: "blue"
     });
   });
 
@@ -30,7 +31,8 @@ describe("appSettings", () => {
       showBoardCoordinates: false,
       showDistrictLabels: true,
       showRecentCharacterActions: true,
-      showLayoutGrid: true
+      showLayoutGrid: true,
+      highlightColor: "blue"
     });
   });
 });

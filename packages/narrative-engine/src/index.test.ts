@@ -82,7 +82,7 @@ describe("createInitialCharacterRoster", () => {
     });
 
     expect(roster["white-king"]?.districtOfOrigin).toBe("Alnwickhill");
-    expect(roster["black-queen"]?.districtOfOrigin).toBe("Trinity");
+    expect(roster["black-queen"]?.districtOfOrigin).toBe("Newhaven");
     expect(roster["black-pawn-h"]?.traits).toContain("watchful");
     expect(roster["white-queen"]?.oneLineDescription).toContain("Kaimes");
     expect(roster["white-queen"]?.generationSource).toContain("reviewed city board");

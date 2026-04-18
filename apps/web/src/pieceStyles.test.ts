@@ -10,7 +10,7 @@ describe("pieceStyles", () => {
   it("falls back to the default stylesheet", () => {
     window.localStorage.clear();
 
-    expect(listPieceStyleSheet()).toContain(".board-square__piece");
+    expect(listPieceStyleSheet()).toBe(defaultPieceStyleSheet);
   });
 
   it("saves and resets the stylesheet", () => {
