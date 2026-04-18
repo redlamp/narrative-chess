@@ -99,8 +99,12 @@ export type ActiveGameSession = {
   gameId: string;
   cityEditionId: string | null;
   status: ActiveGameRecord["status"];
+  rated: boolean;
   yourSide: ActiveGameRecord["yourSide"];
   currentTurn: ActiveGameRecord["currentTurn"];
+  result: "white" | "black" | "draw" | "abandoned" | "cancelled" | null;
+  whiteRatingDelta: number | null;
+  blackRatingDelta: number | null;
   snapshot: GameSnapshot | null;
   syncedMoveCount: number;
   timeControlKind: TimeControlKind;
@@ -141,7 +145,11 @@ type ActiveGameSessionThreadRow = {
   id: string;
   city_edition_id: string | null;
   status: ActiveGameRecord["status"];
+  rated: boolean;
   current_turn: ActiveGameRecord["currentTurn"];
+  result: ActiveGameSession["result"];
+  white_rating_delta: number | null;
+  black_rating_delta: number | null;
   time_control_kind: TimeControlKind;
   base_seconds: number | null;
   increment_seconds: number | null;
@@ -338,7 +346,7 @@ export async function loadActiveGameSessionFromSupabase(
   const { data: threadData, error: threadError } = await auth.supabase
     .from("game_threads")
     .select(
-      "id, city_edition_id, status, current_turn, time_control_kind, base_seconds, increment_seconds, move_deadline_seconds, deadline_at, game_participants!inner(side, participant_status)"
+      "id, city_edition_id, status, rated, current_turn, result, white_rating_delta, black_rating_delta, time_control_kind, base_seconds, increment_seconds, move_deadline_seconds, deadline_at, game_participants!inner(side, participant_status)"
     )
     .eq("id", gameId)
     .eq("game_participants.user_id", auth.user.id)
@@ -385,8 +393,12 @@ export async function loadActiveGameSessionFromSupabase(
     gameId: thread.id,
     cityEditionId: thread.city_edition_id,
     status: thread.status,
+    rated: thread.rated,
     yourSide: selfParticipant.side,
     currentTurn: thread.current_turn,
+    result: thread.result,
+    whiteRatingDelta: thread.white_rating_delta,
+    blackRatingDelta: thread.black_rating_delta,
     snapshot,
     syncedMoveCount,
     timeControlKind: thread.time_control_kind,
@@ -406,6 +418,9 @@ export async function appendActiveGameMoveInSupabase(input: {
   currentTurn: PieceSide | null;
   deadlineAt: string | null;
   nextPlyNumber: number;
+  result: ActiveGameSession["result"];
+  whiteRatingDelta: number | null;
+  blackRatingDelta: number | null;
 }> {
   const auth = await requireAuthenticatedUser();
   if (!auth) {
@@ -444,6 +459,9 @@ export async function appendActiveGameMoveInSupabase(input: {
     status: row.status as ActiveGameRecord["status"],
     currentTurn: (row.current_turn as PieceSide | null) ?? null,
     deadlineAt: (row.deadline_at as string | null) ?? null,
-    nextPlyNumber: row.next_ply_number as number
+    nextPlyNumber: row.next_ply_number as number,
+    result: (row.result as ActiveGameSession["result"]) ?? null,
+    whiteRatingDelta: (row.white_rating_delta as number | null) ?? null,
+    blackRatingDelta: (row.black_rating_delta as number | null) ?? null
   };
 }

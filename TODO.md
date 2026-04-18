@@ -15,19 +15,18 @@ Last updated: April 18, 2026
    h. time-control schema + invite presets implemented
    i. move append / turn sync implemented
    j. `Active` games can now be opened into the match surface
-   k. next: rated completion + Elo update
+   k. rated completion + Elo update implemented
+   l. Play header now shows multiplayer status and Elo delta for completed rated games
 
 ## Next
 
-1. Add rated game completion + Elo update
+1. Add remote refresh / polling or Realtime so opponent moves appear without manual reopen
 
-2. Add remote refresh / polling or Realtime so opponent moves appear without manual reopen
+2. Pull completed multiplayer games into a dedicated list or archive surface
 
-3. Show explicit multiplayer session status in Play UI
+3. Add Supabase Realtime subscriptions for multiplayer
 
-4. Add Supabase Realtime subscriptions for multiplayer
-
-5. Let invite creator choose or randomize color instead of fixed white
+4. Let invite creator choose or randomize color instead of fixed white
 
 ## Durable data already moved to Supabase
 

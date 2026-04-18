@@ -188,11 +188,15 @@ type ActiveMultiplayerSession = {
   gameId: string;
   cityEditionId: string | null;
   status: "invited" | "active" | "completed" | "abandoned" | "cancelled";
+  rated: boolean;
   yourSide: "white" | "black" | "spectator";
   currentTurn: "white" | "black" | null;
   syncedMoveCount: number;
   timeControlKind: TimeControlKind;
   deadlineAt: string | null;
+  result: "white" | "black" | "draw" | "abandoned" | "cancelled" | null;
+  whiteRatingDelta: number | null;
+  blackRatingDelta: number | null;
 };
 
 type PanelSizeConstraint = {
@@ -280,6 +284,30 @@ function statusCardStateClassName(isCheck: boolean, isCheckmate: boolean) {
 
 function turnLabel(turn: "white" | "black") {
   return turn === "white" ? "White" : "Black";
+}
+
+function multiplayerResultLabel(result: ActiveMultiplayerSession["result"]) {
+  if (result === "white") {
+    return "White won";
+  }
+
+  if (result === "black") {
+    return "Black won";
+  }
+
+  if (result === "draw") {
+    return "Draw";
+  }
+
+  if (result === "abandoned") {
+    return "Abandoned";
+  }
+
+  if (result === "cancelled") {
+    return "Cancelled";
+  }
+
+  return "In progress";
 }
 
 function getWorkspaceGridStyle(
@@ -577,11 +605,15 @@ export default function App() {
         gameId: session.gameId,
         cityEditionId: session.cityEditionId,
         status: session.status,
+        rated: session.rated,
         yourSide: session.yourSide,
         currentTurn: session.currentTurn,
         syncedMoveCount: session.syncedMoveCount,
         timeControlKind: session.timeControlKind,
-        deadlineAt: session.deadlineAt
+        deadlineAt: session.deadlineAt,
+        result: session.result,
+        whiteRatingDelta: session.whiteRatingDelta,
+        blackRatingDelta: session.blackRatingDelta
       });
       setPage("match");
     } catch (error) {
@@ -802,7 +834,10 @@ export default function App() {
                 status: result.status,
                 currentTurn: result.currentTurn,
                 deadlineAt: result.deadlineAt,
-                syncedMoveCount: result.nextPlyNumber
+                syncedMoveCount: result.nextPlyNumber,
+                result: result.result,
+                whiteRatingDelta: result.whiteRatingDelta,
+                blackRatingDelta: result.blackRatingDelta
               }
             : current
         );
@@ -972,6 +1007,29 @@ export default function App() {
     referenceGamesLibrary[0] ??
     null;
   const hasActiveGame = isStudyMode || totalPlies > 0;
+  const multiplayerStatusValue = activeMultiplayerSession
+    ? activeMultiplayerSession.status === "completed"
+      ? multiplayerResultLabel(activeMultiplayerSession.result)
+      : activeMultiplayerSession.status === "active"
+        ? isActiveMultiplayerTurn
+          ? "Your turn"
+          : "Waiting"
+        : activeMultiplayerSession.status === "invited"
+          ? "Invite pending"
+          : activeMultiplayerSession.status
+    : null;
+  const multiplayerEloDelta =
+    activeMultiplayerSession?.yourSide === "white"
+      ? activeMultiplayerSession.whiteRatingDelta
+      : activeMultiplayerSession?.yourSide === "black"
+        ? activeMultiplayerSession.blackRatingDelta
+        : null;
+  const multiplayerEloValue =
+    activeMultiplayerSession?.rated && activeMultiplayerSession.status === "completed"
+      ? multiplayerEloDelta === null
+        ? "Pending"
+        : `${multiplayerEloDelta >= 0 ? "+" : ""}${multiplayerEloDelta}`
+      : null;
 
   useEffect(() => {
     if (!isHistoryPlaying) {
@@ -2623,6 +2681,18 @@ export default function App() {
                     {totalPlies}
                   </strong>
                 </div>
+                {activeMultiplayerSession ? (
+                  <div className="app-header__status-card">
+                    <span className="app-header__status-label">Multiplayer</span>
+                    <strong className="app-header__status-value">{multiplayerStatusValue}</strong>
+                  </div>
+                ) : null}
+                {multiplayerEloValue ? (
+                  <div className="app-header__status-card">
+                    <span className="app-header__status-label">Elo</span>
+                    <strong className="app-header__status-value">{multiplayerEloValue}</strong>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>
