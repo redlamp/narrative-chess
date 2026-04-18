@@ -458,6 +458,24 @@ export default function App() {
     () => playCityOptions.find((option) => option.id === playCityOptionId) ?? playCityOptions[0] ?? null,
     [playCityOptionId, playCityOptions]
   );
+  const multiplayerCityOptions = useMemo(() => {
+    const seen = new Set<string>();
+
+    return playCityOptions
+      .filter((option) => option.publishedEditionId)
+      .map((option) => ({
+        id: option.publishedEditionId ?? option.id,
+        label: option.displayLabel
+      }))
+      .filter((option) => {
+        if (seen.has(option.id)) {
+          return false;
+        }
+
+        seen.add(option.id);
+        return true;
+      });
+  }, [playCityOptions]);
   const effectiveRole = viewAsRole;
   const canAccessDraftCities = effectiveRole === "author" || effectiveRole === "admin";
   const canPublishCities = effectiveRole === "admin";
@@ -2700,6 +2718,9 @@ export default function App() {
                     selectedReferenceGameId={selectedReferenceGameId}
                     onSelectReferenceGame={setSelectedReferenceGameId}
                     onLoadReferenceGame={handleLoadReferenceGame}
+                    accountEmail={sessionEmail}
+                    accountUsername={sessionProfile?.username ?? null}
+                    multiplayerCityOptions={multiplayerCityOptions}
                   />
                 </Panel>
               )

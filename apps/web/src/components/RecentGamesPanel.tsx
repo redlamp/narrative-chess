@@ -1,7 +1,17 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { ReferenceGame } from "@narrative-chess/content-schema";
+import {
+  createGameInviteInSupabase,
+  listActiveGamesFromSupabase,
+  respondToGameInviteInSupabase,
+  type ActiveGamePlayMode,
+  type ActiveGameRecord
+} from "@/activeGames";
 import type { SavedMatchRecord } from "@/savedMatches";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -15,7 +25,7 @@ import {
   AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ExternalLink, FileUp, Trash2 } from "lucide-react";
+import { Check, ExternalLink, FileUp, RefreshCcw, Send, Trash2, X } from "lucide-react";
 
 type RecentGamesPanelProps = {
   savedMatches: SavedMatchRecord[];
@@ -27,6 +37,12 @@ type RecentGamesPanelProps = {
   selectedReferenceGameId: string;
   onSelectReferenceGame: (value: string) => void;
   onLoadReferenceGame: () => void;
+  accountEmail: string | null;
+  accountUsername: string | null;
+  multiplayerCityOptions: Array<{
+    id: string;
+    label: string;
+  }>;
 };
 
 type RecentGameRowProps = {
@@ -70,6 +86,51 @@ function RecentGameRow({
   );
 }
 
+type ActiveGamesNotice = {
+  tone: "success" | "error";
+  text: string;
+};
+
+function formatGameTimestamp(value: string | null) {
+  if (!value) {
+    return "Just now";
+  }
+
+  try {
+    return new Date(value).toLocaleString();
+  } catch {
+    return value;
+  }
+}
+
+function activeGameHeading(game: ActiveGameRecord) {
+  if (game.opponentDisplayName) {
+    return game.opponentDisplayName;
+  }
+
+  if (game.opponentUsername) {
+    return `@${game.opponentUsername}`;
+  }
+
+  return "Unknown player";
+}
+
+function activeGameStatusLabel(game: ActiveGameRecord) {
+  if (game.isIncomingInvite) {
+    return "Incoming invite";
+  }
+
+  if (game.isOutgoingInvite) {
+    return "Invite sent";
+  }
+
+  if (game.status === "active") {
+    return game.isYourTurn ? "Your turn" : "Waiting";
+  }
+
+  return game.status;
+}
+
 // Note: RecentGamesPanel does not wrap itself in <Panel> because App.tsx already
 // renders it inside <Panel title="Games">. Adding another Panel here would
 // double-nest the card chrome.
@@ -82,13 +143,24 @@ export function RecentGamesPanel({
   referenceGames,
   selectedReferenceGameId,
   onSelectReferenceGame,
-  onLoadReferenceGame
+  onLoadReferenceGame,
+  accountEmail,
+  accountUsername,
+  multiplayerCityOptions
 }: RecentGamesPanelProps) {
   const minimumListWidthPercent = 28;
   const maximumListWidthPercent = 72;
   const [hoveredReferenceGameId, setHoveredReferenceGameId] = useState<string | null>(null);
   const [historicListWidthPercent, setHistoricListWidthPercent] = useState<number>(46);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
+  const [activeGames, setActiveGames] = useState<ActiveGameRecord[]>([]);
+  const [isLoadingActiveGames, setIsLoadingActiveGames] = useState(false);
+  const [isSubmittingInvite, setIsSubmittingInvite] = useState(false);
+  const [activeGamesNotice, setActiveGamesNotice] = useState<ActiveGamesNotice | null>(null);
+  const [inviteOpponentUsername, setInviteOpponentUsername] = useState("");
+  const [inviteCityEditionId, setInviteCityEditionId] = useState(multiplayerCityOptions[0]?.id ?? "");
+  const [invitePlayMode, setInvitePlayMode] = useState<ActiveGamePlayMode>("async");
+  const [inviteRated, setInviteRated] = useState(false);
   const splitContentRef = useRef<HTMLDivElement | null>(null);
   const selectedSavedMatch = savedMatches.find((savedMatch) => savedMatch.id === selectedSavedMatchId);
   const selectedReferenceGame = useMemo(
@@ -116,6 +188,107 @@ export function RecentGamesPanel({
       }) as CSSProperties,
     [historicListWidthPercent]
   );
+  const refreshActiveGames = useCallback(async () => {
+    if (!accountEmail) {
+      setActiveGames([]);
+      return;
+    }
+
+    setIsLoadingActiveGames(true);
+    try {
+      const games = await listActiveGamesFromSupabase();
+      setActiveGames(games ?? []);
+    } catch (error) {
+      setActiveGamesNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Could not load multiplayer games."
+      });
+    } finally {
+      setIsLoadingActiveGames(false);
+    }
+  }, [accountEmail]);
+
+  useEffect(() => {
+    if (!multiplayerCityOptions.length) {
+      setInviteCityEditionId("");
+      return;
+    }
+
+    if (multiplayerCityOptions.some((option) => option.id === inviteCityEditionId)) {
+      return;
+    }
+
+    setInviteCityEditionId(multiplayerCityOptions[0]?.id ?? "");
+  }, [inviteCityEditionId, multiplayerCityOptions]);
+
+  useEffect(() => {
+    void refreshActiveGames();
+  }, [refreshActiveGames]);
+
+  const handleCreateInvite = useCallback(async () => {
+    if (!accountUsername) {
+      setActiveGamesNotice({
+        tone: "error",
+        text: "Claim a username in the menu before creating multiplayer games."
+      });
+      return;
+    }
+
+    if (!inviteOpponentUsername.trim()) {
+      setActiveGamesNotice({
+        tone: "error",
+        text: "Enter the opponent username."
+      });
+      return;
+    }
+
+    if (!inviteCityEditionId) {
+      setActiveGamesNotice({
+        tone: "error",
+        text: "Choose a published city edition first."
+      });
+      return;
+    }
+
+    setIsSubmittingInvite(true);
+    try {
+      await createGameInviteInSupabase({
+        opponentUsername: inviteOpponentUsername,
+        cityEditionId: inviteCityEditionId,
+        playMode: invitePlayMode,
+        rated: inviteRated
+      });
+      setInviteOpponentUsername("");
+      setActiveGamesNotice({
+        tone: "success",
+        text: "Multiplayer invite created."
+      });
+      await refreshActiveGames();
+    } catch (error) {
+      setActiveGamesNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Could not create the multiplayer invite."
+      });
+    } finally {
+      setIsSubmittingInvite(false);
+    }
+  }, [accountUsername, inviteCityEditionId, inviteOpponentUsername, invitePlayMode, inviteRated, refreshActiveGames]);
+
+  const handleRespondToInvite = useCallback(async (gameId: string, response: "accept" | "decline") => {
+    try {
+      await respondToGameInviteInSupabase({ gameId, response });
+      setActiveGamesNotice({
+        tone: "success",
+        text: response === "accept" ? "Invite accepted." : "Invite declined."
+      });
+      await refreshActiveGames();
+    } catch (error) {
+      setActiveGamesNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Could not update the multiplayer invite."
+      });
+    }
+  }, [refreshActiveGames]);
 
   useEffect(() => {
     if (!isDraggingSplit) {
@@ -170,11 +343,153 @@ export function RecentGamesPanel({
       </TabsList>
 
       <TabsContent value="active" className="recent-games-content">
-        <div className="recent-games-shell">
-          <p className="muted">
-            Active sync and async multiplayer games will appear here. Save current local runs to
-            <strong> Yours</strong> when you want to keep them.
-          </p>
+        <div className="recent-games-active">
+          <div className="recent-games-active__composer">
+            <div className="recent-games-active__composer-header">
+              <div>
+                <h4>Invite by username</h4>
+                <p className="muted">
+                  Direct invites first. Sync and async both use the same thread model.
+                </p>
+              </div>
+              <Button type="button" variant="outline" size="icon-sm" onClick={() => void refreshActiveGames()}>
+                <RefreshCcw />
+              </Button>
+            </div>
+
+            {!accountEmail ? (
+              <p className="muted">Sign in to create and track multiplayer games.</p>
+            ) : !accountUsername ? (
+              <p className="muted">Claim a username in the menu before creating multiplayer invites.</p>
+            ) : (
+              <div className="recent-games-active__filters">
+                <label className="grid gap-1">
+                  <span className="text-sm font-medium">Opponent</span>
+                  <Input
+                    placeholder="username"
+                    value={inviteOpponentUsername}
+                    onChange={(event) => setInviteOpponentUsername(event.target.value)}
+                    disabled={isSubmittingInvite}
+                  />
+                </label>
+                <label className="grid gap-1">
+                  <span className="text-sm font-medium">City</span>
+                  <select
+                    className="field-select"
+                    value={inviteCityEditionId}
+                    onChange={(event) => setInviteCityEditionId(event.currentTarget.value)}
+                    disabled={isSubmittingInvite || multiplayerCityOptions.length === 0}
+                  >
+                    {multiplayerCityOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="grid gap-1">
+                  <span className="text-sm font-medium">Mode</span>
+                  <select
+                    className="field-select"
+                    value={invitePlayMode}
+                    onChange={(event) => setInvitePlayMode(event.currentTarget.value as ActiveGamePlayMode)}
+                    disabled={isSubmittingInvite}
+                  >
+                    <option value="async">Async</option>
+                    <option value="sync">Sync</option>
+                  </select>
+                </label>
+                <label className="recent-games-active__rated">
+                  <Checkbox
+                    checked={inviteRated}
+                    onCheckedChange={(checked) => setInviteRated(checked === true)}
+                    disabled={isSubmittingInvite}
+                  />
+                  <span>Rated</span>
+                </label>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void handleCreateInvite()}
+                  disabled={isSubmittingInvite || multiplayerCityOptions.length === 0}
+                >
+                  <Send data-icon="inline-start" />
+                  {isSubmittingInvite ? "Sending..." : "Create invite"}
+                </Button>
+              </div>
+            )}
+
+            {activeGamesNotice ? (
+              <p
+                className={`recent-games-active__notice ${
+                  activeGamesNotice.tone === "error"
+                    ? "recent-games-active__notice--error"
+                    : "recent-games-active__notice--success"
+                }`}
+              >
+                {activeGamesNotice.text}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="recent-games-active__list-shell">
+            {isLoadingActiveGames && !activeGames.length ? (
+              <p className="muted">Loading multiplayer games…</p>
+            ) : activeGames.length ? (
+              <ul className="recent-games-active__list">
+                {activeGames.map((game) => (
+                  <li key={game.gameId} className="recent-games-active__entry">
+                    <div className="recent-games-active__entry-header">
+                      <div className="recent-games-active__entry-main">
+                        <div className="recent-games-active__entry-title-row">
+                          <h4>{activeGameHeading(game)}</h4>
+                          <Badge variant={game.isIncomingInvite || game.isYourTurn ? "secondary" : "outline"}>
+                            {activeGameStatusLabel(game)}
+                          </Badge>
+                        </div>
+                        <p className="recent-games-active__entry-meta">
+                          {game.opponentUsername ? `@${game.opponentUsername}` : "Unnamed opponent"} ·{" "}
+                          {game.cityLabel ?? "Default board"} · {game.playMode === "sync" ? "Sync" : "Async"} ·{" "}
+                          {game.rated ? "Rated" : "Casual"} · Elo {game.opponentEloRating}
+                        </p>
+                        <p className="recent-games-active__entry-meta">
+                          Updated {formatGameTimestamp(game.lastMoveAt ?? game.updatedAt)}
+                        </p>
+                      </div>
+                      {game.isIncomingInvite ? (
+                        <div className="recent-games-active__entry-actions">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => void handleRespondToInvite(game.gameId, "accept")}
+                          >
+                            <Check data-icon="inline-start" />
+                            Accept
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => void handleRespondToInvite(game.gameId, "decline")}
+                          >
+                            <X data-icon="inline-start" />
+                            Decline
+                          </Button>
+                        </div>
+                      ) : null}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="muted">
+                No multiplayer games yet. Save current local runs to <strong>Yours</strong> when you
+                want a personal snapshot.
+              </p>
+            )}
+          </div>
         </div>
       </TabsContent>
 
