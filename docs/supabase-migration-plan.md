@@ -171,7 +171,7 @@ Why:
 
 Need:
 
-- Supabase tables for cities and city versions
+- Supabase tables for cities, city editions, and city versions
 - Cities page edits remote draft
 - explicit publish action
 - explicit reset-to-published action
@@ -182,6 +182,19 @@ UI target:
 - Cities edits draft
 - public Play uses published
 - later maybe add editor-only draft preview
+
+City shape:
+
+- `cities` = stable place identity
+- `city_editions` = one playable setting for city
+- `city_versions` = revision history for one city edition
+
+Examples:
+
+- `edinburgh`
+- `edinburgh-modern`
+- `edinburgh-1700s`
+- `edinburgh-scifi`
 
 ### Phase 2: Roles and character foundation
 
@@ -246,19 +259,46 @@ Suggested fields:
 - `created_at`
 - `updated_at`
 
-### `city_versions`
+### `city_editions`
 
-Use for draft and published city board records.
+Use for one playable setting of city.
 
 Suggested fields:
 
 - `id`
 - `city_id`
+- `slug`
+- `label`
+- `time_period`
+- `theme`
+- `is_default`
+- `created_at`
+- `updated_at`
+
+Notes:
+
+- historical era and speculative theme belong here
+- public Play default should resolve to published version of default edition
+- district identity only needs to be stable inside one edition for now
+
+### `city_versions`
+
+Use for draft/published records and version history of one city edition.
+
+Suggested fields:
+
+- `id`
+- `city_edition_id`
 - `version_number`
 - `status`
-- `board_payload` JSONB
+- `content_status`
+- `review_status`
+- `payload` JSONB
+- `review_notes`
+- `last_reviewed_at`
 - `created_by`
 - `created_at`
+- `updated_at`
 - `published_at`
 - `notes`
 
@@ -266,6 +306,12 @@ Rule:
 
 - never overwrite published in place
 - use versions
+
+Version history note:
+
+- target user feel is closer to Google Docs version history than git patch list
+- each version row stores full snapshot
+- later UI can show named/history states without raw diff focus
 
 ### `roles`
 
@@ -364,7 +410,7 @@ So version tables better than only one mutable row.
 Start simple:
 
 - keep validation in `packages/content-schema`
-- store first payloads as JSONB
+- store first city edition snapshots as JSONB
 - validate with Zod on app side
 - normalize later only when real query need appears
 
@@ -372,6 +418,17 @@ Important rule:
 
 - do not casually change shared schemas
 - if agent changes `packages/content-schema`, agent must say so clearly
+
+Hierarchy note:
+
+- DB tables are flat rows
+- hierarchy comes from links between tables
+- JSON can nest deeply inside one row
+- for city system now, keep table hierarchy shallow:
+  - `cities`
+  - `city_editions`
+  - `city_versions`
+- deeper district structure stays inside JSON payload for now
 
 ## Auth Strategy
 
@@ -559,8 +616,8 @@ Target:
 If build starts now:
 
 1. define city persistence contract
-2. create `cities` and `city_versions`
-3. seed Edinburgh as first published city
+2. create `cities`, `city_editions`, and `city_versions`
+3. seed `edinburgh` and `edinburgh-modern`
 4. wire Cities editor to remote draft
 5. add publish/reset actions
 6. keep Play on bundled content until verified
