@@ -272,6 +272,10 @@ label:has(> .text-sm.font-medium) {
   background: color-mix(in srgb, var(--king-checkmate) 26%, var(--card) 74%);
 }
 
+.app-header__status-card--warning {
+  border-color: color-mix(in srgb, var(--destructive) 42%, var(--border));
+}
+
 .app-header__status-card--king-check .app-header__status-label,
 .app-header__status-card--king-checkmate .app-header__status-label {
   color: color-mix(in srgb, var(--foreground) 72%, var(--muted-foreground) 28%);
@@ -291,6 +295,13 @@ label:has(> .text-sm.font-medium) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.app-header__status-value--inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
 }
 
 .indexed-workspace {

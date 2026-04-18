@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   Moon,
   Pencil,
+  RefreshCcw,
   Scroll,
   Sun,
   Telescope,
@@ -490,6 +491,9 @@ export default function App() {
   const [isAuthBusy, setIsAuthBusy] = useState(false);
   const [activeMultiplayerSession, setActiveMultiplayerSession] = useState<ActiveMultiplayerSession | null>(null);
   const [isSyncingActiveMultiplayerMove, setIsSyncingActiveMultiplayerMove] = useState(false);
+  const [isRefreshingActiveMultiplayerSession, setIsRefreshingActiveMultiplayerSession] = useState(false);
+  const [activeMultiplayerRefreshError, setActiveMultiplayerRefreshError] = useState<string | null>(null);
+  const [activeMultiplayerLastRefreshAt, setActiveMultiplayerLastRefreshAt] = useState<string | null>(null);
   const activeMultiplayerMoveSyncRef = useRef<string | null>(null);
   const handleCityBoardDraftChange = useCallback((board: CityBoard) => {
     if (useSupabasePublishedCities) {
@@ -583,6 +587,8 @@ export default function App() {
   const clearActiveMultiplayerSession = useCallback(() => {
     activeMultiplayerMoveSyncRef.current = null;
     setActiveMultiplayerSession(null);
+    setActiveMultiplayerRefreshError(null);
+    setActiveMultiplayerLastRefreshAt(null);
   }, []);
 
   useEffect(() => {
@@ -874,6 +880,8 @@ export default function App() {
 
       loadSnapshot(session.snapshot);
       activeMultiplayerMoveSyncRef.current = null;
+      setActiveMultiplayerRefreshError(null);
+      setActiveMultiplayerLastRefreshAt(new Date().toISOString());
       setActiveMultiplayerSession({
         gameId: session.gameId,
         cityEditionId: session.cityEditionId,
@@ -894,54 +902,67 @@ export default function App() {
     }
   }, [loadSnapshot, playCityOptions]);
 
+  const refreshLoadedActiveMultiplayerGame = useCallback(async (options?: { silent?: boolean }) => {
+    if (!activeMultiplayerSession) {
+      return;
+    }
+
+    if (!options?.silent) {
+      setIsRefreshingActiveMultiplayerSession(true);
+    }
+
+    try {
+      const session = await loadActiveGameSessionFromSupabase(activeMultiplayerSession.gameId);
+      if (!session) {
+        setActiveMultiplayerRefreshError("This multiplayer game is no longer available.");
+        return;
+      }
+
+      if (session.syncedMoveCount > activeMultiplayerSession.syncedMoveCount) {
+        loadSnapshot(session.snapshot);
+        activeMultiplayerMoveSyncRef.current = null;
+      }
+
+      setActiveMultiplayerSession((current) =>
+        current && current.gameId === session.gameId
+          ? {
+              ...current,
+              status: session.status,
+              currentTurn: session.currentTurn,
+              syncedMoveCount: Math.max(current.syncedMoveCount, session.syncedMoveCount),
+              deadlineAt: session.deadlineAt,
+              result: session.result,
+              whiteRatingDelta: session.whiteRatingDelta,
+              blackRatingDelta: session.blackRatingDelta
+            }
+          : current
+      );
+      setActiveMultiplayerRefreshError(null);
+      setActiveMultiplayerLastRefreshAt(new Date().toISOString());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not refresh multiplayer game.";
+      setActiveMultiplayerRefreshError(message);
+      console.warn("[supabase] Could not refresh multiplayer game session.", error);
+    } finally {
+      if (!options?.silent) {
+        setIsRefreshingActiveMultiplayerSession(false);
+      }
+    }
+  }, [activeMultiplayerSession, loadSnapshot]);
+
   useEffect(() => {
     if (!activeMultiplayerSession || isSyncingActiveMultiplayerMove) {
       return;
     }
 
-    let cancelled = false;
-    const refreshActiveMultiplayerSession = async () => {
-      try {
-        const session = await loadActiveGameSessionFromSupabase(activeMultiplayerSession.gameId);
-        if (cancelled || !session) {
-          return;
-        }
-
-        if (session.syncedMoveCount > activeMultiplayerSession.syncedMoveCount) {
-          loadSnapshot(session.snapshot);
-          activeMultiplayerMoveSyncRef.current = null;
-        }
-
-        setActiveMultiplayerSession((current) =>
-          current && current.gameId === session.gameId
-            ? {
-                ...current,
-                status: session.status,
-                currentTurn: session.currentTurn,
-                syncedMoveCount: Math.max(current.syncedMoveCount, session.syncedMoveCount),
-                deadlineAt: session.deadlineAt,
-                result: session.result,
-                whiteRatingDelta: session.whiteRatingDelta,
-                blackRatingDelta: session.blackRatingDelta
-              }
-            : current
-        );
-      } catch (error) {
-        if (!cancelled) {
-          console.warn("[supabase] Could not refresh multiplayer game session.", error);
-        }
-      }
-    };
-
     const intervalId = window.setInterval(() => {
-      void refreshActiveMultiplayerSession();
+      void refreshLoadedActiveMultiplayerGame({ silent: true });
     }, 5000);
 
     return () => {
-      cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [activeMultiplayerSession, isSyncingActiveMultiplayerMove, loadSnapshot]);
+  }, [activeMultiplayerSession, isSyncingActiveMultiplayerMove, refreshLoadedActiveMultiplayerGame]);
   const motionPlayhead = useMovePlayhead({
     targetPly: selectedPly,
     totalPlies,
@@ -1079,6 +1100,17 @@ export default function App() {
         ? "Pending"
         : `${multiplayerEloDelta >= 0 ? "+" : ""}${multiplayerEloDelta}`
       : null;
+  const multiplayerRefreshValue = activeMultiplayerRefreshError
+    ? "Refresh failed"
+    : isRefreshingActiveMultiplayerSession
+      ? "Refreshing"
+      : activeMultiplayerLastRefreshAt
+        ? new Date(activeMultiplayerLastRefreshAt).toLocaleTimeString([], {
+            hour: "numeric",
+            minute: "2-digit",
+            second: "2-digit"
+          })
+        : "Not synced";
 
   useEffect(() => {
     if (!isHistoryPlaying) {
@@ -2740,6 +2772,30 @@ export default function App() {
                   <div className="app-header__status-card">
                     <span className="app-header__status-label">Multiplayer</span>
                     <strong className="app-header__status-value">{multiplayerStatusValue}</strong>
+                  </div>
+                ) : null}
+                {activeMultiplayerSession ? (
+                  <div
+                    className={[
+                      "app-header__status-card",
+                      activeMultiplayerRefreshError ? "app-header__status-card--warning" : ""
+                    ].filter(Boolean).join(" ")}
+                  >
+                    <span className="app-header__status-label">Cloud sync</span>
+                    <strong className="app-header__status-value app-header__status-value--inline">
+                      {multiplayerRefreshValue}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => void refreshLoadedActiveMultiplayerGame()}
+                        disabled={isRefreshingActiveMultiplayerSession}
+                        aria-label="Refresh multiplayer game"
+                        title={activeMultiplayerRefreshError ?? "Refresh multiplayer game"}
+                      >
+                        <RefreshCcw />
+                      </Button>
+                    </strong>
                   </div>
                 ) : null}
                 {multiplayerEloValue ? (
