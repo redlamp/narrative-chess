@@ -28,6 +28,8 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Check, ExternalLink, FileUp, RefreshCcw, Send, Trash2, X } from "lucide-react";
 
+type InviteCreatorSide = "white" | "black" | "random";
+
 type RecentGamesPanelProps = {
   savedMatches: SavedMatchRecord[];
   selectedSavedMatchId: string | null;
@@ -197,7 +199,7 @@ export function RecentGamesPanel({
   const [inviteOpponentUsername, setInviteOpponentUsername] = useState("");
   const [inviteCityEditionId, setInviteCityEditionId] = useState(multiplayerCityOptions[0]?.id ?? "");
   const [inviteTimeControlPresetId, setInviteTimeControlPresetId] = useState("deadline-daily");
-  const [inviteCreatorSide, setInviteCreatorSide] = useState<"white" | "black">("white");
+  const [inviteCreatorSide, setInviteCreatorSide] = useState<InviteCreatorSide>("random");
   const [inviteRated, setInviteRated] = useState(false);
   const splitContentRef = useRef<HTMLDivElement | null>(null);
   const selectedSavedMatch = savedMatches.find((savedMatch) => savedMatch.id === selectedSavedMatchId);
@@ -462,9 +464,10 @@ export function RecentGamesPanel({
                   <select
                     className="field-select"
                     value={inviteCreatorSide}
-                    onChange={(event) => setInviteCreatorSide(event.currentTarget.value as "white" | "black")}
+                    onChange={(event) => setInviteCreatorSide(event.currentTarget.value as InviteCreatorSide)}
                     disabled={isSubmittingInvite}
                   >
+                    <option value="random">Random</option>
                     <option value="white">White</option>
                     <option value="black">Black</option>
                   </select>

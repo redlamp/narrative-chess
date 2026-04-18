@@ -1,5 +1,3 @@
-drop function if exists public.create_game_invite(text, text, text, integer, integer, integer, boolean);
-
 create or replace function public.create_game_invite(
   p_opponent_username text,
   p_city_edition_id text default null,

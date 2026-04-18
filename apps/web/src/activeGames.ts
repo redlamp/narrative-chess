@@ -307,7 +307,7 @@ export async function createGameInviteInSupabase(input: {
   opponentUsername: string;
   cityEditionId: string | null;
   timeControlPresetId: string;
-  creatorSide: "white" | "black";
+  creatorSide: "white" | "black" | "random";
   rated: boolean;
 }): Promise<string> {
   const auth = await requireAuthenticatedUser();
