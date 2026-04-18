@@ -11,19 +11,22 @@ Last updated: April 18, 2026
    d. multiplayer schema tables scaffolded
    e. invite-by-username RPCs added
    f. `Active` tab now creates invites and accepts / declines them
-   g. next: move append / turn sync
+   g. product direction changed from `sync/async` to time controls
+   h. next: move append / turn sync
 
 ## Next
 
-1. Add move append / turn update flow
+1. Replace multiplayer `sync/async` with time controls in schema and UI
 
-2. Add rated game completion + Elo update
+2. Add move append / turn update flow
 
-3. Add `Resume game` flow from `Active`
+3. Add rated game completion + Elo update
 
-4. Add Supabase Realtime subscriptions for multiplayer
+4. Add `Resume game` flow from `Active`
 
-5. Let invite creator choose or randomize color instead of fixed white
+5. Add Supabase Realtime subscriptions for multiplayer
+
+6. Let invite creator choose or randomize color instead of fixed white
 
 ## Durable data already moved to Supabase
 
@@ -37,3 +40,4 @@ Last updated: April 18, 2026
 2. Keep invite-based multiplayer before public matchmaking
 3. Keep `Historic` separate from multiplayer state
 4. Current invite flow assigns creator = white and opponent = black as a first pass
+5. Replace user-facing `sync/async` with time-control presets like `10 min` and `1 move / day`

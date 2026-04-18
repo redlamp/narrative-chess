@@ -6,11 +6,12 @@ Last updated: April 18, 2026
 
 Add invite-based multiplayer that supports:
 
-1. sync play
-2. async play
-3. durable game history
-4. usernames
-5. a basic Elo system
+1. one multiplayer game model with time controls
+2. live clock play
+3. correspondence play with move deadlines
+4. durable game history
+5. usernames
+6. a basic Elo system
 
 Keep scope narrow. Do not build public matchmaking first.
 
@@ -20,7 +21,7 @@ Keep scope narrow. Do not build public matchmaking first.
 
 1. `Active`
    a. live multiplayer games
-   b. async games waiting on a player
+   b. correspondence games waiting on a player
    c. invites and accepted games
 
 2. `Yours`
@@ -92,14 +93,22 @@ Add:
    b. `active`
    c. `completed`
    d. `abandoned`
-5. `play_mode`
-   a. `sync`
-   b. `async`
-6. `current_turn`
-7. `current_fen`
-8. `winner_user_id`
-9. `rated`
-10. timestamps
+5. `time_control_kind`
+   a. `live_clock`
+   b. `move_deadline`
+6. `base_seconds`
+   a. optional for live clock only
+7. `increment_seconds`
+   a. optional for live clock only
+8. `move_deadline_seconds`
+   a. optional for correspondence only
+9. `deadline_at`
+   a. next required move deadline for correspondence
+10. `current_turn`
+11. `current_fen`
+12. `winner_user_id`
+13. `rated`
+14. timestamps
 
 ### Participants
 
@@ -151,10 +160,38 @@ Flow:
 2. creator chooses:
    a. city edition
    b. rated or casual
-   c. sync or async
+   c. time control preset
 3. invite sent
 4. opponent accepts or declines
 5. game becomes active
+
+Suggested first presets:
+
+1. `10 min`
+   a. live clock
+   b. `base_seconds = 600`
+   c. `increment_seconds = 0`
+
+2. `15 + 10`
+   a. live clock
+   b. `base_seconds = 900`
+   c. `increment_seconds = 10`
+
+3. `1 move / hour`
+   a. correspondence
+   b. `move_deadline_seconds = 3600`
+
+4. `1 move / day`
+   a. correspondence
+   b. `move_deadline_seconds = 86400`
+
+5. `1 move / week`
+   a. correspondence
+   b. `move_deadline_seconds = 604800`
+
+6. `1 move / month`
+   a. correspondence
+   b. `move_deadline_seconds = 2592000`
 
 ## Phase 4
 
@@ -169,7 +206,7 @@ Realtime should cover:
 3. turn changes
 4. maybe presence later
 
-Async does not need presence to work.
+Correspondence does not need presence to work.
 
 ## Elo
 
@@ -208,8 +245,9 @@ Need strict ownership rules:
 3. active game list
 4. turn indicators
 5. accept/decline invite
-6. rated/casual badge
-7. result screen with Elo delta
+6. time control badge
+7. rated/casual badge
+8. result screen with Elo delta
 
 ## Near-term implementation order
 
@@ -220,10 +258,11 @@ Need strict ownership rules:
    b. done: `game_participants`
    c. done: `game_moves`
    d. done: `calculate_elo_delta()`
-4. create invite flow
-5. append moves to DB
-6. subscribe with Realtime
-7. add rated game completion function
+4. replace `sync/async` with time controls
+5. create invite flow
+6. append moves to DB
+7. subscribe with Realtime
+8. add rated game completion function
 
 ## Deliberate non-goals for first release
 
@@ -233,3 +272,10 @@ Need strict ownership rules:
 4. clans/friends/social graph
 5. complex ranking tiers
 6. tournament mode
+
+## Notes
+
+1. Do not ask users to choose between `sync` and `async` directly.
+2. Ask for a time control instead.
+3. Live and correspondence are backend variants of the same thread model.
+4. The first implementation can keep `play_mode` internally if needed for compatibility, but the product direction should move to explicit time controls.
