@@ -23,6 +23,10 @@ import {
   supportsWorkspaceLayoutDirectory
 } from "../fileSystemAccess";
 import {
+  loadLayoutBundleFromSupabase,
+  saveLayoutBundleToSupabase
+} from "../layoutCloud";
+import {
   activatePreset,
   createPageLayoutPreset,
   deletePreset,
@@ -850,6 +854,43 @@ export function IndexedWorkspace({
     });
   };
 
+  const handleSaveLayoutBundleToCloud = () => {
+    void runLayoutFileAction("save-layout-bundle-cloud", async () => {
+      const result = await saveLayoutBundleToSupabase(layoutFileName);
+      setLayoutFileName(result.bundleName);
+      setLayoutFileNotice({
+        tone: "success",
+        text: `Saved all layouts to cloud as ${result.bundleName}.`
+      });
+    });
+  };
+
+  const handleLoadLayoutBundleFromCloud = () => {
+    void runLayoutFileAction("load-layout-bundle-cloud", async () => {
+      const result = await loadLayoutBundleFromSupabase(layoutFileName);
+      if (!result) {
+        setLayoutFileNotice({
+          tone: "neutral",
+          text: "No cloud layout bundle matched that name."
+        });
+        return;
+      }
+
+      if (layoutKey) {
+        const currentPageLayout = result.pages[layoutKey];
+        if (currentPageLayout) {
+          setLayoutState(currentPageLayout.layoutState);
+        }
+      }
+
+      setLayoutFileName(result.name);
+      setLayoutFileNotice({
+        tone: "success",
+        text: `Loaded all layouts from cloud bundle ${result.name}.`
+      });
+    });
+  };
+
   const renderMoveSurface = (panelId: PageLayoutPanelId) =>
     effectiveLayoutMode ? (
       <button
@@ -1023,6 +1064,8 @@ export function IndexedWorkspace({
               onConnectLayoutDirectory={handleConnectLayoutDirectory}
               onSaveLayoutBundle={handleSaveLayoutBundle}
               onLoadLayoutBundle={handleLoadLayoutBundle}
+              onSaveLayoutBundleToCloud={handleSaveLayoutBundleToCloud}
+              onLoadLayoutBundleFromCloud={handleLoadLayoutBundleFromCloud}
               onRestoreComponent={(panelId) => handleRestorePanel(panelId as PageLayoutPanelId)}
               onToggleComponentVisibility={(panelId, visible) =>
                 handlePanelVisibilityChange(panelId as PageLayoutPanelId, visible)

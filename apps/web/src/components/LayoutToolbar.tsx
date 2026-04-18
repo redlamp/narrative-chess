@@ -39,6 +39,8 @@ type LayoutToolbarProps = {
   onConnectLayoutDirectory: () => void;
   onLoadLayoutFile: () => void;
   onSaveLayoutFile: () => void;
+  onLoadLayoutFileFromCloud?: () => void;
+  onSaveLayoutFileToCloud?: () => void;
   onDeleteLayoutFile: () => void;
   onSelectKnownLayoutFile: (name: string) => void;
   onRestoreComponent: (id: string) => void;
@@ -80,6 +82,8 @@ export function LayoutToolbar({ components, ...props }: LayoutToolbarProps) {
       onConnectLayoutDirectory={props.onConnectLayoutDirectory}
       onSaveLayoutBundle={props.onSaveLayoutFile}
       onLoadLayoutBundle={props.onLoadLayoutFile}
+      onSaveLayoutBundleToCloud={props.onSaveLayoutFileToCloud}
+      onLoadLayoutBundleFromCloud={props.onLoadLayoutFileFromCloud}
       onDragHandlePointerDown={props.onDragHandlePointerDown}
       isDragging={props.isDragging}
       onToggleLayoutMode={props.onToggleLayoutMode}

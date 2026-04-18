@@ -43,6 +43,8 @@ type PageLayoutToolbarProps = {
   onConnectLayoutDirectory: () => void;
   onSaveLayoutBundle: () => void;
   onLoadLayoutBundle: () => void;
+  onSaveLayoutBundleToCloud?: () => void;
+  onLoadLayoutBundleFromCloud?: () => void;
   onDragHandlePointerDown?: (event: ReactPointerEvent<HTMLElement>) => void;
   isDragging?: boolean;
   onToggleLayoutMode: () => void;

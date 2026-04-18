@@ -16,6 +16,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { FloatingActionNotice } from "./FloatingActionNotice";
 import {
   ChevronDown,
+  CloudDownload,
+  CloudUpload,
   EllipsisVertical,
   FolderOpen,
   FolderTree,
@@ -89,6 +91,8 @@ type SharedLayoutToolbarProps = {
   onConnectLayoutDirectory: () => void;
   onSaveLayoutBundle: () => void;
   onLoadLayoutBundle: () => void;
+  onSaveLayoutBundleToCloud?: () => void;
+  onLoadLayoutBundleFromCloud?: () => void;
 
   // Toolbar chrome
   onDragHandlePointerDown?: (event: ReactPointerEvent<HTMLElement>) => void;
@@ -144,6 +148,8 @@ export function SharedLayoutToolbar({
   onConnectLayoutDirectory,
   onSaveLayoutBundle,
   onLoadLayoutBundle,
+  onSaveLayoutBundleToCloud,
+  onLoadLayoutBundleFromCloud,
   onDragHandlePointerDown,
   isDragging = false,
   onToggleLayoutMode,
@@ -614,6 +620,40 @@ export function SharedLayoutToolbar({
                     </TooltipTrigger>
                     <TooltipContent>Save all page layouts to file</TooltipContent>
                   </Tooltip>
+                  {onLoadLayoutBundleFromCloud ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon-sm"
+                          onClick={onLoadLayoutBundleFromCloud}
+                          disabled={layoutFileBusyAction !== null}
+                          aria-label="Load layout bundle from cloud"
+                        >
+                          <CloudDownload />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Load all page layouts from cloud</TooltipContent>
+                    </Tooltip>
+                  ) : null}
+                  {onSaveLayoutBundleToCloud ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon-sm"
+                          onClick={onSaveLayoutBundleToCloud}
+                          disabled={layoutFileBusyAction !== null}
+                          aria-label="Save layout bundle to cloud"
+                        >
+                          <CloudUpload />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Save all page layouts to cloud</TooltipContent>
+                    </Tooltip>
+                  ) : null}
                   <FloatingActionNotice notice={layoutFileNotice} />
                 </div>
               </div>
