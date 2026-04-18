@@ -162,19 +162,29 @@ export function RecentGamesPanel({
 
   return (
     <TooltipProvider delayDuration={150}>
-      <Tabs defaultValue="open" className="recent-games-panel w-full">
+      <Tabs defaultValue="active" className="recent-games-panel w-full">
       <TabsList className="recent-games-tabs">
-        <TabsTrigger value="open">Open Games</TabsTrigger>
-        <TabsTrigger value="saved">Your Games ({savedMatches.length})</TabsTrigger>
+        <TabsTrigger value="active">Active</TabsTrigger>
+        <TabsTrigger value="saved">Yours ({savedMatches.length})</TabsTrigger>
+        <TabsTrigger value="historic">Historic</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="open" className="recent-games-content">
+      <TabsContent value="active" className="recent-games-content">
+        <div className="recent-games-shell">
+          <p className="muted">
+            Active sync and async multiplayer games will appear here. Save current local runs to
+            <strong> Yours</strong> when you want to keep them.
+          </p>
+        </div>
+      </TabsContent>
+
+      <TabsContent value="historic" className="recent-games-content">
         <div className="recent-games-historic">
           <div ref={splitContentRef} className="recent-games-historic__content" style={historicSplitStyle}>
             <ul
               className="recent-games-historic__list"
               role="listbox"
-              aria-label="Open games"
+              aria-label="Historic games"
               onMouseLeave={() => setHoveredReferenceGameId(null)}
             >
               {referenceGames.map((game) => (
