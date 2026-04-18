@@ -119,6 +119,10 @@ function activeGameHeading(game: ActiveGameRecord) {
 }
 
 function activeGameStatusLabel(game: ActiveGameRecord) {
+  if (game.status === "completed") {
+    return "Complete";
+  }
+
   if (game.isIncomingInvite) {
     return "Incoming invite";
   }
@@ -132,6 +136,34 @@ function activeGameStatusLabel(game: ActiveGameRecord) {
   }
 
   return game.status;
+}
+
+function activeGameResultLabel(game: ActiveGameRecord) {
+  if (game.result === "draw") {
+    return "Draw";
+  }
+
+  if (game.result === "white" || game.result === "black") {
+    return `${game.result === game.yourSide ? "Won" : "Lost"} as ${game.yourSide}`;
+  }
+
+  if (game.result === "abandoned") {
+    return "Abandoned";
+  }
+
+  if (game.result === "cancelled") {
+    return "Cancelled";
+  }
+
+  return "Completed";
+}
+
+function activeGameRatingDelta(game: ActiveGameRecord) {
+  if (!game.rated || game.status !== "completed") {
+    return null;
+  }
+
+  return game.yourSide === "white" ? game.whiteRatingDelta : game.yourSide === "black" ? game.blackRatingDelta : null;
 }
 
 // Note: RecentGamesPanel does not wrap itself in <Panel> because App.tsx already
@@ -177,6 +209,14 @@ export function RecentGamesPanel({
       referenceGames.find((game) => game.id === (hoveredReferenceGameId ?? selectedReferenceGameId)) ??
       selectedReferenceGame,
     [hoveredReferenceGameId, referenceGames, selectedReferenceGame, selectedReferenceGameId]
+  );
+  const currentActiveGames = useMemo(
+    () => activeGames.filter((game) => game.status !== "completed"),
+    [activeGames]
+  );
+  const completedActiveGames = useMemo(
+    () => activeGames.filter((game) => game.status === "completed"),
+    [activeGames]
   );
 
   const formatSavedAt = (dateString: string): string => {
@@ -445,8 +485,12 @@ export function RecentGamesPanel({
             {isLoadingActiveGames && !activeGames.length ? (
               <p className="muted">Loading multiplayer games…</p>
             ) : activeGames.length ? (
-              <ul className="recent-games-active__list">
-                {activeGames.map((game) => (
+              <div className="recent-games-active__sections">
+                <section className="recent-games-active__section">
+                  <h4>Current</h4>
+                  {currentActiveGames.length ? (
+                    <ul className="recent-games-active__list">
+                      {currentActiveGames.map((game) => (
                   <li key={game.gameId} className="recent-games-active__entry">
                     <div className="recent-games-active__entry-header">
                       <div className="recent-games-active__entry-main">
@@ -518,8 +562,70 @@ export function RecentGamesPanel({
                       )}
                     </div>
                   </li>
-                ))}
-              </ul>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="muted">No pending or active multiplayer games.</p>
+                  )}
+                </section>
+                <section className="recent-games-active__section">
+                  <h4>Completed</h4>
+                  {completedActiveGames.length ? (
+                    <ul className="recent-games-active__list">
+                      {completedActiveGames.map((game) => {
+                        const ratingDelta = activeGameRatingDelta(game);
+
+                        return (
+                          <li key={game.gameId} className="recent-games-active__entry">
+                            <div className="recent-games-active__entry-header">
+                              <div className="recent-games-active__entry-main">
+                                <div className="recent-games-active__entry-title-row">
+                                  <h4>{activeGameHeading(game)}</h4>
+                                  <Badge variant="outline">{activeGameResultLabel(game)}</Badge>
+                                  {ratingDelta !== null ? (
+                                    <Badge variant={ratingDelta >= 0 ? "secondary" : "outline"}>
+                                      Elo {ratingDelta >= 0 ? "+" : ""}
+                                      {ratingDelta}
+                                    </Badge>
+                                  ) : null}
+                                  {activeMultiplayerGameId === game.gameId ? (
+                                    <Badge variant="outline">Open</Badge>
+                                  ) : null}
+                                </div>
+                                <p className="recent-games-active__entry-meta">
+                                  {game.opponentUsername ? `@${game.opponentUsername}` : "Unnamed opponent"} Â·{" "}
+                                  {game.cityLabel ?? "Default board"} Â·{" "}
+                                  {formatTimeControlLabel({
+                                    timeControlKind: game.timeControlKind,
+                                    baseSeconds: game.baseSeconds,
+                                    incrementSeconds: game.incrementSeconds,
+                                    moveDeadlineSeconds: game.moveDeadlineSeconds
+                                  })} Â· {game.rated ? "Rated" : "Casual"}
+                                </p>
+                                <p className="recent-games-active__entry-meta">
+                                  Completed {formatGameTimestamp(game.lastMoveAt ?? game.updatedAt)}
+                                </p>
+                              </div>
+                              <div className="recent-games-active__entry-actions">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => onLoadActiveGame(game.gameId)}
+                                >
+                                  Review
+                                </Button>
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="muted">Completed multiplayer games will appear here.</p>
+                  )}
+                </section>
+              </div>
             ) : (
               <p className="muted">
                 No multiplayer games yet. Save current local runs to <strong>Yours</strong> when you

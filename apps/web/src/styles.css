@@ -3840,6 +3840,20 @@ label:has(> .text-sm.font-medium) {
   padding: 0;
 }
 
+.recent-games-active__sections,
+.recent-games-active__section {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.recent-games-active__section > h4 {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .recent-games-active__entry-main {
   display: grid;
   gap: var(--space-1);

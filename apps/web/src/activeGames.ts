@@ -77,6 +77,9 @@ export type ActiveGameRecord = {
   moveDeadlineSeconds: number | null;
   deadlineAt: string | null;
   rated: boolean;
+  result: "white" | "black" | "draw" | "abandoned" | "cancelled" | null;
+  whiteRatingDelta: number | null;
+  blackRatingDelta: number | null;
   cityEditionId: string | null;
   cityLabel: string | null;
   createdAt: string;
@@ -123,6 +126,9 @@ type ActiveGameRow = {
   move_deadline_seconds: number | null;
   deadline_at: string | null;
   rated: boolean;
+  result: ActiveGameRecord["result"];
+  white_rating_delta: number | null;
+  black_rating_delta: number | null;
   city_edition_id: string | null;
   city_label: string | null;
   created_at: string;
@@ -178,6 +184,9 @@ function mapActiveGameRow(row: ActiveGameRow): ActiveGameRecord {
     moveDeadlineSeconds: row.move_deadline_seconds,
     deadlineAt: row.deadline_at,
     rated: row.rated,
+    result: row.result,
+    whiteRatingDelta: row.white_rating_delta,
+    blackRatingDelta: row.black_rating_delta,
     cityEditionId: row.city_edition_id,
     cityLabel: row.city_label,
     createdAt: row.created_at,
