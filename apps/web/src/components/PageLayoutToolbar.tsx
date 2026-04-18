@@ -31,7 +31,6 @@ type PageLayoutToolbarProps = {
   onCreatePreset: () => void;
   onSavePreset: () => void;
   onActivatePreset: (id: string) => void;
-  onTogglePresetHidden: (id: string) => void;
   onDeletePreset: (id: string) => void;
   onRenamePreset: (id: string, name: string) => void;
   onReorderPreset: (id: string, targetId: string) => void;

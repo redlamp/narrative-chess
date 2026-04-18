@@ -3,7 +3,7 @@
   "layoutKey": "match-workspace",
   "layoutVariant": "match",
   "name": "match",
-  "savedAt": "2026-04-14T08:31:51.528Z",
+  "savedAt": "2026-04-18T07:42:35.611Z",
   "layoutState": {
     "version": 2,
     "columnCount": 12,
@@ -14,7 +14,7 @@
         "x": 6,
         "y": 1,
         "w": 4,
-        "h": 8
+        "h": 10
       },
       "moves": {
         "x": 10,
@@ -26,37 +26,37 @@
         "x": 1,
         "y": 1,
         "w": 5,
-        "h": 8
+        "h": 10
       },
       "story-beat": {
-        "x": 1,
-        "y": 9,
-        "w": 6,
+        "x": 5,
+        "y": 13,
+        "w": 4,
         "h": 3
       },
       "story-tile": {
         "x": 1,
-        "y": 12,
-        "w": 3,
+        "y": 8,
+        "w": 4,
         "h": 5
       },
       "story-character": {
-        "x": 4,
-        "y": 12,
-        "w": 3,
+        "x": 5,
+        "y": 8,
+        "w": 4,
         "h": 5
       },
       "story-tone": {
-        "x": 7,
-        "y": 9,
+        "x": 1,
+        "y": 13,
         "w": 4,
         "h": 3
       },
       "recent-games": {
         "x": 1,
-        "y": 9,
+        "y": 11,
         "w": 9,
-        "h": 7
+        "h": 5
       }
     },
     "visible": {

@@ -3,6 +3,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,11 +16,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { FloatingActionNotice } from "./FloatingActionNotice";
 import {
   ChevronDown,
-  Eye,
-  EyeOff,
+  EllipsisVertical,
   FolderOpen,
   FolderTree,
   GripHorizontal,
+  Pencil,
   Plus,
   RefreshCw,
   Save,
@@ -50,7 +56,6 @@ export type SharedLayoutPresetEntry = {
   id: string;
   name: string;
   active: boolean;
-  hidden: boolean;
 };
 
 type SharedLayoutToolbarProps = {
@@ -70,7 +75,6 @@ type SharedLayoutToolbarProps = {
   onCreatePreset: () => void;
   onSavePreset: () => void;
   onActivatePreset: (id: string) => void;
-  onTogglePresetHidden: (id: string) => void;
   onDeletePreset: (id: string) => void;
   onRenamePreset: (id: string, name: string) => void;
   onReorderPreset: (id: string, targetId: string) => void;
@@ -128,7 +132,6 @@ export function SharedLayoutToolbar({
   onCreatePreset,
   onSavePreset,
   onActivatePreset,
-  onTogglePresetHidden,
   onDeletePreset,
   onRenamePreset,
   onReorderPreset,
@@ -174,8 +177,6 @@ export function SharedLayoutToolbar({
   const [draggedPresetId, setDraggedPresetId] = useState<string | null>(null);
   const [dragOverPresetId, setDragOverPresetId] = useState<string | null>(null);
   const activePreset = presets.find((p) => p.active);
-  const visiblePresets = presets.filter((p) => !p.hidden);
-  const hiddenPresets = presets.filter((p) => p.hidden);
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -253,7 +254,7 @@ export function SharedLayoutToolbar({
 
             <CollapsibleContent className="layout-toolbar__section-content">
               <div className="layout-toolbar__preset-list">
-                {visiblePresets.map((preset) => (
+                {presets.map((preset) => (
                   <div
                     key={preset.id}
                     draggable
@@ -310,10 +311,6 @@ export function SharedLayoutToolbar({
                         type="button"
                         className="layout-toolbar__preset-label"
                         onClick={() => onActivatePreset(preset.id)}
-                        onDoubleClick={() => {
-                          setEditingPresetId(preset.id);
-                          setEditingName(preset.name);
-                        }}
                         aria-pressed={preset.active}
                       >
                         <span className="layout-toolbar__preset-name">{preset.name}</span>
@@ -323,57 +320,39 @@ export function SharedLayoutToolbar({
                         />
                       </button>
                     )}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon-sm"
-                          onClick={() => onTogglePresetHidden(preset.id)}
-                          aria-label="Hide"
+                          aria-label="Layout options"
                         >
-                          <Eye />
+                          <EllipsisVertical />
                         </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Hide</TooltipContent>
-                    </Tooltip>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setEditingPresetId(preset.id);
+                            setEditingName(preset.name);
+                          }}
+                        >
+                          <Pencil />
+                          <span>Rename</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          variant="destructive"
+                          disabled={presets.length <= 1}
+                          onClick={() => onDeletePreset(preset.id)}
+                        >
+                          <Trash2 />
+                          <span>Delete</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 ))}
-                {hiddenPresets.length > 0 ? (
-                  <div className="layout-toolbar__preset-hidden-group">
-                    <span className="layout-toolbar__preset-hidden-label">
-                      Hidden ({hiddenPresets.length})
-                    </span>
-                    {hiddenPresets.map((preset) => (
-                      <div
-                        key={preset.id}
-                        className="layout-toolbar__preset-row layout-toolbar__preset-row--hidden"
-                      >
-                        <button
-                          type="button"
-                          className="layout-toolbar__preset-label"
-                          onClick={() => onActivatePreset(preset.id)}
-                        >
-                          <span className="layout-toolbar__preset-name">{preset.name}</span>
-                        </button>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              onClick={() => onTogglePresetHidden(preset.id)}
-                              aria-label="Show"
-                            >
-                              <EyeOff />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Show</TooltipContent>
-                        </Tooltip>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
               </div>
 
               <div className="layout-toolbar__preset-actions-row">

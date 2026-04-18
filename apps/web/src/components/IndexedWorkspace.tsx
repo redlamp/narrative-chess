@@ -251,7 +251,13 @@ export function IndexedWorkspace({
         return dynamicPanels.map((p) => p.id);
       }
 
-      const nextIds: string[] = ["intro", "index"];
+      const nextIds: string[] = [];
+
+      if (intro) {
+        nextIds.push("intro");
+      }
+
+      nextIds.push("index");
 
       if (secondaryIndex) {
         nextIds.push("secondary");
@@ -269,7 +275,7 @@ export function IndexedWorkspace({
 
       return nextIds;
     },
-    [dynamicPanels, quaternary, secondaryIndex, tertiary]
+    [dynamicPanels, intro, quaternary, secondaryIndex, tertiary]
   );
   const [isCompactViewport, setIsCompactViewport] = useState(false);
   const [layoutState, setLayoutState] = useState<PageLayoutState>(() =>
@@ -348,8 +354,7 @@ export function IndexedWorkspace({
       presetStore.presets.map((p) => ({
         id: p.id,
         name: p.name,
-        active: p.id === presetStore.activePresetId,
-        hidden: p.hidden
+        active: p.id === presetStore.activePresetId
       })),
     [presetStore]
   );
@@ -981,7 +986,6 @@ export function IndexedWorkspace({
               onCreatePreset={handleCreatePreset}
               onSavePreset={handleSavePreset}
               onActivatePreset={handleActivatePreset}
-              onTogglePresetHidden={handleTogglePresetHidden}
               onDeletePreset={handleDeletePreset}
               onRenamePreset={handleRenamePreset}
               onReorderPreset={handleReorderPreset}

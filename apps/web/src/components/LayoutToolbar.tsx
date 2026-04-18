@@ -68,7 +68,6 @@ export function LayoutToolbar({ components, ...props }: LayoutToolbarProps) {
       onCreatePreset={() => {}}
       onSavePreset={() => {}}
       onActivatePreset={() => {}}
-      onTogglePresetHidden={() => {}}
       onDeletePreset={() => {}}
       onRenamePreset={() => {}}
       onReorderPreset={() => {}}
