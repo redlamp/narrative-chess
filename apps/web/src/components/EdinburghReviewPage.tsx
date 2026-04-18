@@ -3,10 +3,11 @@ import {
   useMemo,
   useRef,
   useState,
+  type ChangeEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent
 } from "react";
-import type { CityBoard, DistrictCell, Square } from "@narrative-chess/content-schema";
+import { cityBoardSchema, type CityBoard, type DistrictCell, type Square } from "@narrative-chess/content-schema";
 import {
   ArrowDownAZ,
   ArrowDownZA,
@@ -17,17 +18,16 @@ import {
   ChevronRight,
   ChevronsDownUp,
   ChevronsUpDown,
+  CloudDownload,
+  CloudUpload,
   Crosshair,
-  Download,
   FilePenLine,
-  FolderTree,
   FolderOpen,
   Move,
   OctagonAlert,
   Paintbrush,
   Bot,
   RotateCcw,
-  Save,
   type LucideIcon
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +45,7 @@ import { Slider } from "@/components/ui/slider";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -58,11 +59,17 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "@/components/ui/tooltip";
-import { cityBoardDefinitions, getCityBoardDefinition } from "../cityBoards";
+import {
+  cityBoardDefinitions,
+  getCityBoardDefinition,
+  loadLatestDraftCityBoard,
+  saveCityBoardDraftToSupabase
+} from "../cityBoards";
 import { getDistrictMapCenter, getDistrictRadiusMeters, getSquareTone } from "./cityMapShared";
 import {
   buildCityBoardValidation,
   getCityBoardDraftStatus,
+  hydrateCityBoardDraft,
   listCityBoardDraft,
   listCityBoardSavedBaseline,
   resetCityBoardDraft,
@@ -70,15 +77,7 @@ import {
   saveCityBoardSavedBaseline,
   type CityBoardDraftStatus
 } from "../cityReviewState";
-import {
-  connectCityReviewDirectory,
-  getConnectedCityReviewDirectoryName,
-  loadCityDraftFromDirectory,
-  saveCityDraftToDirectory,
-  supportsLocalContentDirectory
-} from "../fileSystemAccess";
 import { IndexedWorkspace, type LayoutNavigation } from "./IndexedWorkspace";
-import { WorkspaceIntroCard } from "./WorkspaceIntroCard";
 import { WorkspaceListItem } from "./WorkspaceListItem";
 import { WorkspaceNoticeCard } from "./WorkspaceNoticeCard";
 import { ClearableSearchField } from "./ClearableSearchField";
@@ -743,6 +742,7 @@ type EdinburghReviewPageProps = {
   layoutMode: boolean;
   showLayoutGrid: boolean;
   layoutNavigation?: LayoutNavigation;
+  canManageRemoteDrafts: boolean;
   onCityBoardDraftChange?: (board: CityBoard) => void;
   onToggleLayoutMode: () => void;
   onToggleLayoutGrid: (checked: boolean) => void;
@@ -752,6 +752,7 @@ export function EdinburghReviewPage({
   layoutMode,
   showLayoutGrid,
   layoutNavigation,
+  canManageRemoteDrafts,
   onCityBoardDraftChange,
   onToggleLayoutMode,
   onToggleLayoutGrid
@@ -780,12 +781,12 @@ export function EdinburghReviewPage({
   const showBoardPieces = false;
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState<SaveNotice | null>(null);
-  const [isDirectorySupported, setIsDirectorySupported] = useState(false);
-  const [cityReviewDirectoryName, setCityReviewDirectoryName] = useState<string | null>(null);
   const [selectedCityTab, setSelectedCityTabState] = useState<CityEditorTab>("basics");
   const [selectedDistrictTab, setSelectedDistrictTabState] = useState<DistrictEditorTab>("basics");
   const [isMapImportArmed, setIsMapImportArmed] = useState(false);
+  const [pendingImportTargetCityId, setPendingImportTargetCityId] = useState<string | null>(null);
   const mapPlacementSearchContainerRef = useRef<HTMLDivElement | null>(null);
+  const cityFileInputRef = useRef<HTMLInputElement | null>(null);
   const selectedCityDefinition =
     getCityBoardDefinition(selectedCityId) ?? initialCityDefinition ?? cityBoardDefinitions[0] ?? null;
   const validation = useMemo(() => buildCityBoardValidation(draft), [draft]);
@@ -819,13 +820,6 @@ export function EdinburghReviewPage({
   );
 
   useEffect(() => {
-    setIsDirectorySupported(supportsLocalContentDirectory());
-    void getConnectedCityReviewDirectoryName().then((directoryName) => {
-      setCityReviewDirectoryName(directoryName);
-    });
-  }, []);
-
-  useEffect(() => {
     try {
       const savedDraft = saveCityBoardDraft(draft);
       onCityBoardDraftChange?.(savedDraft);
@@ -839,28 +833,61 @@ export function EdinburghReviewPage({
       return;
     }
 
-    const cachedDraft = cityDraftsRef.current[selectedCityDefinition.id];
-    const nextDraft = cachedDraft ?? listCityBoardDraft(selectedCityDefinition.id, selectedCityDefinition.board);
-    cityDraftsRef.current[selectedCityDefinition.id] = nextDraft;
-    setSavedDraftsByCityId((current) =>
-      current[selectedCityDefinition.id]
-        ? current
-        : {
-            ...current,
-            [selectedCityDefinition.id]: listCityBoardSavedBaseline(
-              selectedCityDefinition.id,
-              selectedCityDefinition.board
-            )
+    let cancelled = false;
+
+    const loadSelectedCity = async () => {
+      const cachedDraft = cityDraftsRef.current[selectedCityDefinition.id];
+      if (cachedDraft) {
+        if (!cancelled) {
+          setDraft(cachedDraft);
+        }
+        return;
+      }
+
+      let nextDraft = listCityBoardDraft(selectedCityDefinition.id, selectedCityDefinition.board);
+      let nextSavedBaseline = listCityBoardSavedBaseline(
+        selectedCityDefinition.id,
+        selectedCityDefinition.board
+      );
+
+      if (canManageRemoteDrafts) {
+        try {
+          const remoteDraft = await loadLatestDraftCityBoard(selectedCityDefinition);
+          if (remoteDraft) {
+            nextDraft = saveCityBoardDraft(remoteDraft.board);
+            nextSavedBaseline = saveCityBoardSavedBaseline(remoteDraft.board);
           }
-    );
-    setDraft(nextDraft);
+        } catch (error) {
+          console.warn(
+            `[supabase] Could not load draft city board for ${selectedCityDefinition.id}.`,
+            error
+          );
+        }
+      }
+
+      cityDraftsRef.current[selectedCityDefinition.id] = nextDraft;
+      if (!cancelled) {
+        setSavedDraftsByCityId((current) => ({
+          ...current,
+          [selectedCityDefinition.id]: nextSavedBaseline
+        }));
+        setDraft(nextDraft);
+      }
+    };
+
+    void loadSelectedCity();
+
     setSelectedRecordId(cityOverviewId);
     setSelectedDistrictIds([]);
     setDistrictSelectionAnchorId(null);
     setIsMapImportArmed(false);
     setHoveredDistrictId(null);
     setHoveredBoardSquare(null);
-  }, [selectedCityDefinition]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canManageRemoteDrafts, selectedCityDefinition]);
 
   useEffect(() => {
     cityDraftsRef.current[draft.id] = draft;
@@ -1081,7 +1108,7 @@ export function EdinburghReviewPage({
     }));
   };
 
-  const runDirectoryAction = async (actionName: string, action: () => Promise<void>) => {
+  const runAsyncAction = async (actionName: string, action: () => Promise<void>) => {
     setBusyAction(actionName);
     setSaveNotice(null);
 
@@ -1106,28 +1133,19 @@ export function EdinburghReviewPage({
     return nextBoard;
   };
 
-  const saveBoardToConnectedDirectory = async (board: CityBoard) => {
-    if (!cityReviewDirectoryName) {
-      return null;
+  const handleSaveCityDraft = () => {
+    if (!canManageRemoteDrafts || !selectedCityDefinition) {
+      return;
     }
 
-    const result = await saveCityDraftToDirectory(board);
-    setCityReviewDirectoryName(result.directoryName);
-    return result;
-  };
-
-  const handleSaveCityDraft = () => {
-    void runDirectoryAction("save-city-draft", async () => {
+    void runAsyncAction("save-city-draft", async () => {
       const nextDraft = saveCityBoardDraft(draft);
       cityDraftsRef.current[nextDraft.id] = nextDraft;
       markCityBoardSaved(nextDraft);
-
-      const result = await saveBoardToConnectedDirectory(nextDraft);
+      const result = await saveCityBoardDraftToSupabase(selectedCityDefinition, nextDraft);
       setSaveNotice({
         tone: "success",
-        text: result
-          ? `Saved all ${nextDraft.name} data to ${result.relativePath} inside ${result.directoryName}.`
-          : `Saved all ${nextDraft.name} data to the browser draft. Connect a folder to save to disk.`
+        text: `Uploaded ${nextDraft.name} draft to remote version ${result.versionNumber}.`
       });
     });
   };
@@ -1149,7 +1167,7 @@ export function EdinburghReviewPage({
   };
 
   const handleSaveEditorDistrict = () => {
-    if (!editorDistrict || !canEditEditorDistrict) {
+    if (!editorDistrict || !canEditEditorDistrict || !canManageRemoteDrafts || !selectedCityDefinition) {
       return;
     }
 
@@ -1159,7 +1177,7 @@ export function EdinburghReviewPage({
       return;
     }
 
-    void runDirectoryAction("save-district-draft", async () => {
+    void runAsyncAction("save-district-draft", async () => {
       const baselineBoard = savedDraft ?? selectedCityDefinition?.board ?? draft;
       const nextSavedBoard = updateDistrict(
         reassignDistrictSquare(baselineBoard, districtId, districtToSave.square),
@@ -1167,14 +1185,61 @@ export function EdinburghReviewPage({
         () => cloneDistrict(districtToSave)
       );
       markCityBoardSaved(nextSavedBoard);
-
-      const result = await saveBoardToConnectedDirectory(nextSavedBoard);
+      const result = await saveCityBoardDraftToSupabase(selectedCityDefinition, nextSavedBoard);
       setSaveNotice({
         tone: "success",
-        text: result
-          ? `Saved ${districtToSave.name} to ${result.relativePath} inside ${result.directoryName}.`
-          : `Saved ${districtToSave.name} to the browser draft baseline. Connect a folder to save to disk.`
+        text: `Uploaded ${districtToSave.name} changes to remote version ${result.versionNumber}.`
       });
+    });
+  };
+
+  const beginCityFileImport = (targetCityId: string) => {
+    setPendingImportTargetCityId(targetCityId);
+    if (cityFileInputRef.current) {
+      cityFileInputRef.current.value = "";
+      cityFileInputRef.current.click();
+    }
+  };
+
+  const handleCityFileImport = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0] ?? null;
+    const targetCityId = pendingImportTargetCityId;
+    event.currentTarget.value = "";
+
+    if (!file || !targetCityId) {
+      return;
+    }
+
+    void runAsyncAction("open-city-file", async () => {
+      const targetCityDefinition = getCityBoardDefinition(targetCityId);
+      if (!targetCityDefinition) {
+        throw new Error("Unknown city target for import.");
+      }
+
+      const rawText = await file.text();
+      const parsedBoard = cityBoardSchema.parse(JSON.parse(rawText) as unknown);
+      if (parsedBoard.id !== targetCityId) {
+        throw new Error(`This file targets ${parsedBoard.id}. Choose ${parsedBoard.id} from Open file instead.`);
+      }
+
+      const nextDraft = saveCityBoardDraft(
+        hydrateCityBoardDraft(parsedBoard, targetCityDefinition.board)
+      );
+
+      cityDraftsRef.current[targetCityId] = nextDraft;
+      markCityBoardSaved(nextDraft);
+      setDraft(nextDraft);
+      setSelectedCityId(targetCityId);
+      setSelectedCityIds([targetCityId]);
+      setCitySelectionAnchorId(targetCityId);
+      setSelectedRecordId(cityOverviewId);
+      setSelectedDistrictIds([]);
+      setDistrictSelectionAnchorId(null);
+      setSaveNotice({
+        tone: "success",
+        text: `Loaded ${file.name} into ${targetCityDefinition.displayLabel}.`
+      });
+      setPendingImportTargetCityId(null);
     });
   };
 
@@ -1275,172 +1340,150 @@ export function EdinburghReviewPage({
   };
 
   return (
-    <IndexedWorkspace
-      className="cities-workspace"
-      scrollMode="page"
-      layoutMode={layoutMode}
-      layoutKey="cities-page"
-      layoutVariant="three-pane"
-      panelLabels={{
-        intro: "Header",
-        index: "Cities",
-        secondary: "Districts",
-        detail: "District detail",
-        tertiary: "Board",
-        quaternary: "Map"
-      }}
-      showLayoutGrid={showLayoutGrid}
-      layoutNavigation={layoutNavigation}
-      onToggleLayoutMode={onToggleLayoutMode}
-      onToggleLayoutGrid={onToggleLayoutGrid}
-      intro={
-        <WorkspaceIntroCard
-          title="Cities"
-          actions={
-            <TooltipProvider delayDuration={150}>
-              <div className="workspace-header-actions-group">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      size="icon-sm"
-                      variant="outline"
-                      onClick={() =>
-                        runDirectoryAction("connect-directory", async () => {
-                          const result = await connectCityReviewDirectory();
-                          setCityReviewDirectoryName(result.directoryName);
-                          setSaveNotice({
-                            tone: "success",
-                            text: `Connected to ${result.directoryName}.`
-                          });
-                        })
-                      }
-                      disabled={!isDirectorySupported || busyAction !== null}
-                      aria-label="Connect folder"
-                    >
-                      <FolderTree />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Connect folder</TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      size="icon-sm"
-                      variant="outline"
-                      onClick={() =>
-                        runDirectoryAction("load-directory-draft", async () => {
-                          const fallback = selectedCityDefinition?.board ?? createInitialCityDraft();
-                          const result = await loadCityDraftFromDirectory(fallback);
-                          if (!result) {
-                            setSaveNotice({
-                              tone: "neutral",
-                              text: "No local city draft or canonical board file was found in the connected directory."
-                            });
-                            return;
-                          }
-
-                          const nextDraft = saveCityBoardDraft(result.board);
-                          cityDraftsRef.current[nextDraft.id] = nextDraft;
-                          markCityBoardSaved(nextDraft);
-                          setDraft(nextDraft);
-                          setSelectedCityId(result.board.id);
-                          setSelectedRecordId(cityOverviewId);
-                          setSelectedDistrictIds([]);
-                          setDistrictSelectionAnchorId(null);
-                          setSaveNotice({
-                            tone: "success",
-                            text: `Loaded ${result.sourceKind} data from ${result.relativePath}.`
-                          });
-                        })
-                      }
-                      disabled={busyAction !== null}
-                      aria-label="Open file"
-                    >
-                      <FolderOpen />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Open file</TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      size="icon-sm"
-                      variant="outline"
-                      className="workspace-header-actions-reset-button"
-                      onClick={handleResetCityDraft}
-                      aria-label="Reset all city data"
-                    >
-                      <RotateCcw />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Reset all city data</TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      size="icon-sm"
-                      variant="outline"
-                      onClick={() => {
-                        downloadDraft(draft);
-                        setSaveNotice({
-                          tone: "neutral",
-                          text: `Downloaded ${draft.id}-board.local.json.`
-                        });
-                      }}
-                      disabled={busyAction !== null}
-                      aria-label="Download JSON"
-                    >
-                      <Download />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Download JSON</TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      size="icon-sm"
-                      variant="outline"
-                      onClick={handleSaveCityDraft}
-                      disabled={busyAction !== null}
-                      aria-label="Save all city data"
-                    >
-                      <Save />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Save all city data</TooltipContent>
-                </Tooltip>
-              </div>
-            </TooltipProvider>
-          }
-          status={saveNotice}
-        >
-          {!validation.isValid ? (
-            <WorkspaceNoticeCard tone="error" title="Validation notes">
-              <ul className="grid gap-2 text-sm text-muted-foreground">
-                {validation.issues.slice(0, 8).map((issue) => (
-                  <li key={issue} className="rounded-md border bg-background px-3 py-2">
-                    {issue}
-                  </li>
-                ))}
-              </ul>
-            </WorkspaceNoticeCard>
-          ) : null}
-        </WorkspaceIntroCard>
-      }
+    <>
+      <input
+        ref={cityFileInputRef}
+        type="file"
+        accept=".json,application/json"
+        className="hidden"
+        onChange={handleCityFileImport}
+      />
+      <IndexedWorkspace
+        className="cities-workspace"
+        scrollMode="page"
+        layoutMode={layoutMode}
+        layoutKey="cities-page"
+        layoutVariant="three-pane"
+        panelLabels={{
+          intro: "Header",
+          index: "Cities",
+          secondary: "Districts",
+          detail: "District detail",
+          tertiary: "Board",
+          quaternary: "Map"
+        }}
+        showLayoutGrid={showLayoutGrid}
+        layoutNavigation={layoutNavigation}
+        onToggleLayoutMode={onToggleLayoutMode}
+        onToggleLayoutGrid={onToggleLayoutGrid}
+        intro={
+          !saveNotice && validation.isValid ? null : (
+            <div className="grid gap-3">
+              {saveNotice ? (
+                <WorkspaceNoticeCard tone={saveNotice.tone}>
+                  <p className="text-sm">{saveNotice.text}</p>
+                </WorkspaceNoticeCard>
+              ) : null}
+              {!validation.isValid ? (
+                <WorkspaceNoticeCard tone="error" title="Validation notes">
+                  <ul className="grid gap-2 text-sm text-muted-foreground">
+                    {validation.issues.slice(0, 8).map((issue) => (
+                      <li key={issue} className="rounded-md border bg-background px-3 py-2">
+                        {issue}
+                      </li>
+                    ))}
+                  </ul>
+                </WorkspaceNoticeCard>
+              ) : null}
+            </div>
+          )
+        }
       index={
         <Card className="page-card page-card--index page-card--secondary-index">
           <CardHeader className="gap-4">
-            <div className="grid gap-2">
-              <CardTitle>Cities</CardTitle>
+            <div className="flex items-start justify-between gap-3">
+              <div className="grid gap-2">
+                <CardTitle>Cities</CardTitle>
+              </div>
+              <TooltipProvider delayDuration={150}>
+                <div className="workspace-header-actions-group">
+                  <DropdownMenu>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            size="icon-sm"
+                            variant="outline"
+                            disabled={busyAction !== null}
+                            aria-label="Open file"
+                          >
+                            <FolderOpen />
+                          </Button>
+                        </DropdownMenuTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>Open file</TooltipContent>
+                    </Tooltip>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Import into city</DropdownMenuLabel>
+                      {cityBoardDefinitions.map((definition) => (
+                        <DropdownMenuItem
+                          key={definition.id}
+                          onSelect={() => beginCityFileImport(definition.id)}
+                        >
+                          {definition.displayLabel}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="outline"
+                        className="workspace-header-actions-reset-button"
+                        onClick={handleResetCityDraft}
+                        aria-label="Reset all city data"
+                      >
+                        <RotateCcw />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Reset all city data</TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="outline"
+                        onClick={() => {
+                          downloadDraft(draft);
+                          setSaveNotice({
+                            tone: "neutral",
+                            text: `Downloaded ${draft.id}-board.local.json.`
+                          });
+                        }}
+                        disabled={busyAction !== null}
+                        aria-label="Download JSON"
+                      >
+                        <CloudDownload />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Download JSON</TooltipContent>
+                  </Tooltip>
+
+                  {canManageRemoteDrafts ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          size="icon-sm"
+                          variant="outline"
+                          onClick={handleSaveCityDraft}
+                          disabled={busyAction !== null}
+                          aria-label="Upload city draft"
+                        >
+                          <CloudUpload />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Upload draft to remote</TooltipContent>
+                    </Tooltip>
+                  ) : null}
+                </div>
+              </TooltipProvider>
             </div>
           </CardHeader>
           <CardContent className="page-card__content page-card__content--scroll">
@@ -1959,42 +2002,6 @@ export function EdinburghReviewPage({
                 </TabsContent>
               </Tabs>
             </CardContent>
-            <CardFooter className="city-placement-editor__detail-footer">
-              <TooltipProvider delayDuration={150}>
-                <div className="city-placement-editor__detail-footer-actions">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        size="icon-sm"
-                        variant="outline"
-                        className="workspace-header-actions-reset-button"
-                        onClick={handleResetCityDraft}
-                        aria-label="Reset all city data"
-                      >
-                        <RotateCcw />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Reset all city data</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        size="icon-sm"
-                        variant="outline"
-                        onClick={handleSaveCityDraft}
-                        disabled={busyAction !== null}
-                        aria-label="Save all city data"
-                      >
-                        <Save />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Save all city data</TooltipContent>
-                  </Tooltip>
-                </div>
-              </TooltipProvider>
-            </CardFooter>
           </Card>
           ) : null}
 
@@ -2399,26 +2406,28 @@ export function EdinburghReviewPage({
                       </TooltipTrigger>
                       <TooltipContent>Reset district</TooltipContent>
                     </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          size="icon-sm"
-                          variant="outline"
-                          onClick={handleSaveEditorDistrict}
-                          disabled={
-                            busyAction !== null ||
-                            isBulkDistrictSelection ||
-                            !canEditEditorDistrict ||
-                            !isEditorDistrictDirty
-                          }
-                          aria-label="Save district"
-                        >
-                          <Save />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Save district</TooltipContent>
-                    </Tooltip>
+                    {canManageRemoteDrafts ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            size="icon-sm"
+                            variant="outline"
+                            onClick={handleSaveEditorDistrict}
+                            disabled={
+                              busyAction !== null ||
+                              isBulkDistrictSelection ||
+                              !canEditEditorDistrict ||
+                              !isEditorDistrictDirty
+                            }
+                            aria-label="Upload district draft"
+                          >
+                            <CloudUpload />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Upload district draft</TooltipContent>
+                      </Tooltip>
+                    ) : null}
                   </div>
                 </TooltipProvider>
               </CardFooter>
@@ -2520,5 +2529,6 @@ export function EdinburghReviewPage({
         </Card>
       }
     />
+    </>
   );
 }

@@ -30,6 +30,19 @@ export type PublishedCityBoardLoadResult = {
   matchesFallback: boolean | null;
 };
 
+export type RemoteCityBoardDraftLoadResult = {
+  board: CityBoard;
+  cityEditionId: string;
+  versionId: string;
+  versionNumber: number;
+};
+
+export type RemoteCityBoardDraftSaveResult = {
+  cityEditionId: string;
+  versionId: string;
+  versionNumber: number;
+};
+
 export type PlayableCityOption = {
   id: string;
   boardId: string;
@@ -59,6 +72,91 @@ export const cityBoardDefinitions: CityBoardDefinition[] = [
 
 export function getCityBoardDefinition(cityId: string) {
   return cityBoardDefinitions.find((definition) => definition.id === cityId) ?? null;
+}
+
+export async function loadLatestDraftCityBoard(
+  definition: CityBoardDefinition
+): Promise<RemoteCityBoardDraftLoadResult | null> {
+  if (!definition.publishedEditionId || !hasSupabaseConfig) {
+    return null;
+  }
+
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("city_versions")
+    .select("id, city_edition_id, version_number, payload")
+    .eq("city_edition_id", definition.publishedEditionId)
+    .eq("status", "draft")
+    .order("version_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data?.payload) {
+    return null;
+  }
+
+  return {
+    board: parseCityBoard(data.payload),
+    cityEditionId: data.city_edition_id,
+    versionId: data.id,
+    versionNumber: data.version_number
+  };
+}
+
+export async function saveCityBoardDraftToSupabase(
+  definition: CityBoardDefinition,
+  board: CityBoard
+): Promise<RemoteCityBoardDraftSaveResult> {
+  if (!definition.publishedEditionId || !hasSupabaseConfig) {
+    throw new Error(`Remote drafts are not configured for ${definition.displayLabel}.`);
+  }
+
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    throw new Error("Supabase is not configured.");
+  }
+
+  const { data: latestVersionData, error: latestVersionError } = await supabase
+    .from("city_versions")
+    .select("version_number")
+    .eq("city_edition_id", definition.publishedEditionId)
+    .order("version_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (latestVersionError) {
+    throw latestVersionError;
+  }
+
+  const nextVersionNumber = (latestVersionData?.version_number ?? 0) + 1;
+  const { data, error } = await supabase
+    .from("city_versions")
+    .insert({
+      city_edition_id: definition.publishedEditionId,
+      version_number: nextVersionNumber,
+      status: "draft",
+      content_status: board.contentStatus,
+      review_status: board.reviewStatus,
+      payload: board,
+      review_notes: board.reviewNotes,
+      last_reviewed_at: board.lastReviewedAt
+    })
+    .select("id, city_edition_id, version_number")
+    .single();
+
+  if (error || !data) {
+    throw error ?? new Error("Could not save the remote city draft.");
+  }
+
+  return {
+    cityEditionId: data.city_edition_id,
+    versionId: data.id,
+    versionNumber: data.version_number
+  };
 }
 
 export function listFallbackPlayableCityOptions(): PlayableCityOption[] {

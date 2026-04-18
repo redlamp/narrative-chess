@@ -8,7 +8,9 @@ import {
 import {
   Building2,
   ChessPawn,
+  Cloud,
   ChevronDown,
+  FileJson,
   LayoutDashboard,
   Moon,
   Pencil,
@@ -33,7 +35,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "@/components/ui/tooltip";
 import {
   applyAppTheme,
   applyHighlightColor,
@@ -443,6 +450,8 @@ export default function App() {
   );
   const canAccessDraftCities = sessionRole === "author" || sessionRole === "admin";
   const playCitySourceLabel = playCitySource === "supabase" ? "Supabase published" : "Bundled fallback";
+  const playCityMenuTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const [playCityMenuMaxWidth, setPlayCityMenuMaxWidth] = useState<number>(320);
 
   const resolveAppRole = useCallback(async (user: { id: string } | null) => {
     const initialRole = await loadCurrentUserRole(user);
@@ -589,6 +598,31 @@ export default function App() {
       unsubscribe();
     };
   }, [resolveAppRole]);
+
+  useEffect(() => {
+    const trigger = playCityMenuTriggerRef.current;
+    const panel = trigger?.closest(".panel");
+    if (!trigger || !panel || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const updateMenuWidth = () => {
+      const triggerWidth = trigger.getBoundingClientRect().width;
+      const panelWidth = panel.getBoundingClientRect().width;
+      setPlayCityMenuMaxWidth(Math.max(triggerWidth, panelWidth - 32));
+    };
+
+    updateMenuWidth();
+
+    const observer = new ResizeObserver(() => {
+      updateMenuWidth();
+    });
+
+    observer.observe(trigger);
+    observer.observe(panel);
+
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (
@@ -910,17 +944,36 @@ export default function App() {
   const playMapCityMenu = (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button type="button" variant="ghost" size="sm" className="panel__title-trigger">
+        <Button
+          ref={playCityMenuTriggerRef}
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="panel__title-trigger max-w-full"
+        >
           <span className="panel__title-trigger-label">
             {selectedPlayCityOption?.displayLabel ?? playCityBoard.name}
           </span>
-          <Badge variant="outline">
-            {playCitySource === "supabase" ? "Published DB" : "Bundled"}
-          </Badge>
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex items-center text-muted-foreground" aria-label={playCitySourceLabel}>
+                  {playCitySource === "supabase" ? <Cloud className="size-4" /> : <FileJson className="size-4" />}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{playCitySource === "supabase" ? "remote" : "local"}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <ChevronDown data-icon="inline-end" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent
+        align="end"
+        style={{
+          width: `${Math.max(220, Math.min(playCityMenuMaxWidth, 360))}px`,
+          maxWidth: `${playCityMenuMaxWidth}px`
+        }}
+      >
         <DropdownMenuLabel>Playable settings</DropdownMenuLabel>
         <DropdownMenuRadioGroup
           value={selectedPlayCityOption?.id ?? playCityOptionId}
@@ -2267,6 +2320,7 @@ export default function App() {
           layoutMode={effectiveLayoutMode}
           showLayoutGrid={settings.showLayoutGrid}
           layoutNavigation={layoutNavigation}
+          canManageRemoteDrafts={canAccessDraftCities}
           onCityBoardDraftChange={handleCityBoardDraftChange}
           onToggleLayoutMode={() => setIsLayoutMode(false)}
           onToggleLayoutGrid={(checked) => handleBooleanSettingChange("showLayoutGrid", checked)}
