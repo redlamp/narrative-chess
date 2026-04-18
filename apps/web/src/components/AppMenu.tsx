@@ -3,6 +3,12 @@ import { ChevronDown, Download, LogIn, LogOut, Menu, RotateCcw, Save, UserPlus, 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Tooltip,
@@ -102,6 +108,10 @@ export function AppMenu({
       }
 
       if (menuRef.current?.contains(target)) {
+        return;
+      }
+
+      if (target instanceof Element && target.closest("[data-slot='dropdown-menu-content']")) {
         return;
       }
 
@@ -313,21 +323,21 @@ export function AppMenu({
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-[0.82rem] text-muted-foreground">View as</span>
-                <div className="relative min-w-28">
-                  <select
-                    className="field-select h-8 w-full appearance-none rounded-md border border-border bg-background px-3 pr-8 text-sm"
-                    value={viewAsRole}
-                    onChange={(event) => onViewAsRoleChange(event.currentTarget.value as AppRole)}
-                    aria-label="View as role"
-                  >
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button type="button" variant="outline" size="sm" className="min-w-28 justify-between gap-2">
+                      <span>{roleLabel(viewAsRole)}</span>
+                      <ChevronDown className="size-4 text-muted-foreground" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-32">
                     {availableViewAsRoles.map((role) => (
-                      <option key={role} value={role}>
+                      <DropdownMenuItem key={role} onSelect={() => onViewAsRoleChange(role)}>
                         {roleLabel(role)}
-                      </option>
+                      </DropdownMenuItem>
                     ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-[0.82rem] text-muted-foreground">Draft city access</span>

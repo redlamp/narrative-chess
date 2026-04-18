@@ -451,6 +451,13 @@ export default function App() {
   );
   const effectiveRole = viewAsRole;
   const canAccessDraftCities = effectiveRole === "author" || effectiveRole === "admin";
+  const visiblePageOptions = useMemo(
+    () =>
+      effectiveRole === "player"
+        ? pageOptions.filter((option) => option.value === "match" || option.value === "cities")
+        : pageOptions,
+    [effectiveRole]
+  );
   const playCitySourceLabel = playCitySource === "supabase" ? "Supabase published" : "Bundled fallback";
   const playCityMenuTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [playCityMenuMaxWidth, setPlayCityMenuMaxWidth] = useState<number>(320);
@@ -613,6 +620,14 @@ export default function App() {
       setViewAsRole(allowedViewAsRoles[0]);
     }
   }, [sessionRole, viewAsRole]);
+
+  useEffect(() => {
+    if (visiblePageOptions.some((option) => option.value === page)) {
+      return;
+    }
+
+    setPage("match");
+  }, [page, visiblePageOptions]);
 
   useEffect(() => {
     const trigger = playCityMenuTriggerRef.current;
@@ -873,13 +888,13 @@ export default function App() {
   const effectiveLayoutMode = isLayoutMode && !isCompactViewport;
   const layoutNavigation = useMemo<LayoutNavigation>(
     () => ({
-      pages: pageOptions,
+      pages: visiblePageOptions,
       activePage: page,
       onPageChange: (nextPage: string) => {
         if (isAppPage(nextPage)) setPage(nextPage);
       }
     }),
-    [page]
+    [page, visiblePageOptions]
   );
   const useFreeformWorkspaceLayout = !isCompactViewport;
   const workspaceRowCount = useMemo(
@@ -2231,7 +2246,7 @@ export default function App() {
               className="page-switcher-tabs"
             >
               <TabsList aria-label="Workspace sections">
-                {pageOptions.map(({ value, label, icon }) => (
+                {visiblePageOptions.map(({ value, label, icon }) => (
                   <TabsTrigger key={value} value={value}>
                     {icon && <span className="mr-1.5">{icon}</span>}
                     {label}
