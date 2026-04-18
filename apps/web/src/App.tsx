@@ -91,7 +91,12 @@ import {
   savePieceStylesDraftToDirectory,
   supportsWorkspaceLayoutDirectory
 } from "./fileSystemAccess";
-import { cityBoardDefinitions } from "./cityBoards";
+import {
+  cityBoardDefinitions,
+  getCityBoardDefinition,
+  isSupabasePublishedCitiesEnabled,
+  loadPublishedCityBoard
+} from "./cityBoards";
 import { listCityBoardDraft, saveCityBoardDraft } from "./cityReviewState";
 import { getAnimatedPieceFrames } from "./chessMotion";
 import { allPageLayoutTargets, listPageLayoutState, savePageLayoutState } from "./pageLayoutState";
@@ -386,14 +391,56 @@ export default function App() {
   const [isPieceStyleDirectorySupported, setIsPieceStyleDirectorySupported] = useState(false);
   const [selectedSavedMatchId, setSelectedSavedMatchId] = useState<string | null>(null);
   const [isHistoryPlaying, setIsHistoryPlaying] = useState(false);
+  const useSupabasePublishedCities = isSupabasePublishedCitiesEnabled();
   const [playCityBoard, setPlayCityBoard] = useState<CityBoard>(() =>
-    listCityBoardDraft(edinburghBoard.id, edinburghBoard)
+    useSupabasePublishedCities ? edinburghBoard : listCityBoardDraft(edinburghBoard.id, edinburghBoard)
   );
   const handleCityBoardDraftChange = useCallback((board: CityBoard) => {
+    if (useSupabasePublishedCities) {
+      return;
+    }
+
     if (board.id === playCityBoard.id) {
       setPlayCityBoard(board);
     }
-  }, [playCityBoard.id]);
+  }, [playCityBoard.id, useSupabasePublishedCities]);
+
+  useEffect(() => {
+    if (!useSupabasePublishedCities) {
+      return;
+    }
+
+    const definition = getCityBoardDefinition(playCityBoard.id);
+    if (!definition) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void loadPublishedCityBoard(definition)
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+
+        if (result.source === "supabase" && result.matchesFallback === false) {
+          console.warn(
+            `[supabase] Published city board for ${definition.id} differs from bundled fallback ${definition.boardFileStem}.`
+          );
+        }
+
+        setPlayCityBoard((current) => (current.id === definition.id ? result.board : current));
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.warn(`[supabase] Could not load published city board for ${definition.id}.`, error);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [playCityBoard.id, useSupabasePublishedCities]);
 
   useEffect(() => {
     if (
@@ -661,7 +708,11 @@ export default function App() {
               return;
             }
 
-            setPlayCityBoard(listCityBoardDraft(nextDefinition.id, nextDefinition.board));
+            setPlayCityBoard(
+              useSupabasePublishedCities
+                ? nextDefinition.board
+                : listCityBoardDraft(nextDefinition.id, nextDefinition.board)
+            );
           }}
         >
           {cityBoardDefinitions.map((definition) => (

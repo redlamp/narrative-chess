@@ -1,17 +1,20 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-function readEnv(name: "VITE_SUPABASE_URL" | "VITE_SUPABASE_PUBLISHABLE_KEY") {
-  const value = import.meta.env[name];
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim() ?? "";
+const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() ?? "";
 
-  if (!value) {
-    throw new Error(`Missing ${name}. Add it to apps/web/.env.local.`);
+export const hasSupabaseConfig = supabaseUrl.length > 0 && supabasePublishableKey.length > 0;
+
+let supabaseClient: SupabaseClient | null = null;
+
+export function getSupabaseClient() {
+  if (!hasSupabaseConfig) {
+    return null;
   }
 
-  return value;
+  if (!supabaseClient) {
+    supabaseClient = createClient(supabaseUrl, supabasePublishableKey);
+  }
+
+  return supabaseClient;
 }
-
-export const supabase = createClient(
-  readEnv("VITE_SUPABASE_URL"),
-  readEnv("VITE_SUPABASE_PUBLISHABLE_KEY")
-);
-
