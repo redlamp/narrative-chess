@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import type { ReferenceGame } from "@narrative-chess/content-schema";
 import {
   createGameInviteInSupabase,
+  formatTimeControlLabel,
+  timeControlPresets,
   listActiveGamesFromSupabase,
   respondToGameInviteInSupabase,
-  type ActiveGamePlayMode,
   type ActiveGameRecord
 } from "@/activeGames";
 import type { SavedMatchRecord } from "@/savedMatches";
@@ -159,7 +160,7 @@ export function RecentGamesPanel({
   const [activeGamesNotice, setActiveGamesNotice] = useState<ActiveGamesNotice | null>(null);
   const [inviteOpponentUsername, setInviteOpponentUsername] = useState("");
   const [inviteCityEditionId, setInviteCityEditionId] = useState(multiplayerCityOptions[0]?.id ?? "");
-  const [invitePlayMode, setInvitePlayMode] = useState<ActiveGamePlayMode>("async");
+  const [inviteTimeControlPresetId, setInviteTimeControlPresetId] = useState("deadline-daily");
   const [inviteRated, setInviteRated] = useState(false);
   const splitContentRef = useRef<HTMLDivElement | null>(null);
   const selectedSavedMatch = savedMatches.find((savedMatch) => savedMatch.id === selectedSavedMatchId);
@@ -255,7 +256,7 @@ export function RecentGamesPanel({
       await createGameInviteInSupabase({
         opponentUsername: inviteOpponentUsername,
         cityEditionId: inviteCityEditionId,
-        playMode: invitePlayMode,
+        timeControlPresetId: inviteTimeControlPresetId,
         rated: inviteRated
       });
       setInviteOpponentUsername("");
@@ -272,7 +273,7 @@ export function RecentGamesPanel({
     } finally {
       setIsSubmittingInvite(false);
     }
-  }, [accountUsername, inviteCityEditionId, inviteOpponentUsername, invitePlayMode, inviteRated, refreshActiveGames]);
+  }, [accountUsername, inviteCityEditionId, inviteOpponentUsername, inviteRated, inviteTimeControlPresetId, refreshActiveGames]);
 
   const handleRespondToInvite = useCallback(async (gameId: string, response: "accept" | "decline") => {
     try {
@@ -388,15 +389,18 @@ export function RecentGamesPanel({
                   </select>
                 </label>
                 <label className="grid gap-1">
-                  <span className="text-sm font-medium">Mode</span>
+                  <span className="text-sm font-medium">Time control</span>
                   <select
                     className="field-select"
-                    value={invitePlayMode}
-                    onChange={(event) => setInvitePlayMode(event.currentTarget.value as ActiveGamePlayMode)}
+                    value={inviteTimeControlPresetId}
+                    onChange={(event) => setInviteTimeControlPresetId(event.currentTarget.value)}
                     disabled={isSubmittingInvite}
                   >
-                    <option value="async">Async</option>
-                    <option value="sync">Sync</option>
+                    {timeControlPresets.map((preset) => (
+                      <option key={preset.id} value={preset.id}>
+                        {preset.label}
+                      </option>
+                    ))}
                   </select>
                 </label>
                 <label className="recent-games-active__rated">
@@ -450,11 +454,18 @@ export function RecentGamesPanel({
                         </div>
                         <p className="recent-games-active__entry-meta">
                           {game.opponentUsername ? `@${game.opponentUsername}` : "Unnamed opponent"} ·{" "}
-                          {game.cityLabel ?? "Default board"} · {game.playMode === "sync" ? "Sync" : "Async"} ·{" "}
-                          {game.rated ? "Rated" : "Casual"} · Elo {game.opponentEloRating}
+                          {game.cityLabel ?? "Default board"} ·{" "}
+                          {formatTimeControlLabel({
+                            timeControlKind: game.timeControlKind,
+                            baseSeconds: game.baseSeconds,
+                            incrementSeconds: game.incrementSeconds,
+                            moveDeadlineSeconds: game.moveDeadlineSeconds
+                          })} · {game.rated ? "Rated" : "Casual"} · Elo {game.opponentEloRating}
                         </p>
                         <p className="recent-games-active__entry-meta">
-                          Updated {formatGameTimestamp(game.lastMoveAt ?? game.updatedAt)}
+                          {game.deadlineAt && game.status === "active"
+                            ? `Deadline ${formatGameTimestamp(game.deadlineAt)}`
+                            : `Updated ${formatGameTimestamp(game.lastMoveAt ?? game.updatedAt)}`}
                         </p>
                       </div>
                       {game.isIncomingInvite ? (
