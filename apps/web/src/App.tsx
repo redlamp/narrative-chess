@@ -432,7 +432,8 @@ export default function App() {
   );
   const [playCityMatchesFallback, setPlayCityMatchesFallback] = useState<boolean | null>(null);
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
-  const [sessionRole, setSessionRole] = useState<AppRole>("reader");
+  const [sessionRole, setSessionRole] = useState<AppRole>("player");
+  const [viewAsRole, setViewAsRole] = useState<AppRole>("player");
   const [isAuthBusy, setIsAuthBusy] = useState(false);
   const handleCityBoardDraftChange = useCallback((board: CityBoard) => {
     if (useSupabasePublishedCities) {
@@ -448,14 +449,15 @@ export default function App() {
     () => playCityOptions.find((option) => option.id === playCityOptionId) ?? playCityOptions[0] ?? null,
     [playCityOptionId, playCityOptions]
   );
-  const canAccessDraftCities = sessionRole === "author" || sessionRole === "admin";
+  const effectiveRole = viewAsRole;
+  const canAccessDraftCities = effectiveRole === "author" || effectiveRole === "admin";
   const playCitySourceLabel = playCitySource === "supabase" ? "Supabase published" : "Bundled fallback";
   const playCityMenuTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [playCityMenuMaxWidth, setPlayCityMenuMaxWidth] = useState<number>(320);
 
   const resolveAppRole = useCallback(async (user: { id: string } | null) => {
     const initialRole = await loadCurrentUserRole(user);
-    if (!user || initialRole !== "reader") {
+    if (!user || initialRole !== "player") {
       return initialRole;
     }
 
@@ -569,7 +571,7 @@ export default function App() {
         if (!cancelled) {
           console.warn("[supabase] Could not read current auth session.", error);
           setSessionEmail(null);
-          setSessionRole("reader");
+          setSessionRole("player");
         }
       }
     };
@@ -588,7 +590,7 @@ export default function App() {
         .catch((error) => {
           if (!cancelled) {
             console.warn("[supabase] Could not read user role.", error);
-            setSessionRole("reader");
+            setSessionRole("player");
           }
         });
     });
@@ -598,6 +600,19 @@ export default function App() {
       unsubscribe();
     };
   }, [resolveAppRole]);
+
+  useEffect(() => {
+    const allowedViewAsRoles =
+      sessionRole === "admin"
+        ? (["admin", "author", "player"] as AppRole[])
+        : sessionRole === "author"
+          ? (["author", "player"] as AppRole[])
+          : (["player"] as AppRole[]);
+
+    if (!allowedViewAsRoles.includes(viewAsRole)) {
+      setViewAsRole(allowedViewAsRoles[0]);
+    }
+  }, [sessionRole, viewAsRole]);
 
   useEffect(() => {
     const trigger = playCityMenuTriggerRef.current;
@@ -844,7 +859,8 @@ export default function App() {
     setIsAuthBusy(true);
     try {
       await signOut();
-      setSessionRole("reader");
+      setSessionRole("player");
+      setViewAsRole("player");
       return "Signed out.";
     } catch (error) {
       console.warn("[supabase] Sign-out failed.", error);
@@ -2272,6 +2288,8 @@ export default function App() {
               }
               accountEmail={sessionEmail}
               accountRole={sessionRole}
+              viewAsRole={viewAsRole}
+              onViewAsRoleChange={setViewAsRole}
               canAccessDraftCities={canAccessDraftCities}
               isAuthBusy={isAuthBusy}
               onSignInWithPassword={handleSignInWithPassword}

@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { Download, LogIn, LogOut, Menu, RotateCcw, Save, UserPlus, X } from "lucide-react";
+import { ChevronDown, Download, LogIn, LogOut, Menu, RotateCcw, Save, UserPlus, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/tooltip";
 import { FloatingActionNotice, type FloatingActionNoticeState } from "./FloatingActionNotice";
 import { highlightColorOptions, type HighlightColor } from "../appSettings";
+import type { AppRole } from "../auth";
 
 type AppMenuProps = {
   isOpen: boolean;
@@ -27,7 +28,9 @@ type AppMenuProps = {
   highlightColor: HighlightColor;
   onHighlightColorChange: (color: HighlightColor) => void;
   accountEmail: string | null;
-  accountRole: string;
+  accountRole: AppRole;
+  viewAsRole: AppRole;
+  onViewAsRoleChange: (role: AppRole) => void;
   canAccessDraftCities: boolean;
   isAuthBusy: boolean;
   onSignInWithPassword: (email: string, password: string) => Promise<string>;
@@ -42,6 +45,10 @@ type AuthNotice = {
   tone: "success" | "error";
   text: string;
 };
+
+function roleLabel(role: AppRole) {
+  return role === "admin" ? "Admin" : role === "author" ? "Author" : "Player";
+}
 
 export function AppMenu({
   isOpen,
@@ -58,6 +65,8 @@ export function AppMenu({
   onHighlightColorChange,
   accountEmail,
   accountRole,
+  viewAsRole,
+  onViewAsRoleChange,
   canAccessDraftCities,
   isAuthBusy,
   onSignInWithPassword,
@@ -74,6 +83,12 @@ export function AppMenu({
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authNotice, setAuthNotice] = useState<AuthNotice | null>(null);
+  const availableViewAsRoles =
+    accountRole === "admin"
+      ? (["admin", "author", "player"] as AppRole[])
+      : accountRole === "author"
+        ? (["author", "player"] as AppRole[])
+        : (["player"] as AppRole[]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -294,7 +309,25 @@ export function AppMenu({
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-[0.82rem] text-muted-foreground">Role</span>
-                <Badge variant="outline">{accountRole}</Badge>
+                <Badge variant="outline">{roleLabel(accountRole)}</Badge>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[0.82rem] text-muted-foreground">View as</span>
+                <div className="relative min-w-28">
+                  <select
+                    className="field-select h-8 w-full appearance-none rounded-md border border-border bg-background px-3 pr-8 text-sm"
+                    value={viewAsRole}
+                    onChange={(event) => onViewAsRoleChange(event.currentTarget.value as AppRole)}
+                    aria-label="View as role"
+                  >
+                    {availableViewAsRoles.map((role) => (
+                      <option key={role} value={role}>
+                        {roleLabel(role)}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                </div>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-[0.82rem] text-muted-foreground">Draft city access</span>

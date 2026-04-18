@@ -78,6 +78,7 @@ import {
   type CityBoardDraftStatus
 } from "../cityReviewState";
 import { IndexedWorkspace, type LayoutNavigation } from "./IndexedWorkspace";
+import { FloatingActionNotice, type FloatingActionNoticeState } from "./FloatingActionNotice";
 import { WorkspaceListItem } from "./WorkspaceListItem";
 import { WorkspaceNoticeCard } from "./WorkspaceNoticeCard";
 import { ClearableSearchField } from "./ClearableSearchField";
@@ -781,6 +782,7 @@ export function EdinburghReviewPage({
   const showBoardPieces = false;
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState<SaveNotice | null>(null);
+  const [cloudActionNotice, setCloudActionNotice] = useState<FloatingActionNoticeState | null>(null);
   const [selectedCityTab, setSelectedCityTabState] = useState<CityEditorTab>("basics");
   const [selectedDistrictTab, setSelectedDistrictTabState] = useState<DistrictEditorTab>("basics");
   const [isMapImportArmed, setIsMapImportArmed] = useState(false);
@@ -1110,15 +1112,24 @@ export function EdinburghReviewPage({
 
   const runAsyncAction = async (actionName: string, action: () => Promise<void>) => {
     setBusyAction(actionName);
-    setSaveNotice(null);
+    if (actionName === "save-city-draft" || actionName === "save-district-draft") {
+      setCloudActionNotice(null);
+    } else {
+      setSaveNotice(null);
+    }
 
     try {
       await action();
     } catch (error) {
-      setSaveNotice({
-        tone: "error",
+      const notice = {
+        tone: "error" as const,
         text: error instanceof Error ? error.message : "Something went wrong."
-      });
+      };
+      if (actionName === "save-city-draft" || actionName === "save-district-draft") {
+        setCloudActionNotice(notice);
+      } else {
+        setSaveNotice(notice);
+      }
     } finally {
       setBusyAction(null);
     }
@@ -1143,6 +1154,10 @@ export function EdinburghReviewPage({
       cityDraftsRef.current[nextDraft.id] = nextDraft;
       markCityBoardSaved(nextDraft);
       const result = await saveCityBoardDraftToSupabase(selectedCityDefinition, nextDraft);
+      setCloudActionNotice({
+        tone: "success",
+        text: `Remote draft v${result.versionNumber} saved.`
+      });
       setSaveNotice({
         tone: "success",
         text: `Uploaded ${nextDraft.name} draft to remote version ${result.versionNumber}.`
@@ -1186,6 +1201,10 @@ export function EdinburghReviewPage({
       );
       markCityBoardSaved(nextSavedBoard);
       const result = await saveCityBoardDraftToSupabase(selectedCityDefinition, nextSavedBoard);
+      setCloudActionNotice({
+        tone: "success",
+        text: `${districtToSave.name} uploaded in v${result.versionNumber}.`
+      });
       setSaveNotice({
         tone: "success",
         text: `Uploaded ${districtToSave.name} changes to remote version ${result.versionNumber}.`
@@ -1366,29 +1385,7 @@ export function EdinburghReviewPage({
         layoutNavigation={layoutNavigation}
         onToggleLayoutMode={onToggleLayoutMode}
         onToggleLayoutGrid={onToggleLayoutGrid}
-        intro={
-          !saveNotice && validation.isValid ? null : (
-            <div className="grid gap-3">
-              {saveNotice ? (
-                <WorkspaceNoticeCard tone={saveNotice.tone}>
-                  <p className="text-sm">{saveNotice.text}</p>
-                </WorkspaceNoticeCard>
-              ) : null}
-              {!validation.isValid ? (
-                <WorkspaceNoticeCard tone="error" title="Validation notes">
-                  <ul className="grid gap-2 text-sm text-muted-foreground">
-                    {validation.issues.slice(0, 8).map((issue) => (
-                      <li key={issue} className="rounded-md border bg-background px-3 py-2">
-                        {issue}
-                      </li>
-                    ))}
-                  </ul>
-                </WorkspaceNoticeCard>
-              ) : null}
-            </div>
-          )
-        }
-      index={
+        index={
         <Card className="page-card page-card--index page-card--secondary-index">
           <CardHeader className="gap-4">
             <div className="flex items-start justify-between gap-3">
@@ -1487,6 +1484,26 @@ export function EdinburghReviewPage({
             </div>
           </CardHeader>
           <CardContent className="page-card__content page-card__content--scroll">
+            {!saveNotice && validation.isValid ? null : (
+              <div className="grid gap-3 pb-4">
+                {saveNotice ? (
+                  <WorkspaceNoticeCard tone={saveNotice.tone}>
+                    <p className="text-sm">{saveNotice.text}</p>
+                  </WorkspaceNoticeCard>
+                ) : null}
+                {!validation.isValid ? (
+                  <WorkspaceNoticeCard tone="error" title="Validation notes">
+                    <ul className="grid gap-2 text-sm text-muted-foreground">
+                      {validation.issues.slice(0, 8).map((issue) => (
+                        <li key={issue} className="rounded-md border bg-background px-3 py-2">
+                          {issue}
+                        </li>
+                      ))}
+                    </ul>
+                  </WorkspaceNoticeCard>
+                ) : null}
+              </div>
+            )}
             <ul className="cities-page__list">
               {trackedCities.map((city) => {
                 const contentStatusMeta = getContentStatusMeta(city.contentStatus);
@@ -2529,6 +2546,11 @@ export function EdinburghReviewPage({
         </Card>
       }
     />
+      <FloatingActionNotice
+        notice={cloudActionNotice}
+        className="fixed bottom-4 left-4 top-auto right-auto z-[90] w-[min(20rem,calc(100vw-2rem))] max-w-[min(20rem,calc(100vw-2rem))]"
+        onDismiss={() => setCloudActionNotice(null)}
+      />
     </>
   );
 }

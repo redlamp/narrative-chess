@@ -1,7 +1,7 @@
 import type { Session, User } from "@supabase/supabase-js";
 import { getSupabaseClient } from "./lib/supabase";
 
-export type AppRole = "reader" | "author" | "admin";
+export type AppRole = "player" | "author" | "admin";
 
 export async function signInWithGoogle() {
   const supabase = getSupabaseClient();
@@ -102,12 +102,12 @@ export function subscribeToAuthChanges(
 
 export async function loadCurrentUserRole(user: User | null): Promise<AppRole> {
   if (!user) {
-    return "reader";
+    return "player";
   }
 
   const supabase = getSupabaseClient();
   if (!supabase) {
-    return "reader";
+    return "player";
   }
 
   const { data, error } = await supabase
@@ -117,7 +117,7 @@ export async function loadCurrentUserRole(user: User | null): Promise<AppRole> {
     .maybeSingle();
 
   if (error || !data?.role) {
-    return "reader";
+    return "player";
   }
 
   return data.role === "admin" ? "admin" : "author";
