@@ -28,7 +28,7 @@ The repo now has a root `components.json`.
 
 Current status:
 
-1. `pnpm dlx shadcn@latest info --json` recognizes the project.
+1. `bunx shadcn@latest info --json` recognizes the project.
 2. Installed local UI primitives are visible to the shadcn CLI.
 3. Framework is detected as `Manual`, which is acceptable for this Vite monorepo layout.
 

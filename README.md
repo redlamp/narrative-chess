@@ -52,7 +52,7 @@ Current implementation:
 - Zod
 - Vitest
 - ESLint
-- pnpm workspace
+- Bun workspace
 
 Planned later, not yet implemented:
 - shadcn/ui or another UI system as needed
@@ -62,24 +62,22 @@ Planned later, not yet implemented:
 
 ## Local Development
 
-This repo uses the pnpm workspace defined in [`package.json`](/C:/workspace/narrative-chess/package.json) and [`pnpm-workspace.yaml`](/C:/workspace/narrative-chess/pnpm-workspace.yaml).
-
-If `pnpm` is not already installed globally, use Corepack:
+This repo uses the Bun workspace defined in [`package.json`](/C:/workspace/narrative-chess/package.json).
 
 ```bash
-corepack pnpm install
-corepack pnpm dev
+bun install
+bun run dev
 ```
 
 Useful commands:
 
 ```bash
-corepack pnpm install
-corepack pnpm dev
-corepack pnpm build
-corepack pnpm test
-corepack pnpm lint
-corepack pnpm typecheck
+bun install
+bun run dev
+bun run build
+bun run test
+bun run lint
+bun run typecheck
 ```
 
 The `dev` and `build` scripts target `apps/web`.

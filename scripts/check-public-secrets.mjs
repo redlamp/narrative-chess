@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 const trackedFiles = execFileSync("git", ["ls-files"], { encoding: "utf8" })
   .split(/\r?\n/u)
   .filter(Boolean)
-  .filter((filePath) => !filePath.endsWith("pnpm-lock.yaml"));
+  .filter((filePath) => !filePath.endsWith("bun.lock"));
 
 const forbiddenPatterns = [
   { label: "Supabase service-role key marker", pattern: /\bservice_role\b/u },
