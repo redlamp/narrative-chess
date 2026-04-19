@@ -17,7 +17,7 @@ Direct table access:
 | Module | Table | Operation |
 | --- | --- | --- |
 | `auth.ts` | `user_roles` | read current user's role |
-| `profiles.ts` | `profiles` | read/upsert current user's profile |
+| `profiles.ts` | `profiles` | read current user's profile |
 | `savedMatchesCloud.ts` | `user_saved_matches` | list/upsert/delete current user's saved matches |
 | `layoutCloud.ts` | `user_layout_bundles` | read/upsert current user's layout bundle |
 | `cityBoards.ts` | `city_versions` | read published versions, read latest draft, insert draft version |
@@ -31,6 +31,7 @@ RPC access:
 | --- | --- | --- |
 | `auth.ts` | `bootstrap_first_admin` | authenticated, internally limited to first-admin bootstrap rule |
 | `cityBoards.ts` | `publish_city_version` | authenticated admin only |
+| `profiles.ts` | `upsert_current_profile` | authenticated, writes only username/display name |
 | `activeGames.ts` | `list_active_games` | authenticated, returns only games involving caller |
 | `activeGames.ts` | `create_game_invite` | authenticated, validates username, city edition, side, and time control |
 | `activeGames.ts` | `respond_to_game_invite` | authenticated invite participant only |
@@ -50,17 +51,15 @@ RPC access:
 
 ## Required Before Production Supabase Use
 
-### P0: Profile Rating Must Not Be Client-Mutable
+### Resolved: Profile Rating Must Not Be Client-Mutable
 
-Current checked-in `profiles` policies allow the owner to insert and update their row. RLS restricts rows, not columns, so a user with the publishable key could attempt to set `elo_rating` directly even though the UI does not send that field.
+Migration `20260419090000_restrict_profile_edit_fields.sql` drops direct authenticated insert/update policies on `profiles` and routes user profile edits through `upsert_current_profile(p_username, p_display_name)`. The RPC accepts only the profile fields users can edit and returns the current `elo_rating`.
 
-Required fix options:
+Keep this invariant:
 
-- move profile writes behind an RPC that accepts only `username` and `display_name`;
-- or use column-level privileges so authenticated users cannot insert/update `elo_rating`;
-- or add a trigger that preserves `elo_rating` except when a trusted rating settlement function updates it.
-
-The rating settlement path in `append_game_move` should remain the only normal writer for Elo changes.
+- browser code may read the current user's `profiles` row;
+- browser code must not insert/update `profiles` directly;
+- the rating settlement path in `append_game_move` remains the normal writer for Elo changes.
 
 ### P0: Version-Control Missing Base Security Objects
 

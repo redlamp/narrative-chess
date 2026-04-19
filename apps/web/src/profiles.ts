@@ -89,24 +89,15 @@ export async function saveCurrentUserProfile(input: {
 
   const displayName = input.displayName.trim() || null;
 
-  const { data, error } = await auth.supabase
-    .from("profiles")
-    .upsert(
-      {
-        user_id: auth.userId,
-        username,
-        display_name: displayName
-      },
-      {
-        onConflict: "user_id"
-      }
-    )
-    .select("user_id, username, display_name, elo_rating")
-    .single();
+  const { data, error } = await auth.supabase.rpc("upsert_current_profile", {
+    p_username: username,
+    p_display_name: displayName
+  });
 
-  if (error || !data) {
+  const row = Array.isArray(data) ? data[0] : data;
+  if (error || !row) {
     throw error ?? new Error("Could not save profile.");
   }
 
-  return mapProfile(data as ProfileRow);
+  return mapProfile(row as ProfileRow);
 }
