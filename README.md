@@ -6,7 +6,8 @@ The board is still chess first. The narrative system is there to add flavor, not
 
 ## Current Status
 
-The repository is now bootstrapped into an early Milestone 1 vertical slice.
+The repository is beyond the first playable prototype and is consolidating city data,
+account auth, local/cloud saves, layout tooling, and GitHub Pages deployment.
 
 What is working today:
 - local playable chess in a 2D board UI
@@ -14,17 +15,17 @@ What is working today:
 - move history
 - undo
 - check, checkmate, and stalemate status in the UI
-- deterministic placeholder character roster
-- minimal narrative event log for moves
+- city-aware boards and city review/editor flows
+- structured role and classic game editors
+- lightweight narrative event log for moves
+- optional Supabase auth, profiles, saved matches, city versions, and multiplayer sync
 
 What is intentionally not in scope yet:
-- multiplayer
 - 3D board rendering
-- real city mapping
 - advanced AI strength
-- authored Edinburgh data
+- broad matchmaking/social systems
 
-The next major product step after this slice is Milestone 2: mapping one city, likely Edinburgh, onto the board without sacrificing chess clarity.
+The current product focus is Milestone 2 city-board stability plus Milestone 6 durability.
 
 ## Repository Structure
 
@@ -54,11 +55,10 @@ Current implementation:
 - ESLint
 - Bun workspace
 
-Planned later, not yet implemented:
-- shadcn/ui or another UI system as needed
-- saved games and backend services
-- city data pipeline
-- richer map-mode and 3D presentation
+Optional backend:
+- Supabase Auth
+- Supabase Postgres tables/RPCs guarded by Row-Level Security
+- frontend-only Supabase publishable key
 
 ## Local Development
 
@@ -81,6 +81,22 @@ bun run typecheck
 ```
 
 The `dev` and `build` scripts target `apps/web`.
+
+## Supabase Configuration
+
+Supabase is optional for local development. Without Supabase env values, the app falls back to browser-local state and bundled content where possible.
+
+For frontend builds, use only these public Vite variables:
+
+```bash
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_replace_me
+VITE_ENABLE_SUPABASE_PUBLISHED_CITIES=false
+```
+
+Do not put Supabase service-role keys in `.env.local`, GitHub Pages variables, GitHub Pages secrets, or any `VITE_*` variable. Vite exposes `VITE_*` values to browser code.
+
+See [`docs/account-auth-setup.md`](/C:/workspace/narrative-chess/docs/account-auth-setup.md) for GitHub Pages variables, Auth redirects, and the expected RLS access model.
 
 ## Milestone Guidance
 

@@ -8,7 +8,17 @@ The GitHub Pages workflow reads these GitHub Actions variables during the Vite b
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
 - `VITE_ENABLE_SUPABASE_PUBLISHED_CITIES`
 
-These are public frontend build values, not service-role secrets. They are set as repository variables with `gh variable set` from the local `apps/web/.env.local` values.
+These are public frontend build values, not service-role secrets. Prefer repository variables for these values; secrets are only a fallback in the deploy workflow for projects that already stored them there.
+
+Never store a Supabase service-role key in:
+
+- `apps/web/.env.local`
+- repository variables or secrets used by GitHub Pages
+- any variable prefixed with `VITE_`
+
+Vite embeds `VITE_*` values into browser code. The app must rely on Supabase Auth, RLS, and narrow RPC functions for authorization.
+
+Local development can copy [`apps/web/.env.example`](../apps/web/.env.example) to `apps/web/.env.local` and fill only the frontend-safe values.
 
 ## Supabase Auth URLs
 
@@ -30,3 +40,53 @@ Add the future custom domain or subdomain here before testing auth on that domai
 - Signed-in password update with password confirmation.
 - Profile display name update for all signed-in users.
 - Username creation for users without a username; username reset only remains visible to admins after a username exists.
+
+## Current Supabase Surface
+
+The browser client is created in `apps/web/src/lib/supabase.ts` with `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`.
+
+Current direct table access from the frontend:
+
+- `profiles`: signed-in profile read/write for the current user.
+- `user_roles`: role lookup for the current user.
+- `user_saved_matches`: signed-in saved match read/write/delete.
+- `user_layout_bundles`: signed-in layout bundle read/write.
+- `city_versions`: published city reads; draft city reads/writes for authorized editors.
+- `game_threads`, `game_participants`, `game_moves`: multiplayer session reads for participating players.
+
+Current RPC calls from the frontend:
+
+- `bootstrap_first_admin`
+- `publish_city_version`
+- `list_active_games`
+- `create_game_invite`
+- `respond_to_game_invite`
+- `append_game_move`
+
+## Profile Privacy
+
+Treat Supabase Auth email, provider metadata, and session data as private.
+
+Profile fields currently used by the UI:
+
+- `user_id`: private identifier; use for ownership checks, not public display.
+- `username`: public multiplayer lookup/display handle.
+- `display_name`: public display label when shown to opponents.
+- `elo_rating`: public rating when shown in multiplayer contexts.
+
+Do not add sensitive demographic fields to account/profile tables for early milestones. Character diversity belongs in authored narrative/content data with editorial review, not inferred from user accounts.
+
+## RLS Requirements
+
+Before enabling Supabase features for production traffic, confirm RLS is enabled on all app tables and policies match the app access model:
+
+- users can read and update only their own private profile row, while public profile lookup exposes only limited display fields needed for multiplayer.
+- users can read/write/delete only their own `user_saved_matches`.
+- users can read/write only their own `user_layout_bundles`.
+- published city versions can be read by everyone if `VITE_ENABLE_SUPABASE_PUBLISHED_CITIES=true`.
+- draft city versions can be read/written only by authorized author/admin users.
+- publish/admin functions are restricted to authorized roles.
+- game threads and moves are readable only by participants.
+- game moves are inserted through `append_game_move`, which must validate participant, turn, ply order, and immutable prior moves.
+
+When adding a table or RPC, update this document in the same change so the browser data surface stays reviewable.
