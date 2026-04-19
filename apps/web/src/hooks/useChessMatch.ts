@@ -159,6 +159,7 @@ export function useChessMatch({
       })
     : [];
   const legalMoves = selectedSquare ? listLegalMoves(snapshot, selectedSquare) : [];
+  const canInteractWithCurrentPosition = !canCommitLocalMove || canCommitLocalMove(snapshot);
   const boardSquares = getBoardSquares(snapshot);
   const canUndo = !isStudyMode && !localControlsLocked && localSnapshot.moveHistory.length > 0;
   const canSave = !isStudyMode && !localControlsLocked;
@@ -294,7 +295,7 @@ export function useChessMatch({
   };
 
   const handleSquareClick = (square: Square) => {
-    if (moveInteractionLocked || isStudyMode) {
+    if (moveInteractionLocked || isStudyMode || !canInteractWithCurrentPosition) {
       return;
     }
 
