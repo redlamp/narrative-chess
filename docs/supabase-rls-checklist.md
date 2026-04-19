@@ -32,8 +32,9 @@ RPC access:
 | `auth.ts` | `bootstrap_first_admin` | authenticated, internally limited to first-admin bootstrap rule |
 | `cityBoards.ts` | `publish_city_version` | authenticated admin only |
 | `profiles.ts` | `upsert_current_profile` | authenticated, writes only username/display name |
-| `activeGames.ts` | `list_active_games` | authenticated, returns only games involving caller |
-| `activeGames.ts` | `create_game_invite` | authenticated, validates username, city edition, side, and time control |
+| `activeGames.ts` | `list_active_games` | authenticated, returns caller games plus limited open-game listings |
+| `activeGames.ts` | `create_game_invite` | authenticated, validates username or open-game intent, city edition, side, and time control |
+| `activeGames.ts` | `join_open_game` | authenticated, joins only available open games through server-side checks |
 | `activeGames.ts` | `respond_to_game_invite` | authenticated invite participant only |
 | `activeGames.ts` | `append_game_move` | authenticated active participant, current turn only |
 
@@ -45,8 +46,9 @@ RPC access:
 - `game_threads`, `game_participants`, and `game_moves` have RLS enabled and participant-only read policies.
 - Multiplayer mutations are routed through `SECURITY DEFINER` RPCs instead of direct table insert/update policies.
 - `20260419093000_add_multiplayer_clock_state.sql` stores live-clock remaining seconds and turn start timestamps on `game_threads`.
-- `list_active_games` is granted only to `authenticated` and joins through the caller's participant row.
-- `create_game_invite` is granted only to `authenticated` and resolves opponent username inside the RPC.
+- `list_active_games` is granted only to `authenticated`; it joins through the caller's participant row and separately exposes limited open-game listings.
+- `create_game_invite` is granted only to `authenticated` and resolves opponent username or open-game creation inside the RPC.
+- `join_open_game` is granted only to `authenticated`; open-game discovery remains constrained to the limited `list_active_games` RPC output.
 - `append_game_move` is granted only to `authenticated` and validates participant status, game status, side, turn, square format, promotion, and immutable ply ordering before inserting a move.
 - `publish_city_version` checks `auth.uid()` and `has_app_role('admin')` before archiving and publishing city versions.
 

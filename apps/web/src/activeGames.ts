@@ -96,6 +96,8 @@ export type ActiveGameRecord = {
   opponentDisplayName: string | null;
   opponentEloRating: number;
   opponentParticipantStatus: "invited" | "active" | "declined" | "left" | null;
+  isOpenGame: boolean;
+  canJoinOpenGame: boolean;
   isYourTurn: boolean;
   isIncomingInvite: boolean;
   isOutgoingInvite: boolean;
@@ -151,6 +153,8 @@ type ActiveGameRow = {
   opponent_display_name: string | null;
   opponent_elo_rating: number | null;
   opponent_participant_status: ActiveGameRecord["opponentParticipantStatus"];
+  is_open_game: boolean | null;
+  can_join_open_game: boolean | null;
   is_your_turn: boolean;
   is_incoming_invite: boolean;
   is_outgoing_invite: boolean;
@@ -215,6 +219,8 @@ function mapActiveGameRow(row: ActiveGameRow): ActiveGameRecord {
     opponentDisplayName: row.opponent_display_name,
     opponentEloRating: row.opponent_elo_rating ?? 1200,
     opponentParticipantStatus: row.opponent_participant_status,
+    isOpenGame: row.is_open_game === true,
+    canJoinOpenGame: row.can_join_open_game === true,
     isYourTurn: row.is_your_turn,
     isIncomingInvite: row.is_incoming_invite,
     isOutgoingInvite: row.is_outgoing_invite
@@ -319,11 +325,12 @@ export function getSupabaseMovePromotion(promotion: MoveRecord["promotion"]) {
 }
 
 export async function createGameInviteInSupabase(input: {
-  opponentUsername: string;
+  opponentUsername: string | null;
   cityEditionId: string | null;
   timeControlPresetId: string;
   creatorSide: "white" | "black" | "random";
   rated: boolean;
+  isOpenGame: boolean;
 }): Promise<string> {
   const auth = await requireAuthenticatedUser();
   if (!auth) {
@@ -336,14 +343,15 @@ export async function createGameInviteInSupabase(input: {
   }
 
   const { data, error } = await auth.supabase.rpc("create_game_invite", {
-    p_opponent_username: input.opponentUsername.trim().toLowerCase(),
+    p_opponent_username: input.opponentUsername?.trim().toLowerCase() || null,
     p_city_edition_id: input.cityEditionId,
     p_time_control_kind: preset.kind,
     p_base_seconds: preset.baseSeconds,
     p_increment_seconds: preset.incrementSeconds,
     p_move_deadline_seconds: preset.moveDeadlineSeconds,
     p_rated: input.rated,
-    p_creator_side: input.creatorSide
+    p_creator_side: input.creatorSide,
+    p_is_open: input.isOpenGame
   });
 
   const row = Array.isArray(data) ? data[0] : data;
@@ -352,6 +360,21 @@ export async function createGameInviteInSupabase(input: {
   }
 
   return row.game_id as string;
+}
+
+export async function joinOpenGameInSupabase(gameId: string): Promise<void> {
+  const auth = await requireAuthenticatedUser();
+  if (!auth) {
+    throw new Error("Sign in to join open multiplayer games.");
+  }
+
+  const { error } = await auth.supabase.rpc("join_open_game", {
+    p_game_id: gameId
+  });
+
+  if (error) {
+    throw error;
+  }
 }
 
 export async function respondToGameInviteInSupabase(input: {

@@ -3820,7 +3820,21 @@ label:has(> .text-sm.font-medium) {
   background: color-mix(in srgb, var(--muted) 30%, var(--background) 70%);
 }
 
+.recent-games-active__composer {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
 .recent-games-active__composer-header,
+.recent-games-active__composer > .recent-games-active__filters {
+  display: none;
+}
+
+.recent-games-active__composer-header,
+.recent-games-active__section-header,
+.recent-games-active__header-actions,
 .recent-games-active__entry-header,
 .recent-games-active__entry-title-row,
 .recent-games-active__entry-actions,
@@ -3831,8 +3845,18 @@ label:has(> .text-sm.font-medium) {
 }
 
 .recent-games-active__composer-header,
+.recent-games-active__section-header,
 .recent-games-active__entry-header {
   justify-content: space-between;
+}
+
+.recent-games-active__section-header {
+  align-items: center;
+}
+
+.recent-games-active__header-actions {
+  flex: 0 0 auto;
+  justify-content: flex-end;
 }
 
 .recent-games-active__composer-header {
@@ -3898,12 +3922,35 @@ label:has(> .text-sm.font-medium) {
   gap: var(--space-2);
 }
 
-.recent-games-active__section > h4 {
+.recent-games-active__section > h4,
+.recent-games-active__section-header > h4 {
   margin: 0;
   color: var(--muted-foreground);
   font-size: var(--font-size-xs);
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   text-transform: uppercase;
+}
+
+.make-game-dialog {
+  inset: var(--space-4);
+  top: var(--space-4);
+  left: var(--space-4);
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  translate: none;
+  transform: none;
+  align-content: start;
+  overflow: auto;
+  border-radius: var(--workspace-card-radius);
+}
+
+.make-game-dialog__body {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
 }
 
 .recent-games-active__entry-main {
@@ -4020,8 +4067,24 @@ label:has(> .text-sm.font-medium) {
 }
 
 @media (max-width: 900px) {
+  .make-game-dialog {
+    inset: 0;
+    top: 0;
+    left: 0;
+    border-radius: 0;
+  }
+
+  .make-game-dialog__body {
+    grid-template-columns: 1fr;
+  }
+
   .recent-games-active__filters {
     grid-template-columns: 1fr;
+  }
+
+  .recent-games-active__section-header {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .recent-games-active__entry-header {

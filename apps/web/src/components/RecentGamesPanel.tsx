@@ -4,6 +4,7 @@ import {
   createGameInviteInSupabase,
   formatTimeControlLabel,
   timeControlPresets,
+  joinOpenGameInSupabase,
   listActiveGamesFromSupabase,
   respondToGameInviteInSupabase,
   type ActiveGameRecord
@@ -23,6 +24,15 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -34,7 +44,7 @@ import {
   AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Check, ExternalLink, FileUp, RefreshCcw, Send, Trash2, X } from "lucide-react";
+import { Check, ExternalLink, FileUp, Plus, RefreshCcw, Send, Trash2, X } from "lucide-react";
 
 type InviteCreatorSide = "white" | "black" | "random";
 
@@ -117,6 +127,10 @@ function formatGameTimestamp(value: string | null) {
 }
 
 function activeGameHeading(game: ActiveGameRecord) {
+  if (game.isOpenGame && !game.opponentDisplayName && !game.opponentUsername) {
+    return game.canJoinOpenGame ? "Open game" : "Waiting for player";
+  }
+
   if (game.opponentDisplayName) {
     return game.opponentDisplayName;
   }
@@ -131,6 +145,14 @@ function activeGameHeading(game: ActiveGameRecord) {
 function activeGameStatusLabel(game: ActiveGameRecord) {
   if (game.status === "completed") {
     return "Complete";
+  }
+
+  if (game.canJoinOpenGame) {
+    return "Open game";
+  }
+
+  if (game.isOpenGame && game.isOutgoingInvite) {
+    return "Open game";
   }
 
   if (game.isIncomingInvite) {
@@ -213,12 +235,14 @@ export function RecentGamesPanel({
   const [activeGames, setActiveGames] = useState<ActiveGameRecord[]>([]);
   const [isLoadingActiveGames, setIsLoadingActiveGames] = useState(false);
   const [isSubmittingInvite, setIsSubmittingInvite] = useState(false);
+  const [isMakeGameDialogOpen, setIsMakeGameDialogOpen] = useState(false);
   const [activeGamesNotice, setActiveGamesNotice] = useState<ActiveGamesNotice | null>(null);
   const [inviteOpponentUsername, setInviteOpponentUsername] = useState("");
   const [inviteCityEditionId, setInviteCityEditionId] = useState(multiplayerCityOptions[0]?.id ?? "");
   const [inviteTimeControlPresetId, setInviteTimeControlPresetId] = useState("deadline-daily");
   const [inviteCreatorSide, setInviteCreatorSide] = useState<InviteCreatorSide>("random");
-  const [inviteRated, setInviteRated] = useState(false);
+  const [inviteCasual, setInviteCasual] = useState(true);
+  const [inviteIsOpenGame, setInviteIsOpenGame] = useState(false);
   const splitContentRef = useRef<HTMLDivElement | null>(null);
   const selectedSavedMatch = savedMatches.find((savedMatch) => savedMatch.id === selectedSavedMatchId);
   const selectedReferenceGame = useMemo(
@@ -239,6 +263,7 @@ export function RecentGamesPanel({
     () => activeGames.filter((game) => game.status === "completed"),
     [activeGames]
   );
+  const showInlineInviteFallback = false;
 
   const formatSavedAt = (dateString: string): string => {
     try {
@@ -300,7 +325,7 @@ export function RecentGamesPanel({
       return;
     }
 
-    if (!inviteOpponentUsername.trim()) {
+    if (!inviteIsOpenGame && !inviteOpponentUsername.trim()) {
       setActiveGamesNotice({
         tone: "error",
         text: "Enter the opponent username."
@@ -323,12 +348,15 @@ export function RecentGamesPanel({
         cityEditionId: inviteCityEditionId,
         timeControlPresetId: inviteTimeControlPresetId,
         creatorSide: inviteCreatorSide,
-        rated: inviteRated
+        rated: !inviteCasual,
+        isOpenGame: inviteIsOpenGame
       });
       setInviteOpponentUsername("");
+      setInviteIsOpenGame(false);
+      setIsMakeGameDialogOpen(false);
       setActiveGamesNotice({
         tone: "success",
-        text: "Multiplayer invite created."
+        text: inviteIsOpenGame ? "Open game created." : "Multiplayer invite sent."
       });
       await refreshActiveGames();
     } catch (error) {
@@ -341,13 +369,31 @@ export function RecentGamesPanel({
     }
   }, [
     accountUsername,
+    inviteCasual,
     inviteCityEditionId,
     inviteCreatorSide,
+    inviteIsOpenGame,
     inviteOpponentUsername,
-    inviteRated,
     inviteTimeControlPresetId,
     refreshActiveGames
   ]);
+
+  const handleJoinOpenGame = useCallback(async (gameId: string) => {
+    try {
+      await joinOpenGameInSupabase(gameId);
+      setActiveGamesNotice({
+        tone: "success",
+        text: "Open game joined."
+      });
+      await refreshActiveGames();
+      onLoadActiveGame(gameId);
+    } catch (error) {
+      setActiveGamesNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Could not join the open game."
+      });
+    }
+  }, [onLoadActiveGame, refreshActiveGames]);
 
   const handleRespondToInvite = useCallback(async (gameId: string, response: "accept" | "decline") => {
     try {
@@ -419,30 +465,177 @@ export function RecentGamesPanel({
 
       <TabsContent value="active" className="recent-games-content">
         <div className="recent-games-active">
+          <Dialog open={isMakeGameDialogOpen} onOpenChange={setIsMakeGameDialogOpen}>
+            <DialogContent className="make-game-dialog">
+              <DialogHeader>
+                <DialogTitle>Make Game</DialogTitle>
+                <DialogDescription>
+                  Send a direct invite by username or create an open game that any signed-in player can join.
+                </DialogDescription>
+              </DialogHeader>
+
+              {!accountEmail ? (
+                <p className="muted">Sign in to create and track multiplayer games.</p>
+              ) : !accountUsername ? (
+                <p className="muted">Claim a username in the menu before creating multiplayer invites.</p>
+              ) : (
+                <div className="make-game-dialog__body">
+                  <label className="grid gap-1">
+                    <span className="text-sm font-medium">Opponent name</span>
+                    <Input
+                      placeholder={inviteIsOpenGame ? "Open to anyone" : "username"}
+                      value={inviteOpponentUsername}
+                      onChange={(event) => setInviteOpponentUsername(event.target.value)}
+                      disabled={isSubmittingInvite || inviteIsOpenGame}
+                    />
+                  </label>
+                  <label className="recent-games-active__rated">
+                    <Checkbox
+                      checked={inviteIsOpenGame}
+                      onCheckedChange={(checked) => setInviteIsOpenGame(checked === true)}
+                      disabled={isSubmittingInvite}
+                    />
+                    <span>Open game</span>
+                  </label>
+                  <label className="grid gap-1">
+                    <span className="text-sm font-medium">City</span>
+                    <Select
+                      value={inviteCityEditionId}
+                      disabled={isSubmittingInvite || multiplayerCityOptions.length === 0}
+                      onValueChange={setInviteCityEditionId}
+                    >
+                      <SelectTrigger aria-label="City">
+                        <SelectValue placeholder="Choose city..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {multiplayerCityOptions.map((option) => (
+                            <SelectItem key={option.id} value={option.id}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </label>
+                  <label className="grid gap-1">
+                    <span className="text-sm font-medium">Time control</span>
+                    <Select
+                      value={inviteTimeControlPresetId}
+                      disabled={isSubmittingInvite}
+                      onValueChange={setInviteTimeControlPresetId}
+                    >
+                      <SelectTrigger aria-label="Time control">
+                        <SelectValue placeholder="Choose time..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {timeControlPresets.map((preset) => (
+                            <SelectItem key={preset.id} value={preset.id}>
+                              {preset.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </label>
+                  <label className="grid gap-1">
+                    <span className="text-sm font-medium">Creator side</span>
+                    <Select
+                      value={inviteCreatorSide}
+                      disabled={isSubmittingInvite}
+                      onValueChange={(value) => setInviteCreatorSide(value as InviteCreatorSide)}
+                    >
+                      <SelectTrigger aria-label="Creator side">
+                        <SelectValue placeholder="Choose side..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem value="random">Random</SelectItem>
+                          <SelectItem value="white">White</SelectItem>
+                          <SelectItem value="black">Black</SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <label className="recent-games-active__rated">
+                        <Checkbox
+                          checked={inviteCasual}
+                          onCheckedChange={(checked) => setInviteCasual(checked === true)}
+                          disabled={isSubmittingInvite}
+                        />
+                        <span>Casual game</span>
+                      </label>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Casual games do not change either player's Elo rating.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              )}
+
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button type="button" variant="outline" disabled={isSubmittingInvite}>
+                    Cancel
+                  </Button>
+                </DialogClose>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void handleCreateInvite()}
+                  disabled={
+                    isSubmittingInvite ||
+                    !accountEmail ||
+                    !accountUsername ||
+                    multiplayerCityOptions.length === 0
+                  }
+                >
+                  <Send data-icon="inline-start" />
+                  {isSubmittingInvite ? "Sending..." : "Send Invite"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           <div className="recent-games-active__composer">
             <div className="recent-games-active__composer-header">
               <div>
-                <h4>Invite by username</h4>
+                <h4>Open Games</h4>
                 <p className="muted">
-                  Direct invites first. Time controls decide how quickly each player must move.
+                  Create a direct invite or an open game that any signed-in player can join.
                 </p>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-sm"
-                onClick={() => void refreshActiveGames()}
-                aria-label="Refresh active games"
-              >
-                <RefreshCcw />
-              </Button>
+              <div className="recent-games-active__header-actions">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setIsMakeGameDialogOpen(true)}
+                  disabled={!accountEmail || !accountUsername}
+                >
+                  <Plus data-icon="inline-start" />
+                  Make Game
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  onClick={() => void refreshActiveGames()}
+                  aria-label="Refresh active games"
+                >
+                  <RefreshCcw />
+                </Button>
+              </div>
             </div>
 
             {!accountEmail ? (
               <p className="muted">Sign in to create and track multiplayer games.</p>
             ) : !accountUsername ? (
               <p className="muted">Claim a username in the menu before creating multiplayer invites.</p>
-            ) : (
+            ) : showInlineInviteFallback ? (
               <div className="recent-games-active__filters">
                 <label className="grid gap-1">
                   <span className="text-sm font-medium">Opponent</span>
@@ -516,11 +709,11 @@ export function RecentGamesPanel({
                 </label>
                 <label className="recent-games-active__rated">
                   <Checkbox
-                    checked={inviteRated}
-                    onCheckedChange={(checked) => setInviteRated(checked === true)}
+                    checked={inviteCasual}
+                    onCheckedChange={(checked) => setInviteCasual(checked === true)}
                     disabled={isSubmittingInvite}
                   />
-                  <span>{inviteRated ? "Rated game" : "Casual game"}</span>
+                  <span>Casual game</span>
                 </label>
                 <Button
                   type="button"
@@ -533,7 +726,7 @@ export function RecentGamesPanel({
                   {isSubmittingInvite ? "Sending…" : "Create invite"}
                 </Button>
               </div>
-            )}
+            ) : null}
 
             {activeGamesNotice ? (
               <p
@@ -551,10 +744,33 @@ export function RecentGamesPanel({
           <div className="recent-games-active__list-shell">
             {isLoadingActiveGames && !activeGames.length ? (
               <p className="muted">Loading multiplayer games…</p>
-            ) : activeGames.length ? (
+            ) : activeGames.length || accountEmail ? (
               <div className="recent-games-active__sections">
                 <section className="recent-games-active__section">
-                  <h4>Current</h4>
+                  <div className="recent-games-active__section-header">
+                    <h4>Open Games</h4>
+                    <div className="recent-games-active__header-actions">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setIsMakeGameDialogOpen(true)}
+                        disabled={!accountEmail || !accountUsername}
+                      >
+                        <Plus data-icon="inline-start" />
+                        Make Game
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={() => void refreshActiveGames()}
+                        aria-label="Refresh active games"
+                      >
+                        <RefreshCcw />
+                      </Button>
+                    </div>
+                  </div>
                   {currentActiveGames.length ? (
                     <ul className="recent-games-active__list">
                       {currentActiveGames.map((game) => (
@@ -571,7 +787,11 @@ export function RecentGamesPanel({
                           ) : null}
                         </div>
                         <p className="recent-games-active__entry-meta">
-                          {game.opponentUsername ? `@${game.opponentUsername}` : "Unnamed opponent"} ·{" "}
+                          {game.opponentUsername
+                            ? `@${game.opponentUsername}`
+                            : game.isOpenGame
+                              ? "Waiting for player"
+                              : "Unnamed opponent"} ·{" "}
                           {game.cityLabel ?? "Default board"} ·{" "}
                           {formatTimeControlLabel({
                             timeControlKind: game.timeControlKind,
@@ -582,7 +802,19 @@ export function RecentGamesPanel({
                         </p>
                         <p className="recent-games-active__entry-meta">{activeGameTimeNote(game)}</p>
                       </div>
-                      {game.isIncomingInvite ? (
+                      {game.canJoinOpenGame ? (
+                        <div className="recent-games-active__entry-actions">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => void handleJoinOpenGame(game.gameId)}
+                          >
+                            <Check data-icon="inline-start" />
+                            Join
+                          </Button>
+                        </div>
+                      ) : game.isIncomingInvite ? (
                         <div className="recent-games-active__entry-actions">
                           <Button
                             type="button"

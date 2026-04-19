@@ -145,7 +145,7 @@ Move rows are append-only.
 
 ### Invite flow
 
-Start with direct invites by username only.
+Start with direct invites by username and open games that any signed-in player can join.
 
 Reason:
 
@@ -156,13 +156,13 @@ Reason:
 
 Flow:
 
-1. user enters opponent username
+1. user enters opponent username or marks the game as open
 2. creator chooses:
    a. city edition
    b. rated or casual
    c. time control preset
-3. invite sent
-4. opponent accepts or declines
+3. invite sent, or open game listed for other signed-in players
+4. opponent accepts or declines, or another player joins the open game
 5. game becomes active
 
 Suggested first presets:
@@ -255,7 +255,7 @@ Need strict ownership rules:
 
 Implemented direction:
 
-1. Players create direct username invites from the Games panel.
+1. Players create direct username invites or open games from the Games panel.
 2. The invite chooses a published city edition, side, rated/casual mode, and time control.
 3. The accepting player activates the game; the server starts the first turn timer.
 4. The Play surface loads the latest server snapshot and locks local controls unless it is the signed-in player's turn.

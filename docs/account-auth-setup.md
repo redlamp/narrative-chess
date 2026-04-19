@@ -61,6 +61,7 @@ Current RPC calls from the frontend:
 - `publish_city_version`
 - `list_active_games`
 - `create_game_invite`
+- `join_open_game`
 - `respond_to_game_invite`
 - `append_game_move`
 
@@ -81,7 +82,7 @@ Do not add sensitive demographic fields to account/profile tables for early mile
 
 Before enabling Supabase features for production traffic, confirm RLS is enabled on all app tables and policies match the app access model:
 
-- users can read and update only their own private profile row, while public profile lookup exposes only limited display fields needed for multiplayer.
+- users can read and update only their own private profile row, while public profile lookup exposes only limited display fields needed for direct invites and open multiplayer game listings.
 - users can read/write/delete only their own `user_saved_matches`.
 - users can read/write only their own `user_layout_bundles`.
 - published city versions can be read by everyone if `VITE_ENABLE_SUPABASE_PUBLISHED_CITIES=true`.
