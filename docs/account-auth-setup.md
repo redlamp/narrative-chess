@@ -89,4 +89,6 @@ Before enabling Supabase features for production traffic, confirm RLS is enabled
 - game threads and moves are readable only by participants.
 - game moves are inserted through `append_game_move`, which must validate participant, turn, ply order, and immutable prior moves.
 
+See [`supabase-rls-checklist.md`](supabase-rls-checklist.md) for the current frontend query/RPC audit and hardening checklist.
+
 When adding a table or RPC, update this document in the same change so the browser data surface stays reviewable.
