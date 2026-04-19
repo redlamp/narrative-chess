@@ -747,30 +747,6 @@ export function RecentGamesPanel({
             ) : activeGames.length || accountEmail ? (
               <div className="recent-games-active__sections">
                 <section className="recent-games-active__section">
-                  <div className="recent-games-active__section-header">
-                    <h4>Open Games</h4>
-                    <div className="recent-games-active__header-actions">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setIsMakeGameDialogOpen(true)}
-                        disabled={!accountEmail || !accountUsername}
-                      >
-                        <Plus data-icon="inline-start" />
-                        Make Game
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        onClick={() => void refreshActiveGames()}
-                        aria-label="Refresh active games"
-                      >
-                        <RefreshCcw />
-                      </Button>
-                    </div>
-                  </div>
                   {currentActiveGames.length ? (
                     <ul className="recent-games-active__list">
                       {currentActiveGames.map((game) => (
