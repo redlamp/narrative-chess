@@ -1,8 +1,10 @@
 import {
   useCallback,
   useEffect,
+  lazy,
   useMemo,
   useRef,
+  Suspense,
   useState
 } from "react";
 import {
@@ -112,24 +114,9 @@ import { listCityBoardDraft, saveCityBoardDraft } from "./cityReviewState";
 import { getAnimatedPieceFrames } from "./chessMotion";
 import { allPageLayoutTargets, listPageLayoutState, savePageLayoutState } from "./pageLayoutState";
 import { getBundledPageLayout, getBundledWorkspaceLayout } from "./bundledLayouts";
-import { Board } from "./components/Board";
-import { BoardPanel } from "./components/BoardPanel";
-import { CityMapLibrePanel } from "./components/CityMapLibrePanel";
-import { Panel } from "./components/Panel";
 import { AppMenu, UserMenu } from "./components/AppMenu";
-import { ClassicGamesLibraryPage } from "./components/ClassicGamesLibraryPage";
-import { DesignPage } from "./components/DesignPage";
-import { IndexedWorkspace, type LayoutNavigation } from "./components/IndexedWorkspace";
-import { EdinburghReviewPage } from "./components/EdinburghReviewPage";
-import { MatchHistoryPanel } from "./components/MatchHistoryPanel";
-import { ResearchPage } from "./components/ResearchPage";
-import { RoleCatalogPage } from "./components/RoleCatalogPage";
-import { StoryBeatSection } from "./components/StoryBeatSection";
-import { StoryCityTileSection } from "./components/StoryCityTileSection";
-import { StoryToneSection } from "./components/StoryToneSection";
-import { CharacterDetailPanel } from "./components/CharacterDetailPanel";
+import type { LayoutNavigation } from "./components/IndexedWorkspace";
 import { DistrictBadge } from "./components/DistrictBadge";
-import { RecentGamesPanel } from "./components/RecentGamesPanel";
 import { useChessMatch } from "./hooks/useChessMatch";
 import { useMovePlayhead } from "./hooks/useMovePlayhead";
 import {
@@ -141,6 +128,25 @@ import {
   saveRoleCatalog,
   updateRoleCatalogEntry
 } from "./roleCatalog";
+
+const CityReviewPage = lazy(() =>
+  import("./components/CityReviewPage").then((module) => ({ default: module.CityReviewPage }))
+);
+const MatchWorkspacePage = lazy(() =>
+  import("./components/MatchWorkspacePage").then((module) => ({ default: module.MatchWorkspacePage }))
+);
+const ClassicGamesLibraryPage = lazy(() =>
+  import("./components/ClassicGamesLibraryPage").then((module) => ({ default: module.ClassicGamesLibraryPage }))
+);
+const RoleCatalogPage = lazy(() =>
+  import("./components/RoleCatalogPage").then((module) => ({ default: module.RoleCatalogPage }))
+);
+const DesignPage = lazy(() =>
+  import("./components/DesignPage").then((module) => ({ default: module.DesignPage }))
+);
+const ResearchPage = lazy(() =>
+  import("./components/ResearchPage").then((module) => ({ default: module.ResearchPage }))
+);
 
 type AppPage = "match" | "classics" | "cities" | "roles" | "design" | "research";
 
@@ -2229,249 +2235,146 @@ export default function App() {
         </div>
       </header>
 
-      {page === "cities" ? (
-        <EdinburghReviewPage
-          layoutMode={effectiveLayoutMode}
-          showLayoutGrid={settings.showLayoutGrid}
-          layoutNavigation={layoutNavigation}
-          canEditCities={canAccessDraftCities}
-          canManageRemoteDrafts={canAccessDraftCities}
-          canPublishRemoteCities={canPublishCities}
-          onCityBoardDraftChange={handleCityBoardDraftChange}
-          onToggleLayoutMode={() => setIsLayoutMode(false)}
-          onToggleLayoutGrid={(checked) => handleBooleanSettingChange("showLayoutGrid", checked)}
-        />
-      ) : page === "classics" ? (
-        <ClassicGamesLibraryPage
-          referenceGames={referenceGamesLibrary}
-          selectedReferenceGameId={selectedReferenceGameId}
-          layoutMode={effectiveLayoutMode}
-          showLayoutGrid={settings.showLayoutGrid}
-          layoutNavigation={layoutNavigation}
-          onSelectReferenceGame={setSelectedReferenceGameId}
-          onLoadReferenceGame={(game) => handleLoadReferenceGameFromLibrary(game.id)}
-          onReferenceGamesChange={setReferenceGamesLibrary}
-          onToggleLayoutMode={() => setIsLayoutMode(false)}
-          onToggleLayoutGrid={(checked) => handleBooleanSettingChange("showLayoutGrid", checked)}
-        />
-      ) : page === "roles" ? (
-        <RoleCatalogPage
-          roleCatalog={roleCatalog}
-          layoutMode={effectiveLayoutMode}
-          showLayoutGrid={settings.showLayoutGrid}
-          layoutNavigation={layoutNavigation}
-          roleCatalogDirectoryName={roleCatalogDirectoryName}
-          isRoleCatalogDirectorySupported={isRoleCatalogDirectorySupported}
-          roleCatalogFileBusyAction={roleCatalogFileBusyAction}
-          roleCatalogFileNotice={roleCatalogFileNotice}
-          onRoleCatalogChange={handleRoleCatalogChange}
-          onRoleCatalogReset={handleRoleCatalogReset}
-          onRoleCatalogAdd={handleRoleCatalogAdd}
-          onRoleCatalogDuplicate={handleRoleCatalogDuplicate}
-          onRoleCatalogRemove={handleRoleCatalogRemove}
-          onConnectRoleCatalogDirectory={handleConnectRoleCatalogDirectory}
-          onLoadRoleCatalogFromDirectory={handleLoadRoleCatalogFile}
-          onSaveRoleCatalogToDirectory={handleSaveRoleCatalogFile}
-          onToggleLayoutMode={() => setIsLayoutMode(false)}
-          onToggleLayoutGrid={(checked) => handleBooleanSettingChange("showLayoutGrid", checked)}
-        />
-      ) : page === "design" ? (
-        <DesignPage
-          layoutMode={effectiveLayoutMode}
-          showLayoutGrid={settings.showLayoutGrid}
-          layoutNavigation={layoutNavigation}
-          pieceStyleSheet={pieceStyleSheet}
-          pieceStyleDirectoryName={pieceStyleDirectoryName}
-          isPieceStyleDirectorySupported={isPieceStyleDirectorySupported}
-          pieceStyleFileBusyAction={pieceStyleFileBusyAction}
-          pieceStyleFileNotice={pieceStyleFileNotice}
-          onPieceStyleSheetChange={handlePieceStyleSheetChange}
-          onConnectPieceStyleDirectory={handleConnectPieceStyleDirectory}
-          onLoadPieceStyleSheetFromDirectory={handleLoadPieceStyleSheetFromDirectory}
-          onSavePieceStyleSheetToDirectory={handleSavePieceStyleSheetToDirectory}
-          onResetPieceStyleSheet={handleResetPieceStyleSheet}
-          onToggleLayoutMode={() => setIsLayoutMode(false)}
-          onToggleLayoutGrid={(checked) => handleBooleanSettingChange("showLayoutGrid", checked)}
-        />
-      ) : page === "research" ? (
-        <ResearchPage
-          layoutMode={effectiveLayoutMode}
-          showLayoutGrid={settings.showLayoutGrid}
-          layoutNavigation={layoutNavigation}
-          onToggleLayoutMode={() => setIsLayoutMode(false)}
-          onToggleLayoutGrid={(checked) => handleBooleanSettingChange("showLayoutGrid", checked)}
-        />
-      ) : (
-        <IndexedWorkspace
-          className="match-workspace"
-          layoutMode={effectiveLayoutMode}
-          layoutKey="match-workspace"
-          layoutVariant="match"
-          showLayoutGrid={settings.showLayoutGrid}
-          layoutNavigation={layoutNavigation}
-          onToggleLayoutMode={() => setIsLayoutMode(false)}
-          onToggleLayoutGrid={(checked: boolean) => handleBooleanSettingChange("showLayoutGrid", checked)}
-          panels={[
-            {
-              id: "board",
-              label: "Board",
-              content: (
-                <BoardPanel
-                  districtName={playHeaderDistrict?.name ?? null}
-                  districtSquare={playHeaderDistrict?.square ?? null}
-                  showDistrictLabels={settings.showDistrictLabels}
-                  onShowDistrictLabelsChange={(v) => handleBooleanSettingChange("showDistrictLabels", v)}
-                  showPieces={true}
-                  onShowPiecesChange={null}
-                  layoutMode={!!effectiveLayoutMode}
-                >
-                  <Board
-                    snapshot={snapshot}
-                    cells={boardSquares}
-                    selectedSquare={selectedSquare}
-                    hoveredSquare={hoveredSquare}
-                    inspectedSquare={inspectedSquare}
-                    legalMoves={legalMoves}
-                    viewMode={settings.defaultViewMode}
-                    districtsBySquare={playDistrictsBySquare}
-                    showCoordinates={true}
-                    showDistrictLabels={settings.showDistrictLabels}
-                    animatedPieces={animatedPieces}
-                    onSquareClick={handleSquareClick}
-                    onSquareHover={setHoveredSquare}
-                    onSquareLeave={() => setHoveredSquare(null)}
-                  />
-                </BoardPanel>
-              )
-            },
-            {
-              id: "moves",
-              label: "Match History",
-              content: (
-                <MatchHistoryPanel
-                  moves={moveHistory}
-                  characters={snapshot.characters}
-                  selectedPly={selectedPly}
-                  totalPlies={totalPlies}
-                  onJumpToStart={handleHistoryJumpToStart}
-                  onStepBackward={handleHistoryStepBackward}
-                  isPlaying={isHistoryPlaying}
-                  onTogglePlayback={handleToggleHistoryPlayback}
-                  onStepForward={handleHistoryStepForward}
-                  onJumpToEnd={handleHistoryJumpToEnd}
-                  onSelectPly={handleHistorySelectPly}
-                />
-              )
-            },
-            {
-              id: "city-map-maplibre",
-              label: "Map",
-              content: (
-                <Panel title={playMapCityMenu} action={renderPlayHeaderActions()}>
-                  <CityMapLibrePanel
-                    cityBoard={playCityBoard}
-                    pieces={animatedPieces}
-                    selectedDistrict={selectedDistrict}
-                    hoveredDistrict={hoveredSquare ? focusedDistrict : null}
-                    lastMoveDistrict={lastMoveDistrict}
-                    lastMove={lastMove}
-                    onPieceSquareHover={setHoveredSquare}
-                  />
-                </Panel>
-              )
-            },
-            {
-              id: "story-beat",
-              label: "Story Beat",
-              content: (
-                <Panel title="Story Beat">
-                  <StoryBeatSection
-                    selectedMove={selectedMove}
-                    selectedEvent={selectedEvent}
-                    showLabel={false}
-                  />
-                </Panel>
-              )
-            },
-            {
-              id: "story-tile",
-              label: "District",
-              content: (
-                <Panel title="District" action={renderPlayHeaderDistrictBadge()}>
-                  <StoryCityTileSection
-                    cityBoard={playCityBoard}
-                    focusedDistrict={focusedDistrict}
-                    selectedDistrict={selectedDistrict}
-                    focusedPiece={focusedPiece}
-                    focusedCharacter={focusedCharacter}
-                    isHoverPreview={Boolean(hoveredSquare)}
-                    showLabel={false}
-                  />
-                </Panel>
-              )
-            },
-            {
-              id: "story-character",
-              label: "Character",
-              content: (
-                <CharacterDetailPanel
-                  focusedSquare={storyFocusedSquare}
-                  focusedPiece={focusedPiece}
-                  focusedCharacter={focusedCharacter}
-                  focusedCharacterMoments={focusedCharacterMoments}
-                  moveHistory={moveHistory}
-                  showRecentCharacterActions={settings.showRecentCharacterActions}
-                />
-              )
-            },
-            {
-              id: "story-tone",
-              label: "Narrative Tone",
-              content: (
-                <Panel
-                  title="Narrative Tone"
-                  action={
-                    <StoryToneSection
-                      tonePreset={tonePreset}
-                      onToneChange={updateTonePreset}
-                      showLabel={false}
-                      inline
-                    />
-                  }
-                >
-                  <p className="muted">Set the narration style for generated beats and summaries.</p>
-                </Panel>
-              )
-            },
-            {
-              id: "recent-games",
-              label: "Games",
-              content: (
-                <Panel title="Games">
-                  <RecentGamesPanel
-                    savedMatches={savedMatches}
-                    selectedSavedMatchId={selectedSavedMatchId}
-                    onSelectSavedMatch={setSelectedSavedMatchId}
-                    onLoadSavedMatch={handleLoadSelectedSavedMatch}
-                    onDeleteSelectedSavedMatch={handleRemoveSelectedSavedMatch}
-                    referenceGames={referenceGamesLibrary}
-                    selectedReferenceGameId={selectedReferenceGameId}
-                    onSelectReferenceGame={setSelectedReferenceGameId}
-                    onLoadReferenceGame={handleLoadReferenceGame}
-                    accountEmail={sessionEmail}
-                    accountUsername={sessionProfile?.username ?? null}
-                    multiplayerCityOptions={multiplayerCityOptions}
-                    activeMultiplayerGameId={activeMultiplayerSession?.gameId ?? null}
-                    onLoadActiveGame={(gameId) => {
-                      void handleLoadActiveMultiplayerGame(gameId);
-                    }}
-                  />
-                </Panel>
-              )
-            }
-          ]}
-        />
-      )}
+      <Suspense fallback={<div className="page-loading" role="status">Loading section...</div>}>
+        {page === "cities" ? (
+          <CityReviewPage
+            layoutMode={effectiveLayoutMode}
+            showLayoutGrid={settings.showLayoutGrid}
+            layoutNavigation={layoutNavigation}
+            canEditCities={canAccessDraftCities}
+            canManageRemoteDrafts={canAccessDraftCities}
+            canPublishRemoteCities={canPublishCities}
+            onCityBoardDraftChange={handleCityBoardDraftChange}
+            onToggleLayoutMode={() => setIsLayoutMode(false)}
+            onToggleLayoutGrid={(checked) => handleBooleanSettingChange("showLayoutGrid", checked)}
+          />
+        ) : page === "classics" ? (
+          <ClassicGamesLibraryPage
+            referenceGames={referenceGamesLibrary}
+            selectedReferenceGameId={selectedReferenceGameId}
+            layoutMode={effectiveLayoutMode}
+            showLayoutGrid={settings.showLayoutGrid}
+            layoutNavigation={layoutNavigation}
+            onSelectReferenceGame={setSelectedReferenceGameId}
+            onLoadReferenceGame={(game) => handleLoadReferenceGameFromLibrary(game.id)}
+            onReferenceGamesChange={setReferenceGamesLibrary}
+            onToggleLayoutMode={() => setIsLayoutMode(false)}
+            onToggleLayoutGrid={(checked) => handleBooleanSettingChange("showLayoutGrid", checked)}
+          />
+        ) : page === "roles" ? (
+          <RoleCatalogPage
+            roleCatalog={roleCatalog}
+            layoutMode={effectiveLayoutMode}
+            showLayoutGrid={settings.showLayoutGrid}
+            layoutNavigation={layoutNavigation}
+            roleCatalogDirectoryName={roleCatalogDirectoryName}
+            isRoleCatalogDirectorySupported={isRoleCatalogDirectorySupported}
+            roleCatalogFileBusyAction={roleCatalogFileBusyAction}
+            roleCatalogFileNotice={roleCatalogFileNotice}
+            onRoleCatalogChange={handleRoleCatalogChange}
+            onRoleCatalogReset={handleRoleCatalogReset}
+            onRoleCatalogAdd={handleRoleCatalogAdd}
+            onRoleCatalogDuplicate={handleRoleCatalogDuplicate}
+            onRoleCatalogRemove={handleRoleCatalogRemove}
+            onConnectRoleCatalogDirectory={handleConnectRoleCatalogDirectory}
+            onLoadRoleCatalogFromDirectory={handleLoadRoleCatalogFile}
+            onSaveRoleCatalogToDirectory={handleSaveRoleCatalogFile}
+            onToggleLayoutMode={() => setIsLayoutMode(false)}
+            onToggleLayoutGrid={(checked) => handleBooleanSettingChange("showLayoutGrid", checked)}
+          />
+        ) : page === "design" ? (
+          <DesignPage
+            layoutMode={effectiveLayoutMode}
+            showLayoutGrid={settings.showLayoutGrid}
+            layoutNavigation={layoutNavigation}
+            pieceStyleSheet={pieceStyleSheet}
+            pieceStyleDirectoryName={pieceStyleDirectoryName}
+            isPieceStyleDirectorySupported={isPieceStyleDirectorySupported}
+            pieceStyleFileBusyAction={pieceStyleFileBusyAction}
+            pieceStyleFileNotice={pieceStyleFileNotice}
+            onPieceStyleSheetChange={handlePieceStyleSheetChange}
+            onConnectPieceStyleDirectory={handleConnectPieceStyleDirectory}
+            onLoadPieceStyleSheetFromDirectory={handleLoadPieceStyleSheetFromDirectory}
+            onSavePieceStyleSheetToDirectory={handleSavePieceStyleSheetToDirectory}
+            onResetPieceStyleSheet={handleResetPieceStyleSheet}
+            onToggleLayoutMode={() => setIsLayoutMode(false)}
+            onToggleLayoutGrid={(checked) => handleBooleanSettingChange("showLayoutGrid", checked)}
+          />
+        ) : page === "research" ? (
+          <ResearchPage
+            layoutMode={effectiveLayoutMode}
+            showLayoutGrid={settings.showLayoutGrid}
+            layoutNavigation={layoutNavigation}
+            onToggleLayoutMode={() => setIsLayoutMode(false)}
+            onToggleLayoutGrid={(checked) => handleBooleanSettingChange("showLayoutGrid", checked)}
+          />
+        ) : (
+          <MatchWorkspacePage
+            layoutMode={effectiveLayoutMode}
+            showLayoutGrid={settings.showLayoutGrid}
+            layoutNavigation={layoutNavigation}
+            onToggleLayoutMode={() => setIsLayoutMode(false)}
+            onToggleLayoutGrid={(checked) => handleBooleanSettingChange("showLayoutGrid", checked)}
+            playHeaderDistrict={playHeaderDistrict}
+            showDistrictLabels={settings.showDistrictLabels}
+            onShowDistrictLabelsChange={(value) => handleBooleanSettingChange("showDistrictLabels", value)}
+            snapshot={snapshot}
+            boardSquares={boardSquares}
+            selectedSquare={selectedSquare}
+            hoveredSquare={hoveredSquare}
+            inspectedSquare={inspectedSquare}
+            legalMoves={legalMoves}
+            defaultViewMode={settings.defaultViewMode}
+            playDistrictsBySquare={playDistrictsBySquare}
+            animatedPieces={animatedPieces}
+            onSquareClick={handleSquareClick}
+            onSquareHover={setHoveredSquare}
+            playMapCityMenu={playMapCityMenu}
+            playHeaderActions={renderPlayHeaderActions()}
+            playHeaderDistrictBadge={renderPlayHeaderDistrictBadge()}
+            playCityBoard={playCityBoard}
+            selectedDistrict={selectedDistrict}
+            focusedDistrict={focusedDistrict}
+            lastMoveDistrict={lastMoveDistrict}
+            lastMove={lastMove}
+            selectedMove={selectedMove}
+            selectedEvent={selectedEvent}
+            focusedPiece={focusedPiece}
+            focusedCharacter={focusedCharacter}
+            focusedCharacterMoments={focusedCharacterMoments}
+            storyFocusedSquare={storyFocusedSquare}
+            moveHistory={moveHistory}
+            showRecentCharacterActions={settings.showRecentCharacterActions}
+            tonePreset={tonePreset}
+            onToneChange={updateTonePreset}
+            savedMatches={savedMatches}
+            selectedSavedMatchId={selectedSavedMatchId}
+            onSelectSavedMatch={setSelectedSavedMatchId}
+            onLoadSavedMatch={handleLoadSelectedSavedMatch}
+            onDeleteSelectedSavedMatch={handleRemoveSelectedSavedMatch}
+            referenceGames={referenceGamesLibrary}
+            selectedReferenceGameId={selectedReferenceGameId}
+            onSelectReferenceGame={setSelectedReferenceGameId}
+            onLoadReferenceGame={handleLoadReferenceGame}
+            accountEmail={sessionEmail}
+            accountUsername={sessionProfile?.username ?? null}
+            multiplayerCityOptions={multiplayerCityOptions}
+            activeMultiplayerGameId={activeMultiplayerSession?.gameId ?? null}
+            onLoadActiveGame={(gameId) => {
+              void handleLoadActiveMultiplayerGame(gameId);
+            }}
+            selectedPly={selectedPly}
+            totalPlies={totalPlies}
+            isHistoryPlaying={isHistoryPlaying}
+            onHistoryJumpToStart={handleHistoryJumpToStart}
+            onHistoryStepBackward={handleHistoryStepBackward}
+            onToggleHistoryPlayback={handleToggleHistoryPlayback}
+            onHistoryStepForward={handleHistoryStepForward}
+            onHistoryJumpToEnd={handleHistoryJumpToEnd}
+            onHistorySelectPly={handleHistorySelectPly}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

@@ -52,7 +52,7 @@ Recommendation:
 
 Known remaining native/custom select patterns:
 
-1. `EdinburghReviewPage.tsx`
+1. `CityReviewPage.tsx`
 
 Done:
 
@@ -93,7 +93,7 @@ For existing code:
 
 ## Suggested Migration Order
 
-1. Finish `EdinburghReviewPage.tsx` select/dropdown cleanup.
+1. Finish `CityReviewPage.tsx` select/dropdown cleanup.
 2. Replace custom notice/callout blocks with `Alert` or a shared local equivalent.
 3. Move simple panel/form layout classes from CSS into Tailwind.
 4. Split `styles.css` only after repeated patterns are stabilized.

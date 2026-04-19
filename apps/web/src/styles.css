@@ -313,6 +313,14 @@ label:has(> .text-sm.font-medium) {
   align-content: start;
 }
 
+.page-loading {
+  min-height: 16rem;
+  display: grid;
+  place-items: center;
+  color: var(--muted-foreground);
+  font-size: var(--font-size-sm);
+}
+
 .indexed-workspace__intro,
 .indexed-workspace__columns,
 .indexed-workspace__index,

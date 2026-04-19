@@ -295,7 +295,7 @@ Files: `App.tsx`, `Board.tsx`, `CityMapLibrePanel.tsx`, `useMovePlayhead.ts`, `u
 - simplify panel behavior conflicting with play clarity
 
 ### Agent 3 — Cities Authoring
-Files: `EdinburghReviewPage.tsx`, `CityDistrictPlacementEditor.tsx`, related draft state
+Files: `CityReviewPage.tsx`, `CityDistrictPlacementEditor.tsx`, related draft state
 - improve district editor ergonomics
 - tighten bulk edit rules
 - improve save/reset + placement workflows

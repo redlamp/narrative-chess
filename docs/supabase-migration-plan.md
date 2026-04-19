@@ -591,7 +591,7 @@ Wire city draft/publish UI without giant rewrite.
 
 Target:
 
-- [EdinburghReviewPage.tsx](/abs/path/c:/workspace/narrative-chess/apps/web/src/components/EdinburghReviewPage.tsx:1)
+- [CityReviewPage.tsx](/abs/path/c:/workspace/narrative-chess/apps/web/src/components/CityReviewPage.tsx:1)
 - related city editor files
 
 ### Agent 4

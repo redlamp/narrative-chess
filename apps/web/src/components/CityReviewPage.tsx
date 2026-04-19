@@ -740,7 +740,7 @@ function MapPositionMoveButton({
   );
 }
 
-type EdinburghReviewPageProps = {
+type CityReviewPageProps = {
   layoutMode: boolean;
   showLayoutGrid: boolean;
   layoutNavigation?: LayoutNavigation;
@@ -752,7 +752,7 @@ type EdinburghReviewPageProps = {
   onToggleLayoutGrid: (checked: boolean) => void;
 };
 
-export function EdinburghReviewPage({
+export function CityReviewPage({
   layoutMode,
   showLayoutGrid,
   layoutNavigation,
@@ -762,7 +762,7 @@ export function EdinburghReviewPage({
   onCityBoardDraftChange,
   onToggleLayoutMode,
   onToggleLayoutGrid
-}: EdinburghReviewPageProps) {
+}: CityReviewPageProps) {
   const [selectedCityId, setSelectedCityId] = useState(initialCityId);
   const [selectedCityIds, setSelectedCityIds] = useState<string[]>([initialCityId]);
   const [citySelectionAnchorId, setCitySelectionAnchorId] = useState<string | null>(initialCityId);
