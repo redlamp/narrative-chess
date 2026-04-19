@@ -11,12 +11,9 @@ import {
   Cloud,
   ChevronDown,
   FileJson,
-  LayoutDashboard,
-  Moon,
   Pencil,
   RefreshCcw,
   Scroll,
-  Sun,
   Telescope,
   UsersRound
 } from "lucide-react";
@@ -138,7 +135,7 @@ import { Board } from "./components/Board";
 import { BoardPanel } from "./components/BoardPanel";
 import { CityMapLibrePanel } from "./components/CityMapLibrePanel";
 import { Panel } from "./components/Panel";
-import { AppMenu } from "./components/AppMenu";
+import { AppMenu, UserMenu } from "./components/AppMenu";
 import { ClassicGamesLibraryPage } from "./components/ClassicGamesLibraryPage";
 import { DesignPage } from "./components/DesignPage";
 import { IndexedWorkspace, type LayoutNavigation } from "./components/IndexedWorkspace";
@@ -426,6 +423,7 @@ export default function App() {
   );
   const [settings, setSettings] = useState<AppSettings>(() => listAppSettings());
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isLayoutMode, setIsLayoutMode] = useState(false);
   const [isCompactViewport, setIsCompactViewport] = useState(false);
   const [hoveredSquare, setHoveredSquare] = useState<Square | null>(null);
@@ -2672,48 +2670,14 @@ export default function App() {
 
         <div className="app-header__aside">
           <div className="app-header__actions">
-            <Button
-              type="button"
-              variant={effectiveLayoutMode ? "secondary" : "outline"}
-              size="icon-sm"
-              onClick={() => setIsLayoutMode((current) => !current)}
-              disabled={isCompactViewport}
-              aria-label={effectiveLayoutMode ? "Exit layout mode" : "Edit layout"}
-              title={effectiveLayoutMode ? "Exit layout mode" : "Edit layout"}
-            >
-              <LayoutDashboard />
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-sm"
-              onClick={() => handleThemeChange(settings.theme === "dark" ? "light" : "dark")}
-              aria-label={settings.theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-              title={settings.theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-            >
-              {settings.theme === "dark" ? (
-                <Sun />
-              ) : (
-                <Moon />
-              )}
-            </Button>
-
-            <AppMenu
-              isOpen={isMenuOpen}
-              onOpenChange={setIsMenuOpen}
-              onResetEverything={handleResetEverything}
-              onSaveEverything={handleSaveEverything}
-              onLoadEverything={handleLoadEverything}
-              isResettingEverything={isResettingEverything}
-              isSavingEverything={isSavingEverything}
-              isLoadingEverything={isLoadingEverything}
-              saveEverythingNotice={saveEverythingNotice}
-              onDismissSaveEverythingNotice={() => setSaveEverythingNotice(null)}
-              highlightColor={settings.highlightColor}
-              onHighlightColorChange={(color: HighlightColor) =>
-                setSettings((s) => ({ ...s, highlightColor: color }))
-              }
+            <UserMenu
+              isOpen={isUserMenuOpen}
+              onOpenChange={(open) => {
+                setIsUserMenuOpen(open);
+                if (open) {
+                  setIsMenuOpen(false);
+                }
+              }}
               accountEmail={sessionEmail}
               accountRole={sessionRole}
               accountUsername={sessionProfile?.username ?? null}
@@ -2727,6 +2691,32 @@ export default function App() {
               onSignUpWithPassword={handleSignUpWithPassword}
               onSignOut={handleSignOut}
               onSaveProfile={handleSaveProfile}
+            />
+            <AppMenu
+              isOpen={isMenuOpen}
+              onOpenChange={(open) => {
+                setIsMenuOpen(open);
+                if (open) {
+                  setIsUserMenuOpen(false);
+                }
+              }}
+              isLayoutModeActive={effectiveLayoutMode}
+              isLayoutModeDisabled={isCompactViewport}
+              onToggleLayoutMode={() => setIsLayoutMode((current) => !current)}
+              theme={settings.theme}
+              onThemeChange={handleThemeChange}
+              onResetEverything={handleResetEverything}
+              onSaveEverything={handleSaveEverything}
+              onLoadEverything={handleLoadEverything}
+              isResettingEverything={isResettingEverything}
+              isSavingEverything={isSavingEverything}
+              isLoadingEverything={isLoadingEverything}
+              saveEverythingNotice={saveEverythingNotice}
+              onDismissSaveEverythingNotice={() => setSaveEverythingNotice(null)}
+              highlightColor={settings.highlightColor}
+              onHighlightColorChange={(color: HighlightColor) =>
+                setSettings((s) => ({ ...s, highlightColor: color }))
+              }
               playCitySourceLabel={playCitySourceLabel}
               playCityPreviewModeLabel={
                 effectivePlayCityPreviewMode === "draft" ? "Draft preview" : "Published"

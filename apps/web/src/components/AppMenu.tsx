@@ -1,5 +1,19 @@
-import { useEffect, useId, useRef, useState } from "react";
-import { ChevronDown, Download, LogIn, LogOut, Menu, RotateCcw, Save, UserPlus, X } from "lucide-react";
+import { useEffect, useId, useRef, useState, type RefObject } from "react";
+import {
+  ChevronDown,
+  Download,
+  LayoutDashboard,
+  LogIn,
+  LogOut,
+  Menu,
+  Moon,
+  RotateCcw,
+  Save,
+  Sun,
+  User,
+  UserPlus,
+  X
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,15 +28,20 @@ import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
-  TooltipTrigger,
+  TooltipTrigger
 } from "@/components/ui/tooltip";
 import { FloatingActionNotice, type FloatingActionNoticeState } from "./FloatingActionNotice";
-import { highlightColorOptions, type HighlightColor } from "../appSettings";
+import { highlightColorOptions, type AppSettings, type HighlightColor } from "../appSettings";
 import type { AppRole } from "../auth";
 
 type AppMenuProps = {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  isLayoutModeActive: boolean;
+  isLayoutModeDisabled: boolean;
+  onToggleLayoutMode: () => void;
+  theme: AppSettings["theme"];
+  onThemeChange: (theme: AppSettings["theme"]) => void;
   onResetEverything: () => void;
   onSaveEverything: () => void;
   onLoadEverything: () => void;
@@ -33,6 +52,15 @@ type AppMenuProps = {
   onDismissSaveEverythingNotice: () => void;
   highlightColor: HighlightColor;
   onHighlightColorChange: (color: HighlightColor) => void;
+  playCitySourceLabel: string;
+  playCityPreviewModeLabel: string;
+  playCityEditionLabel: string | null;
+  isPlayCityFallbackMatchKnown: boolean;
+};
+
+type UserMenuProps = {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
   accountEmail: string | null;
   accountRole: AppRole;
   accountUsername: string | null;
@@ -46,10 +74,6 @@ type AppMenuProps = {
   onSignUpWithPassword: (email: string, password: string) => Promise<string>;
   onSignOut: () => Promise<string>;
   onSaveProfile: (username: string, displayName: string) => Promise<string>;
-  playCitySourceLabel: string;
-  playCityPreviewModeLabel: string;
-  playCityEditionLabel: string | null;
-  isPlayCityFallbackMatchKnown: boolean;
 };
 
 type AuthNotice = {
@@ -61,58 +85,15 @@ function roleLabel(role: AppRole) {
   return role === "admin" ? "Admin" : role === "author" ? "Author" : "Player";
 }
 
-export function AppMenu({
+function useDismissiblePanel({
   isOpen,
   onOpenChange,
-  onResetEverything,
-  onSaveEverything,
-  onLoadEverything,
-  isResettingEverything,
-  isSavingEverything,
-  isLoadingEverything,
-  saveEverythingNotice,
-  onDismissSaveEverythingNotice,
-  highlightColor,
-  onHighlightColorChange,
-  accountEmail,
-  accountRole,
-  accountUsername,
-  accountDisplayName,
-  accountEloRating,
-  viewAsRole,
-  onViewAsRoleChange,
-  canAccessDraftCities,
-  isAuthBusy,
-  onSignInWithPassword,
-  onSignUpWithPassword,
-  onSignOut,
-  onSaveProfile,
-  playCitySourceLabel,
-  playCityPreviewModeLabel,
-  playCityEditionLabel,
-  isPlayCityFallbackMatchKnown
-}: AppMenuProps) {
-  const panelId = useId();
-  const titleId = useId();
-  const menuRef = useRef<HTMLDivElement | null>(null);
-  const [isPanelHovered, setIsPanelHovered] = useState(false);
-  const [authEmail, setAuthEmail] = useState("");
-  const [authPassword, setAuthPassword] = useState("");
-  const [profileUsername, setProfileUsername] = useState(accountUsername ?? "");
-  const [profileDisplayName, setProfileDisplayName] = useState(accountDisplayName ?? "");
-  const [authNotice, setAuthNotice] = useState<AuthNotice | null>(null);
-  const availableViewAsRoles =
-    accountRole === "admin"
-      ? (["admin", "author", "player"] as AppRole[])
-      : accountRole === "author"
-        ? (["author", "player"] as AppRole[])
-        : (["player"] as AppRole[]);
-
-  useEffect(() => {
-    setProfileUsername(accountUsername ?? "");
-    setProfileDisplayName(accountDisplayName ?? "");
-  }, [accountDisplayName, accountUsername]);
-
+  panelRef
+}: {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  panelRef: RefObject<HTMLDivElement | null>;
+}) {
   useEffect(() => {
     if (!isOpen) {
       return;
@@ -124,7 +105,7 @@ export function AppMenu({
         return;
       }
 
-      if (menuRef.current?.contains(target)) {
+      if (panelRef.current?.contains(target)) {
         return;
       }
 
@@ -148,7 +129,248 @@ export function AppMenu({
       window.removeEventListener("pointerdown", handlePointerDown);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, onOpenChange]);
+  }, [isOpen, onOpenChange, panelRef]);
+}
+
+export function AppMenu({
+  isOpen,
+  onOpenChange,
+  isLayoutModeActive,
+  isLayoutModeDisabled,
+  onToggleLayoutMode,
+  theme,
+  onThemeChange,
+  onResetEverything,
+  onSaveEverything,
+  onLoadEverything,
+  isResettingEverything,
+  isSavingEverything,
+  isLoadingEverything,
+  saveEverythingNotice,
+  onDismissSaveEverythingNotice,
+  highlightColor,
+  onHighlightColorChange,
+  playCitySourceLabel,
+  playCityPreviewModeLabel,
+  playCityEditionLabel,
+  isPlayCityFallbackMatchKnown
+}: AppMenuProps) {
+  const panelId = useId();
+  const titleId = useId();
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [isPanelHovered, setIsPanelHovered] = useState(false);
+  const nextTheme = theme === "dark" ? "light" : "dark";
+
+  useDismissiblePanel({ isOpen, onOpenChange, panelRef: menuRef });
+
+  return (
+    <div className="app-menu" ref={menuRef}>
+      <TooltipProvider delayDuration={150}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              aria-expanded={isOpen}
+              aria-controls={panelId}
+              aria-haspopup="dialog"
+              aria-label="Open menu"
+              onClick={() => onOpenChange(!isOpen)}
+            >
+              <Menu />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Open menu</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      {isOpen ? (
+        <Card
+          id={panelId}
+          className="app-menu__content"
+          size="sm"
+          role="dialog"
+          aria-modal="false"
+          aria-labelledby={titleId}
+          onMouseEnter={() => setIsPanelHovered(true)}
+          onMouseLeave={() => setIsPanelHovered(false)}
+        >
+          <CardHeader className="app-menu__section-header">
+            <div className="app-menu__header-row">
+              <CardTitle id={titleId}>Workspace</CardTitle>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                className="app-menu__close-button"
+                aria-label="Close workspace panel"
+                onClick={() => onOpenChange(false)}
+              >
+                <X />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="app-menu__section">
+            <div className="app-menu__panel-section">
+              <h3 className="app-menu__panel-title">Display</h3>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant={isLayoutModeActive ? "secondary" : "outline"}
+                size="sm"
+                onClick={onToggleLayoutMode}
+                disabled={isLayoutModeDisabled}
+              >
+                <LayoutDashboard data-icon="inline-start" />
+                {isLayoutModeActive ? "Exit layout" : "Edit layout"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onThemeChange(nextTheme)}
+              >
+                {theme === "dark" ? <Sun data-icon="inline-start" /> : <Moon data-icon="inline-start" />}
+                {theme === "dark" ? "Light theme" : "Dark theme"}
+              </Button>
+            </div>
+
+            <div className="app-menu__panel-section">
+              <h3 className="app-menu__panel-title">Data</h3>
+            </div>
+
+            <div className="app-menu__actions">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onResetEverything}
+                disabled={isResettingEverything || isSavingEverything || isLoadingEverything}
+              >
+                <RotateCcw data-icon="inline-start" />
+                {isResettingEverything ? "Resetting..." : "Reset"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onLoadEverything}
+                disabled={isResettingEverything || isSavingEverything || isLoadingEverything}
+              >
+                <Download data-icon="inline-start" />
+                {isLoadingEverything ? "Loading..." : "Load"}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onSaveEverything}
+                disabled={isResettingEverything || isSavingEverything || isLoadingEverything}
+              >
+                <Save data-icon="inline-start" />
+                {isSavingEverything ? "Saving..." : "Save"}
+              </Button>
+            </div>
+
+            <div className="app-menu__panel-section">
+              <h3 className="app-menu__panel-title">Highlight color</h3>
+            </div>
+
+            <div className="app-menu__color-swatches" role="group" aria-label="Highlight color">
+              {highlightColorOptions.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={[
+                    "app-menu__color-swatch",
+                    highlightColor === option.id ? "app-menu__color-swatch--active" : ""
+                  ].filter(Boolean).join(" ")}
+                  style={{ backgroundColor: option.hex }}
+                  onClick={() => onHighlightColorChange(option.id)}
+                  aria-label={option.label}
+                  aria-pressed={highlightColor === option.id}
+                />
+              ))}
+            </div>
+
+            <div className="app-menu__panel-section">
+              <h3 className="app-menu__panel-title">Network Details</h3>
+            </div>
+
+            <div className="grid gap-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[0.82rem] text-muted-foreground">Play city mode</span>
+                <Badge variant="outline">{playCityPreviewModeLabel}</Badge>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[0.82rem] text-muted-foreground">Play city source</span>
+                <Badge variant="outline">{playCitySourceLabel}</Badge>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[0.82rem] text-muted-foreground">Edition</span>
+                <span className="text-[0.9rem]">{playCityEditionLabel ?? "None"}</span>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[0.82rem] text-muted-foreground">Fallback parity</span>
+                <span className="text-[0.9rem]">
+                  {isPlayCityFallbackMatchKnown ? "Known" : "Unknown"}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <FloatingActionNotice
+        notice={saveEverythingNotice}
+        className="app-menu__floating-notice"
+        isPaused={isPanelHovered}
+        onDismiss={onDismissSaveEverythingNotice}
+      />
+    </div>
+  );
+}
+
+export function UserMenu({
+  isOpen,
+  onOpenChange,
+  accountEmail,
+  accountRole,
+  accountUsername,
+  accountDisplayName,
+  accountEloRating,
+  viewAsRole,
+  onViewAsRoleChange,
+  canAccessDraftCities,
+  isAuthBusy,
+  onSignInWithPassword,
+  onSignUpWithPassword,
+  onSignOut,
+  onSaveProfile
+}: UserMenuProps) {
+  const panelId = useId();
+  const titleId = useId();
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [profileUsername, setProfileUsername] = useState(accountUsername ?? "");
+  const [profileDisplayName, setProfileDisplayName] = useState(accountDisplayName ?? "");
+  const [authNotice, setAuthNotice] = useState<AuthNotice | null>(null);
+  const availableViewAsRoles =
+    accountRole === "admin"
+      ? (["admin", "author", "player"] as AppRole[])
+      : accountRole === "author"
+        ? (["author", "player"] as AppRole[])
+        : (["player"] as AppRole[]);
+  const buttonLabel = accountEmail
+    ? accountDisplayName || (accountUsername ? `@${accountUsername}` : accountEmail)
+    : "SIGN IN";
+
+  useDismissiblePanel({ isOpen, onOpenChange, panelRef: menuRef });
+
+  useEffect(() => {
+    setProfileUsername(accountUsername ?? "");
+    setProfileDisplayName(accountDisplayName ?? "");
+  }, [accountDisplayName, accountUsername]);
 
   const getAuthInput = () => {
     const email = authEmail.trim();
@@ -244,17 +466,19 @@ export function AppMenu({
           <TooltipTrigger asChild>
             <Button
               variant="outline"
-              size="icon-sm"
+              size="sm"
+              className="max-w-48 justify-between gap-2"
               aria-expanded={isOpen}
               aria-controls={panelId}
               aria-haspopup="dialog"
-              aria-label="Open menu"
+              aria-label={accountEmail ? "Open account details" : "Open sign in"}
               onClick={() => onOpenChange(!isOpen)}
             >
-              <Menu />
+              <span className="truncate">{buttonLabel}</span>
+              <User data-icon="inline-end" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Open menu</TooltipContent>
+          <TooltipContent>{accountEmail ? "Account details" : "Sign in"}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
 
@@ -266,18 +490,16 @@ export function AppMenu({
           role="dialog"
           aria-modal="false"
           aria-labelledby={titleId}
-          onMouseEnter={() => setIsPanelHovered(true)}
-          onMouseLeave={() => setIsPanelHovered(false)}
         >
           <CardHeader className="app-menu__section-header">
             <div className="app-menu__header-row">
-              <CardTitle id={titleId}>Workspace</CardTitle>
+              <CardTitle id={titleId}>Account Details</CardTitle>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon-xs"
                 className="app-menu__close-button"
-                aria-label="Close workspace panel"
+                aria-label="Close account panel"
                 onClick={() => onOpenChange(false)}
               >
                 <X />
@@ -285,65 +507,6 @@ export function AppMenu({
             </div>
           </CardHeader>
           <CardContent className="app-menu__section">
-            <div className="app-menu__panel-section">
-              <h3 className="app-menu__panel-title">Data</h3>
-            </div>
-
-            <div className="app-menu__actions">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onResetEverything}
-                disabled={isResettingEverything || isSavingEverything || isLoadingEverything}
-              >
-                <RotateCcw data-icon="inline-start" />
-                {isResettingEverything ? "Resetting..." : "Reset"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onLoadEverything}
-                disabled={isResettingEverything || isSavingEverything || isLoadingEverything}
-              >
-                <Download data-icon="inline-start" />
-                {isLoadingEverything ? "Loading..." : "Load"}
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={onSaveEverything}
-                disabled={isResettingEverything || isSavingEverything || isLoadingEverything}
-              >
-                <Save data-icon="inline-start" />
-                {isSavingEverything ? "Saving..." : "Save"}
-              </Button>
-            </div>
-
-            <div className="app-menu__panel-section">
-              <h3 className="app-menu__panel-title">Highlight color</h3>
-            </div>
-
-            <div className="app-menu__color-swatches" role="group" aria-label="Highlight color">
-              {highlightColorOptions.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  className={[
-                    "app-menu__color-swatch",
-                    highlightColor === option.id ? "app-menu__color-swatch--active" : ""
-                  ].filter(Boolean).join(" ")}
-                  style={{ backgroundColor: option.hex }}
-                  onClick={() => onHighlightColorChange(option.id)}
-                  aria-label={option.label}
-                  aria-pressed={highlightColor === option.id}
-                />
-              ))}
-            </div>
-
-            <div className="app-menu__panel-section">
-              <h3 className="app-menu__panel-title">Account Details</h3>
-            </div>
-
             <div className="grid gap-1.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-[0.82rem] text-muted-foreground">Signed in</span>
@@ -367,7 +530,7 @@ export function AppMenu({
                   <DropdownMenuTrigger asChild>
                     <Button type="button" variant="outline" size="sm" className="min-w-28 justify-between gap-2">
                       <span>{roleLabel(viewAsRole)}</span>
-                      <ChevronDown className="size-4 text-muted-foreground" />
+                      <ChevronDown data-icon="inline-end" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="min-w-32">
@@ -490,41 +653,9 @@ export function AppMenu({
                 {authNotice.text}
               </p>
             ) : null}
-
-            <div className="app-menu__panel-section">
-              <h3 className="app-menu__panel-title">Network Details</h3>
-            </div>
-
-            <div className="grid gap-1.5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-[0.82rem] text-muted-foreground">Play city mode</span>
-                <Badge variant="outline">{playCityPreviewModeLabel}</Badge>
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-[0.82rem] text-muted-foreground">Play city source</span>
-                <Badge variant="outline">{playCitySourceLabel}</Badge>
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-[0.82rem] text-muted-foreground">Edition</span>
-                <span className="text-[0.9rem]">{playCityEditionLabel ?? "None"}</span>
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-[0.82rem] text-muted-foreground">Fallback parity</span>
-                <span className="text-[0.9rem]">
-                  {isPlayCityFallbackMatchKnown ? "Known" : "Unknown"}
-                </span>
-              </div>
-            </div>
           </CardContent>
         </Card>
       ) : null}
-
-      <FloatingActionNotice
-        notice={saveEverythingNotice}
-        className="app-menu__floating-notice"
-        isPaused={isPanelHovered}
-        onDismiss={onDismissSaveEverythingNotice}
-      />
     </div>
   );
 }
