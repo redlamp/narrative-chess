@@ -18,7 +18,7 @@ Not a full urban simulation. Do not overbuild systems not needed for current mil
 
 ## Current State
 
-Beyond prototype. Includes: playable local chess, study replay, city-aware board (Edinburgh), structured content editors, shared layout tooling, design token system, GitHub Pages deployment. Not database-backed — browser-local state + optional file saves + checked-in content.
+Beyond prototype. Includes: playable local chess, study replay, city-aware board (Edinburgh), structured content editors, shared layout tooling, design token system, GitHub Pages deployment, optional Supabase auth/cloud saves, and early multiplayer turn sync. Still local-first: browser-local state + optional file saves + checked-in content remain core.
 
 Six pages: Play, Cities, Classics, Roles, Research, Design.
 
@@ -53,7 +53,7 @@ Always optimize for current milestone. See `docs/PRD.md` Section 6 for full stat
 ### Milestone 4 — Narrative Event Layer 🔄 In Progress
 ### Milestone 5 — Visual Identity/3D ⏳ Not Started
 ### Milestone 6 — Durable Content + Save 🔄 In Progress (parallel target)
-### Milestone 7 — Multiplayer ⏳ Not Started
+### Milestone 7 — Multiplayer 🔄 In Progress
 ### Milestone 8 — Story Artifact Output ⏳ Not Started
 
 ## Agent Rules

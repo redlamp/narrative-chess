@@ -25,7 +25,7 @@ What is intentionally not in scope yet:
 - advanced AI strength
 - broad matchmaking/social systems
 
-The current product focus is Milestone 2 city-board stability plus Milestone 6 durability.
+The current product focus is Milestone 2 city-board stability plus Milestone 6 durability, with early Milestone 7 multiplayer work kept narrow around Supabase turn sync.
 
 ## Repository Structure
 
@@ -106,18 +106,16 @@ The project direction is:
 3. city-context presentation
 4. richer map or 3D presentation later
 
-Milestone 1 focus:
-- legal local chess
-- move history
-- undo
-- clear board UI
-- minimal narrative hooks
+Current milestone focus:
+- keep Play chess-first and turn-correct
+- stabilize city-board and authored city data flow
+- clarify local draft, file save, repo content, and Supabase-backed state
+- keep multiplayer limited to invite/open games, time controls, turn enforcement, and durable move sync
 
-Milestone 1 non-goals:
-- multiplayer
-- 3D board
-- authored city research
-- advanced AI
+Current non-goals:
+- 3D board rendering
+- advanced AI strength
+- broad matchmaking/social systems
 - comic or vignette systems
 
 ## Definition Of Done For The First Playable Slice

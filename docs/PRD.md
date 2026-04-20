@@ -1,7 +1,7 @@
 # PRD — Narrative Chess
 
-Last Updated: April 14, 2026
-Status: Active prototype, local-first, static deployment
+Last Updated: April 20, 2026
+Status: Active prototype, local-first static deployment with optional Supabase-backed account, cloud save, and multiplayer paths
 
 ---
 
@@ -15,7 +15,7 @@ Priority order:
 3. city-context presentation
 4. richer spatial/visual presentation later
 
-Beyond pure prototype. Includes: playable local chess, study replay, city-aware board, structured content editors, shared layout tooling, design token system, GitHub Pages deployment. Not database-backed — mix of browser-local state, optional local file saves, checked-in content.
+Beyond pure prototype. Includes: playable local chess, study replay, city-aware board, structured content editors, shared layout tooling, design token system, GitHub Pages deployment, optional Supabase auth/cloud saves, and an early multiplayer turn loop.
 
 Six page areas: Play, Cities, Classics, Roles, Research, Design.
 
@@ -41,6 +41,7 @@ Most mature surface:
 - move history with replay stepping + scrubbing
 - shared animation playhead for board + map motion
 - saved games + historic study flows
+- online multiplayer game list, invite/open-game creation, turn-aware board locking, and completed multiplayer review from Games > Yours
 - Story Beat, City Tile, Character, Narrative Tone, map panels
 - Google Maps + MapLibre variants
 - shared layout mode: panel visibility, resizing, saved layouts, per-panel bounds
@@ -138,6 +139,15 @@ Typography zoo + visual hierarchy reference. Design support, not gameplay.
 - canonical city data source established with draft status UI
 - GitHub Pages deployment from `main`
 
+### 4.9 Early Multiplayer + Account Surface
+- optional Supabase Auth with profile username/display name and Elo rating
+- direct username invites and open multiplayer games
+- live-clock and correspondence time-control presets
+- active game loading from Supabase snapshots
+- client-side board lock for non-player sides and non-turn states
+- server-side `append_game_move` validation for participant, side, turn, square format, promotion, and ply ordering
+- completed multiplayer games moved out of Games > Active and shown in Games > Yours
+
 ---
 
 ## 5. Architecture Snapshot
@@ -158,11 +168,12 @@ Mostly respects boundary:
 Biggest remaining issue: persistence fragmentation.
 
 ### 5.3 Persistence Model Today
-Mixed local-first:
+Mixed local-first plus optional Supabase-backed flows:
 - `localStorage` — app settings, layouts, saved matches, role/catalog drafts, city drafts
 - IndexedDB — persisted local directory handles
 - local file save/load — JSON + CSS export/import
 - checked-in JSON — `content/` + `layouts/`
+- Supabase — optional auth/profile, cloud saved matches, layout bundles, published/draft city versions, and multiplayer game threads/moves
 
 Main problem: data-source ambiguity between browser state, local file state, repo-tracked files, deployed state. Partially addressed by canonical city data source + draft status UI, but not yet resolved across all content types.
 
@@ -215,7 +226,15 @@ Remaining:
 - database-backed storage
 - revision history + conflict handling
 
-### Milestone 7 — Multiplayer ⏳ Not Started
+### Milestone 7 — Multiplayer 🔄 In Progress
+Done: optional Supabase username/profile foundation, game thread/participant/move schema, direct invites, open games, time-control presets, active game list, turn-aware Play loading, server-side move append validation, live-clock state, basic Elo settlement on rated completion, completed games shown in Games > Yours
+
+Remaining:
+- apply and verify migrations in the live Supabase project before relying on production multiplayer enforcement
+- polling refresh polish and clearer stale/sync states
+- invite decline/cancel/archive affordances
+- timeout/flag handling for expired clocks or missed correspondence deadlines
+- Realtime subscription after the polling turn loop is stable
 
 ### Milestone 8 — Story Artifact Output ⏳ Not Started
 
@@ -260,6 +279,7 @@ Remaining:
 - improve animation reliability + performance
 - tighten panel sync rules
 - remove UI clutter weakening chess readability
+- keep multiplayer turn/player-side enforcement explicit in the board and status tiles
 
 ### Priority C — Cities Workflow Maturity
 - improve district editing workflow
@@ -345,6 +365,8 @@ Recommended sequence:
 - review Cities save/load end to end
 - define which values stay browser-only cache
 - make local file saves vs repo-tracked content visibly distinct in UI
+- verify live Supabase migrations for multiplayer RLS/RPC behavior
+- add timeout handling for live clocks and correspondence deadlines
 
 ### Medium-Term
 - choose canonical data model for layouts, cities, districts, characters, saved matches
@@ -352,9 +374,9 @@ Recommended sequence:
 - wire authored city content more cleanly into gameplay
 - improve narrative event quality
 - normalize shared editor + button-bar patterns across non-Play pages
+- add Realtime subscriptions after polling-based multiplayer is stable
 
 ### Deferred
-- multiplayer
 - 3D presentation
 - comic/vignette generation
 - heavier backend before data contracts stable

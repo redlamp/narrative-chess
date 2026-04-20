@@ -1,6 +1,6 @@
 # Multiplayer Plan
 
-Last updated: April 18, 2026
+Last updated: April 20, 2026
 
 ## Goal
 
@@ -248,8 +248,21 @@ Need strict ownership rules:
 6. time control badge
 7. rated/casual badge
 8. result screen with Elo delta
-9. completed games list in `Games > Active`
+9. completed games list in `Games > Yours`
 10. creator side choice
+
+Implemented UI status:
+
+1. username claim UI in account details: done
+2. `Games > Active` invite/create state: done
+3. active game list: done
+4. turn indicators: done
+5. accept/decline invite: done
+6. time control badge: done
+7. rated/casual badge: done
+8. result display with Elo delta: done
+9. completed games list in `Games > Yours`: done
+10. creator side choice, including random side: done
 
 ## Current Online Turn Loop
 
@@ -277,19 +290,30 @@ UI contract:
 
 ## Near-term implementation order
 
+Done:
+
 1. scaffold `profiles`
 2. add username claim UI
-3. add multiplayer schema tables
-   a. done: `game_threads`
-   b. done: `game_participants`
-   c. done: `game_moves`
-   d. done: `calculate_elo_delta()`
-4. replace `sync/async` with time controls
-5. create invite flow
-6. append moves to DB
-7. poll open active games for opponent moves
-8. add rated game completion function
-9. subscribe with Realtime
+3. add multiplayer schema tables:
+   a. `game_threads`
+   b. `game_participants`
+   c. `game_moves`
+   d. `calculate_elo_delta()`
+4. replace user-facing `sync/async` choices with explicit time controls
+5. create direct invite flow
+6. create open-game flow
+7. append moves to DB through `append_game_move`
+8. validate participant, player side, turn, square format, promotion, and next ply in `append_game_move`
+9. add rated game completion and Elo settlement in the move append path
+10. poll/list active, invited, open, and completed games through `list_active_games`
+
+Remaining:
+
+1. apply and verify all checked-in migrations in the live Supabase project
+2. add timeout/flag handling for expired live clocks and missed correspondence deadlines
+3. improve polling refresh/stale-state UI
+4. add cancel/archive affordances for invites and inactive games
+5. subscribe with Realtime after the polling turn loop is stable
 
 ## Deliberate non-goals for first release
 

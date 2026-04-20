@@ -542,8 +542,8 @@ Main cases:
 Fix:
 
 - cities first
-- no realtime now
-- no multiplayer now
+- no Realtime-first multiplayer expansion
+- keep current multiplayer work to the narrow thread/move/RPC path until persistence contracts are stable
 
 ### Big editor regressions
 

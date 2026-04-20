@@ -47,7 +47,7 @@ The browser client is created in `apps/web/src/lib/supabase.ts` with `VITE_SUPAB
 
 Current direct table access from the frontend:
 
-- `profiles`: signed-in profile read/write for the current user.
+- `profiles`: signed-in profile read for the current user; user-edited profile writes go through `upsert_current_profile`.
 - `user_roles`: role lookup for the current user.
 - `user_saved_matches`: signed-in saved match read/write/delete.
 - `user_layout_bundles`: signed-in layout bundle read/write.
