@@ -147,6 +147,7 @@ Typography zoo + visual hierarchy reference. Design support, not gameplay.
 - client-side board lock for non-player sides and non-turn states
 - server-side `append_game_move` validation for participant, side, turn, square format, promotion, and ply ordering
 - completed multiplayer games moved out of Games > Active and shown in Games > Yours
+- `claim_game_timeout` RPC lets the opposing active participant settle a game when the live clock or correspondence deadline has passed, with Elo applied for rated games
 
 ---
 
@@ -227,13 +228,12 @@ Remaining:
 - revision history + conflict handling
 
 ### Milestone 7 — Multiplayer 🔄 In Progress
-Done: optional Supabase username/profile foundation, game thread/participant/move schema, direct invites, open games, time-control presets, active game list, turn-aware Play loading, server-side move append validation, live-clock state, basic Elo settlement on rated completion, completed games shown in Games > Yours
+Done: optional Supabase username/profile foundation, game thread/participant/move schema, direct invites, open games, time-control presets, active game list, turn-aware Play loading, server-side move append validation, live-clock state, basic Elo settlement on rated completion, completed games shown in Games > Yours, timeout claims for expired clocks and missed correspondence deadlines via `claim_game_timeout`
 
 Remaining:
 - apply and verify migrations in the live Supabase project before relying on production multiplayer enforcement
 - polling refresh polish and clearer stale/sync states
 - invite decline/cancel/archive affordances
-- timeout/flag handling for expired clocks or missed correspondence deadlines
 - Realtime subscription after the polling turn loop is stable
 
 ### Milestone 8 — Story Artifact Output ⏳ Not Started
@@ -366,7 +366,6 @@ Recommended sequence:
 - define which values stay browser-only cache
 - make local file saves vs repo-tracked content visibly distinct in UI
 - verify live Supabase migrations for multiplayer RLS/RPC behavior
-- add timeout handling for live clocks and correspondence deadlines
 
 ### Medium-Term
 - choose canonical data model for layouts, cities, districts, characters, saved matches

@@ -281,6 +281,7 @@ Time-control behavior:
 
 - `live_clock`: each player starts with `base_seconds`; the moving side spends elapsed time since `turn_started_at`, then receives `increment_seconds`; `deadline_at` tracks when the active side's clock would expire.
 - `move_deadline`: each turn gets a fresh `move_deadline_seconds` window; players can still make multiple moves in a day if both keep responding before the current deadline.
+- when `deadline_at` passes while the game is still active, the opposing active participant may call `claim_game_timeout` to settle the thread as `completed` with the caller as winner; rated games run the standard Elo delta update, and `list_active_games` surfaces `is_timed_out` and `can_claim_timeout` flags to drive the Play and Games affordances.
 
 UI contract:
 
@@ -306,14 +307,14 @@ Done:
 8. validate participant, player side, turn, square format, promotion, and next ply in `append_game_move`
 9. add rated game completion and Elo settlement in the move append path
 10. poll/list active, invited, open, and completed games through `list_active_games`
+11. claim timeouts on expired live clocks and missed correspondence deadlines through `claim_game_timeout`
 
 Remaining:
 
 1. apply and verify all checked-in migrations in the live Supabase project
-2. add timeout/flag handling for expired live clocks and missed correspondence deadlines
-3. improve polling refresh/stale-state UI
-4. add cancel/archive affordances for invites and inactive games
-5. subscribe with Realtime after the polling turn loop is stable
+2. improve polling refresh/stale-state UI
+3. add cancel/archive affordances for invites and inactive games
+4. subscribe with Realtime after the polling turn loop is stable
 
 ## Deliberate non-goals for first release
 

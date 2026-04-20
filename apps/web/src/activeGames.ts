@@ -101,6 +101,8 @@ export type ActiveGameRecord = {
   isYourTurn: boolean;
   isIncomingInvite: boolean;
   isOutgoingInvite: boolean;
+  isTimedOut: boolean;
+  canClaimTimeout: boolean;
 };
 
 export type ActiveGameSession = {
@@ -158,6 +160,8 @@ type ActiveGameRow = {
   is_your_turn: boolean;
   is_incoming_invite: boolean;
   is_outgoing_invite: boolean;
+  is_timed_out: boolean | null;
+  can_claim_timeout: boolean | null;
 };
 
 type ActiveGameSessionThreadRow = {
@@ -223,7 +227,9 @@ function mapActiveGameRow(row: ActiveGameRow): ActiveGameRecord {
     canJoinOpenGame: row.can_join_open_game === true,
     isYourTurn: row.is_your_turn,
     isIncomingInvite: row.is_incoming_invite,
-    isOutgoingInvite: row.is_outgoing_invite
+    isOutgoingInvite: row.is_outgoing_invite,
+    isTimedOut: row.is_timed_out === true,
+    canClaimTimeout: row.can_claim_timeout === true
   };
 }
 
@@ -394,6 +400,58 @@ export async function respondToGameInviteInSupabase(input: {
   if (error) {
     throw error;
   }
+}
+
+export type ClaimGameTimeoutResult = {
+  status: ActiveGameRecord["status"];
+  result: ActiveGameSession["result"];
+  currentTurn: PieceSide | null;
+  deadlineAt: string | null;
+  completedAt: string | null;
+  whiteRatingDelta: number | null;
+  blackRatingDelta: number | null;
+};
+
+export async function claimGameTimeoutInSupabase(gameId: string): Promise<ClaimGameTimeoutResult> {
+  const auth = await requireAuthenticatedUser();
+  if (!auth) {
+    throw new Error("Sign in to claim multiplayer timeouts.");
+  }
+
+  const { data, error } = await auth.supabase.rpc("claim_game_timeout", {
+    p_game_id: gameId
+  });
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (error || !row) {
+    throw error ?? new Error("Could not claim the multiplayer timeout.");
+  }
+
+  return {
+    status: row.status as ActiveGameRecord["status"],
+    result: (row.result as ActiveGameSession["result"]) ?? null,
+    currentTurn: (row.current_turn as PieceSide | null) ?? null,
+    deadlineAt: (row.deadline_at as string | null) ?? null,
+    completedAt: (row.completed_at as string | null) ?? null,
+    whiteRatingDelta: (row.white_rating_delta as number | null) ?? null,
+    blackRatingDelta: (row.black_rating_delta as number | null) ?? null
+  };
+}
+
+export function resolveTimeoutDeadlineMs(game: {
+  status: ActiveGameRecord["status"];
+  currentTurn: ActiveGameRecord["currentTurn"];
+  yourSide: ActiveGameRecord["yourSide"];
+  yourParticipantStatus: ActiveGameRecord["yourParticipantStatus"];
+  deadlineAt: string | null;
+}): number | null {
+  if (game.status !== "active") return null;
+  if (game.yourParticipantStatus !== "active") return null;
+  if (game.yourSide !== "white" && game.yourSide !== "black") return null;
+  if (!game.currentTurn || game.currentTurn === game.yourSide) return null;
+  if (!game.deadlineAt) return null;
+  const ms = Date.parse(game.deadlineAt);
+  return Number.isFinite(ms) ? ms : null;
 }
 
 export async function loadActiveGameSessionFromSupabase(

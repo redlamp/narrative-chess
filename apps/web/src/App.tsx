@@ -13,6 +13,7 @@ import {
   Cloud,
   ChevronDown,
   FileJson,
+  Flag,
   Pencil,
   RefreshCcw,
   Scroll,
@@ -79,6 +80,7 @@ import {
 } from "./fileSystemAccess";
 import {
   appendActiveGameMoveInSupabase,
+  claimGameTimeoutInSupabase,
   formatTimeControlLabel,
   loadActiveGameSessionFromSupabase,
   type TimeControlKind
@@ -355,6 +357,7 @@ export default function App() {
   const [isRefreshingActiveMultiplayerSession, setIsRefreshingActiveMultiplayerSession] = useState(false);
   const [activeMultiplayerRefreshError, setActiveMultiplayerRefreshError] = useState<string | null>(null);
   const [activeMultiplayerLastRefreshAt, setActiveMultiplayerLastRefreshAt] = useState<string | null>(null);
+  const [isClaimingActiveMultiplayerTimeout, setIsClaimingActiveMultiplayerTimeout] = useState(false);
   const [clockNow, setClockNow] = useState(() => Date.now());
   const activeMultiplayerMoveSyncRef = useRef<string | null>(null);
   const handleCityBoardDraftChange = useCallback((board: CityBoard) => {
@@ -841,6 +844,25 @@ export default function App() {
     }
   }, [activeMultiplayerSession, loadSnapshot]);
 
+  const claimLoadedActiveMultiplayerTimeout = useCallback(async () => {
+    if (!activeMultiplayerSession) {
+      return;
+    }
+
+    setIsClaimingActiveMultiplayerTimeout(true);
+    try {
+      await claimGameTimeoutInSupabase(activeMultiplayerSession.gameId);
+      setActiveMultiplayerRefreshError(null);
+      await refreshLoadedActiveMultiplayerGame({ silent: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not claim the timeout.";
+      setActiveMultiplayerRefreshError(message);
+      console.warn("[supabase] Could not claim multiplayer timeout.", error);
+    } finally {
+      setIsClaimingActiveMultiplayerTimeout(false);
+    }
+  }, [activeMultiplayerSession, refreshLoadedActiveMultiplayerGame]);
+
   useEffect(() => {
     if (!activeMultiplayerSession || isSyncingActiveMultiplayerMove) {
       return;
@@ -1043,15 +1065,40 @@ export default function App() {
           moveDeadlineSeconds: activeMultiplayerSession.moveDeadlineSeconds
         })
     : null;
+  const activeMultiplayerDeadlineMs = activeMultiplayerSession?.deadlineAt
+    ? Date.parse(activeMultiplayerSession.deadlineAt)
+    : null;
+  const activeMultiplayerDeadlineElapsed =
+    activeMultiplayerDeadlineMs !== null &&
+    Number.isFinite(activeMultiplayerDeadlineMs) &&
+    activeMultiplayerDeadlineMs <= clockNow;
+  const activeMultiplayerCanClaimTimeout = Boolean(
+    activeMultiplayerSession &&
+      activeMultiplayerSession.status === "active" &&
+      activeMultiplayerDeadlineElapsed &&
+      activeMultiplayerSession.currentTurn &&
+      activeMultiplayerSession.currentTurn !== activeMultiplayerSession.yourSide &&
+      (activeMultiplayerSession.yourSide === "white" || activeMultiplayerSession.yourSide === "black")
+  );
+  const activeMultiplayerOwnClockExpired = Boolean(
+    activeMultiplayerSession &&
+      activeMultiplayerSession.status === "active" &&
+      activeMultiplayerDeadlineElapsed &&
+      activeMultiplayerSession.currentTurn === activeMultiplayerSession.yourSide
+  );
   const multiplayerStatusValue = activeMultiplayerSession
     ? activeMultiplayerSession.status === "completed"
       ? multiplayerResultLabel(activeMultiplayerSession.result)
       : activeMultiplayerSession.status === "active"
         ? hasPendingActiveMultiplayerMove || isSyncingActiveMultiplayerMove
           ? "Syncing"
-          : activeMultiplayerSession.currentTurn === activeMultiplayerSession.yourSide
-          ? "Your turn"
-          : "Waiting"
+          : activeMultiplayerCanClaimTimeout
+            ? "Opponent timed out"
+            : activeMultiplayerOwnClockExpired
+              ? "Clock expired"
+              : activeMultiplayerSession.currentTurn === activeMultiplayerSession.yourSide
+                ? "Your turn"
+                : "Waiting"
         : activeMultiplayerSession.status === "invited"
           ? "Invite pending"
           : activeMultiplayerSession.status
@@ -2228,6 +2275,23 @@ export default function App() {
                       >
                         <RefreshCcw />
                       </Button>
+                      {activeMultiplayerCanClaimTimeout ? (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="icon-sm"
+                          onClick={() => void claimLoadedActiveMultiplayerTimeout()}
+                          disabled={isClaimingActiveMultiplayerTimeout}
+                          aria-label="Claim opponent timeout"
+                          title={
+                            isClaimingActiveMultiplayerTimeout
+                              ? "Claiming opponent timeout"
+                              : "Claim opponent timeout"
+                          }
+                        >
+                          <Flag />
+                        </Button>
+                      ) : null}
                     </strong>
                   </div>
                 ) : null}
@@ -2370,6 +2434,11 @@ export default function App() {
             activeMultiplayerGameId={activeMultiplayerSession?.gameId ?? null}
             onLoadActiveGame={(gameId) => {
               void handleLoadActiveMultiplayerGame(gameId);
+            }}
+            onActiveGameStateChanged={(gameId) => {
+              if (activeMultiplayerSession?.gameId === gameId) {
+                void refreshLoadedActiveMultiplayerGame({ silent: true });
+              }
             }}
             selectedPly={selectedPly}
             totalPlies={totalPlies}

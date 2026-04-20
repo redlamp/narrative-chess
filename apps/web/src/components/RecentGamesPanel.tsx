@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { ReferenceGame } from "@narrative-chess/content-schema";
 import {
+  claimGameTimeoutInSupabase,
   createGameInviteInSupabase,
   formatTimeControlLabel,
   timeControlPresets,
@@ -44,7 +45,7 @@ import {
   AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Check, ExternalLink, FileUp, Plus, RefreshCcw, Send, Trash2, X } from "lucide-react";
+import { Check, ExternalLink, FileUp, Flag, Plus, RefreshCcw, Send, Trash2, X } from "lucide-react";
 
 type InviteCreatorSide = "white" | "black" | "random";
 
@@ -66,6 +67,7 @@ type RecentGamesPanelProps = {
   }>;
   activeMultiplayerGameId: string | null;
   onLoadActiveGame: (gameId: string) => void;
+  onActiveGameStateChanged?: (gameId: string) => void;
 };
 
 type RecentGameRowProps = {
@@ -164,6 +166,12 @@ function activeGameStatusLabel(game: ActiveGameRecord) {
   }
 
   if (game.status === "active") {
+    if (game.canClaimTimeout) {
+      return "Opponent timed out";
+    }
+    if (game.isTimedOut && game.isYourTurn) {
+      return "Your clock expired";
+    }
     return game.isYourTurn ? "Your turn" : "Waiting";
   }
 
@@ -201,6 +209,12 @@ function activeGameRatingDelta(game: ActiveGameRecord) {
 function activeGameTimeNote(game: ActiveGameRecord) {
   if (game.status !== "active" || !game.deadlineAt) {
     return `Updated ${formatGameTimestamp(game.lastMoveAt ?? game.updatedAt)}`;
+  }
+
+  if (game.isTimedOut) {
+    return game.timeControlKind === "live_clock"
+      ? `Clock expired ${formatGameTimestamp(game.deadlineAt)}`
+      : `Move overdue since ${formatGameTimestamp(game.deadlineAt)}`;
   }
 
   return game.timeControlKind === "live_clock"
@@ -257,18 +271,22 @@ type ActiveGameDetailsProps = {
   game: ActiveGameRecord | null;
   activeMultiplayerGameId: string | null;
   emptyMessage: string;
+  claimingGameId: string | null;
   onJoinOpenGame: (gameId: string) => void;
   onLoadActiveGame: (gameId: string) => void;
   onRespondToInvite: (gameId: string, response: "accept" | "decline") => void;
+  onClaimTimeout: (gameId: string) => void;
 };
 
 function ActiveGameDetails({
   game,
   activeMultiplayerGameId,
   emptyMessage,
+  claimingGameId,
   onJoinOpenGame,
   onLoadActiveGame,
-  onRespondToInvite
+  onRespondToInvite,
+  onClaimTimeout
 }: ActiveGameDetailsProps) {
   if (!game) {
     return <p className="recent-games-details recent-games-details--empty muted">{emptyMessage}</p>;
@@ -359,6 +377,18 @@ function ActiveGameDetails({
             {game.status === "completed" ? "Review" : game.status === "active" ? "Resume" : "Open"}
           </Button>
         )}
+        {game.canClaimTimeout ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={claimingGameId === game.gameId}
+            onClick={() => onClaimTimeout(game.gameId)}
+          >
+            <Flag data-icon="inline-start" />
+            {claimingGameId === game.gameId ? "Claiming..." : "Claim on time"}
+          </Button>
+        ) : null}
         {activeMultiplayerGameId === game.gameId ? <Badge variant="outline">Open</Badge> : null}
       </div>
     </div>
@@ -453,7 +483,8 @@ export function RecentGamesPanel({
   accountUsername,
   multiplayerCityOptions,
   activeMultiplayerGameId,
-  onLoadActiveGame
+  onLoadActiveGame,
+  onActiveGameStateChanged
 }: RecentGamesPanelProps) {
   const minimumListWidthPercent = 28;
   const maximumListWidthPercent = 72;
@@ -470,6 +501,8 @@ export function RecentGamesPanel({
   const [isSubmittingInvite, setIsSubmittingInvite] = useState(false);
   const [isMakeGameDialogOpen, setIsMakeGameDialogOpen] = useState(false);
   const [activeGamesNotice, setActiveGamesNotice] = useState<ActiveGamesNotice | null>(null);
+  const [claimingGameId, setClaimingGameId] = useState<string | null>(null);
+  const [clockNow, setClockNow] = useState(() => Date.now());
   const [inviteOpponentUsername, setInviteOpponentUsername] = useState("");
   const [inviteCityEditionId, setInviteCityEditionId] = useState(multiplayerCityOptions[0]?.id ?? "");
   const [inviteTimeControlPresetId, setInviteTimeControlPresetId] = useState("deadline-daily");
@@ -489,13 +522,42 @@ export function RecentGamesPanel({
       selectedReferenceGame,
     [hoveredReferenceGameId, referenceGames, selectedReferenceGame, selectedReferenceGameId]
   );
+  const derivedActiveGames = useMemo(() => {
+    return activeGames.map((game) => {
+      if (game.status !== "active" || !game.deadlineAt) {
+        return game;
+      }
+
+      const deadlineMs = Date.parse(game.deadlineAt);
+      if (!Number.isFinite(deadlineMs)) {
+        return game;
+      }
+
+      const expired = deadlineMs <= clockNow;
+      if (!expired) {
+        return game;
+      }
+
+      const canClaim =
+        game.yourParticipantStatus === "active" &&
+        (game.yourSide === "white" || game.yourSide === "black") &&
+        game.currentTurn !== null &&
+        game.currentTurn !== game.yourSide;
+
+      return {
+        ...game,
+        isTimedOut: true,
+        canClaimTimeout: canClaim || game.canClaimTimeout
+      };
+    });
+  }, [activeGames, clockNow]);
   const currentActiveGames = useMemo(
-    () => activeGames.filter((game) => game.status !== "completed"),
-    [activeGames]
+    () => derivedActiveGames.filter((game) => game.status !== "completed"),
+    [derivedActiveGames]
   );
   const completedActiveGames = useMemo(
-    () => activeGames.filter((game) => game.status === "completed"),
-    [activeGames]
+    () => derivedActiveGames.filter((game) => game.status === "completed"),
+    [derivedActiveGames]
   );
   const previewActiveGame = useMemo(
     () =>
@@ -598,6 +660,43 @@ export function RecentGamesPanel({
   useEffect(() => {
     void refreshActiveGames();
   }, [refreshActiveGames]);
+
+  useEffect(() => {
+    const hasDeadline = activeGames.some(
+      (game) => game.status === "active" && Boolean(game.deadlineAt)
+    );
+    if (!hasDeadline) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setClockNow(Date.now());
+    }, 5000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [activeGames]);
+
+  const handleClaimTimeout = useCallback(async (gameId: string) => {
+    setClaimingGameId(gameId);
+    try {
+      await claimGameTimeoutInSupabase(gameId);
+      setActiveGamesNotice({
+        tone: "success",
+        text: "Opponent timed out. Game scored."
+      });
+      await refreshActiveGames();
+      onActiveGameStateChanged?.(gameId);
+    } catch (error) {
+      setActiveGamesNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Could not claim the timeout."
+      });
+    } finally {
+      setClaimingGameId(null);
+    }
+  }, [onActiveGameStateChanged, refreshActiveGames]);
 
   const handleCreateInvite = useCallback(async () => {
     if (!accountUsername) {
@@ -1152,6 +1251,18 @@ export function RecentGamesPanel({
                           >
                             {game.status === "active" ? "Resume" : "Open"}
                           </Button>
+                          {game.canClaimTimeout ? (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              disabled={claimingGameId === game.gameId}
+                              onClick={() => void handleClaimTimeout(game.gameId)}
+                            >
+                              <Flag data-icon="inline-start" />
+                              {claimingGameId === game.gameId ? "Claiming..." : "Claim on time"}
+                            </Button>
+                          ) : null}
                         </div>
                       )}
                     </div>
@@ -1200,9 +1311,11 @@ export function RecentGamesPanel({
                 game={previewActiveGame}
                 activeMultiplayerGameId={activeMultiplayerGameId}
                 emptyMessage="Select an active game to see match details."
+                claimingGameId={claimingGameId}
                 onJoinOpenGame={(gameId) => void handleJoinOpenGame(gameId)}
                 onLoadActiveGame={onLoadActiveGame}
                 onRespondToInvite={(gameId, response) => void handleRespondToInvite(gameId, response)}
+                onClaimTimeout={(gameId) => void handleClaimTimeout(gameId)}
               />
             </div>
           </div>
@@ -1379,9 +1492,11 @@ export function RecentGamesPanel({
                   game={selectedYoursGame.game}
                   activeMultiplayerGameId={activeMultiplayerGameId}
                   emptyMessage="Select a completed multiplayer game."
+                  claimingGameId={claimingGameId}
                   onJoinOpenGame={(gameId) => void handleJoinOpenGame(gameId)}
                   onLoadActiveGame={onLoadActiveGame}
                   onRespondToInvite={(gameId, response) => void handleRespondToInvite(gameId, response)}
+                  onClaimTimeout={(gameId) => void handleClaimTimeout(gameId)}
                 />
               ) : (
                 <SavedMatchDetails

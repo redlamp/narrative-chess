@@ -87,6 +87,7 @@ type MatchWorkspacePageProps = {
   }>;
   activeMultiplayerGameId: string | null;
   onLoadActiveGame: (gameId: string) => void;
+  onActiveGameStateChanged?: (gameId: string) => void;
   selectedPly: number;
   totalPlies: number;
   isHistoryPlaying: boolean;
@@ -150,6 +151,7 @@ export function MatchWorkspacePage({
   multiplayerCityOptions,
   activeMultiplayerGameId,
   onLoadActiveGame,
+  onActiveGameStateChanged,
   selectedPly,
   totalPlies,
   isHistoryPlaying,
@@ -328,6 +330,7 @@ export function MatchWorkspacePage({
                 multiplayerCityOptions={multiplayerCityOptions}
                 activeMultiplayerGameId={activeMultiplayerGameId}
                 onLoadActiveGame={onLoadActiveGame}
+                onActiveGameStateChanged={onActiveGameStateChanged}
               />
             </Panel>
           )

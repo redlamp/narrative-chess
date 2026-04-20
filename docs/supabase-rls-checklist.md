@@ -37,6 +37,7 @@ RPC access:
 | `activeGames.ts` | `join_open_game` | authenticated, joins only available open games through server-side checks |
 | `activeGames.ts` | `respond_to_game_invite` | authenticated invite participant only |
 | `activeGames.ts` | `append_game_move` | authenticated active participant, current turn only |
+| `activeGames.ts` | `claim_game_timeout` | authenticated opposing active participant, after `deadline_at` has passed |
 
 ## Confirmed In Checked-In Migrations
 
@@ -50,6 +51,7 @@ RPC access:
 - `create_game_invite` is granted only to `authenticated` and resolves opponent username or open-game creation inside the RPC.
 - `join_open_game` is granted only to `authenticated`; open-game discovery remains constrained to the limited `list_active_games` RPC output.
 - `append_game_move` is granted only to `authenticated` and validates participant status, game status, side, turn, square format, promotion, and immutable ply ordering before inserting a move.
+- `claim_game_timeout` is granted only to `authenticated`, requires an active participant on the non-current-turn side, and refuses to settle the thread until `deadline_at` has passed; rated settlements reuse the `calculate_elo_delta` path.
 - `publish_city_version` checks `auth.uid()` and `has_app_role('admin')` before archiving and publishing city versions.
 
 ## Required Before Production Supabase Use
