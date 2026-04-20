@@ -484,6 +484,32 @@ export async function claimGameTimeoutInSupabase(gameId: string): Promise<ClaimG
   };
 }
 
+export async function resignGameInSupabase(gameId: string): Promise<ClaimGameTimeoutResult> {
+  const auth = await requireAuthenticatedUser();
+  if (!auth) {
+    throw new Error("Sign in to resign multiplayer games.");
+  }
+
+  const { data, error } = await auth.supabase.rpc("resign_game", {
+    p_game_id: gameId
+  });
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (error || !row) {
+    throw error ?? new Error("Could not resign the multiplayer game.");
+  }
+
+  return {
+    status: row.status as ActiveGameRecord["status"],
+    result: (row.result as ActiveGameSession["result"]) ?? null,
+    currentTurn: (row.current_turn as PieceSide | null) ?? null,
+    deadlineAt: (row.deadline_at as string | null) ?? null,
+    completedAt: (row.completed_at as string | null) ?? null,
+    whiteRatingDelta: (row.white_rating_delta as number | null) ?? null,
+    blackRatingDelta: (row.black_rating_delta as number | null) ?? null
+  };
+}
+
 export function resolveTimeoutDeadlineMs(game: {
   status: ActiveGameRecord["status"];
   currentTurn: ActiveGameRecord["currentTurn"];

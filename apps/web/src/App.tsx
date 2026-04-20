@@ -14,6 +14,7 @@ import {
   ChevronDown,
   FileJson,
   Flag,
+  Handshake,
   Pencil,
   RefreshCcw,
   Scroll,
@@ -23,6 +24,17 @@ import {
 import { getPieceAtSquare } from "@narrative-chess/game-core";
 import { getCharacterEventHistory } from "@narrative-chess/narrative-engine";
 import type { CityBoard, GameSnapshot, PieceKind, Square } from "@narrative-chess/content-schema";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -83,6 +95,7 @@ import {
   claimGameTimeoutInSupabase,
   formatTimeControlLabel,
   loadActiveGameSessionFromSupabase,
+  resignGameInSupabase,
   type TimeControlKind
 } from "./activeGames";
 import {
@@ -358,6 +371,8 @@ export default function App() {
   const [activeMultiplayerRefreshError, setActiveMultiplayerRefreshError] = useState<string | null>(null);
   const [activeMultiplayerLastRefreshAt, setActiveMultiplayerLastRefreshAt] = useState<string | null>(null);
   const [isClaimingActiveMultiplayerTimeout, setIsClaimingActiveMultiplayerTimeout] = useState(false);
+  const [isResigningActiveMultiplayerGame, setIsResigningActiveMultiplayerGame] = useState(false);
+  const [isResignDialogOpen, setIsResignDialogOpen] = useState(false);
   const [clockNow, setClockNow] = useState(() => Date.now());
   const activeMultiplayerMoveSyncRef = useRef<string | null>(null);
   const handleCityBoardDraftChange = useCallback((board: CityBoard) => {
@@ -863,6 +878,26 @@ export default function App() {
     }
   }, [activeMultiplayerSession, refreshLoadedActiveMultiplayerGame]);
 
+  const resignLoadedActiveMultiplayerGame = useCallback(async () => {
+    if (!activeMultiplayerSession) {
+      return;
+    }
+
+    setIsResigningActiveMultiplayerGame(true);
+    try {
+      await resignGameInSupabase(activeMultiplayerSession.gameId);
+      setActiveMultiplayerRefreshError(null);
+      setIsResignDialogOpen(false);
+      await refreshLoadedActiveMultiplayerGame({ silent: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not resign the game.";
+      setActiveMultiplayerRefreshError(message);
+      console.warn("[supabase] Could not resign multiplayer game.", error);
+    } finally {
+      setIsResigningActiveMultiplayerGame(false);
+    }
+  }, [activeMultiplayerSession, refreshLoadedActiveMultiplayerGame]);
+
   useEffect(() => {
     if (!activeMultiplayerSession || isSyncingActiveMultiplayerMove) {
       return;
@@ -1085,6 +1120,11 @@ export default function App() {
       activeMultiplayerSession.status === "active" &&
       activeMultiplayerDeadlineElapsed &&
       activeMultiplayerSession.currentTurn === activeMultiplayerSession.yourSide
+  );
+  const activeMultiplayerCanResign = Boolean(
+    activeMultiplayerSession &&
+      activeMultiplayerSession.status === "active" &&
+      (activeMultiplayerSession.yourSide === "white" || activeMultiplayerSession.yourSide === "black")
   );
   const multiplayerStatusValue = activeMultiplayerSession
     ? activeMultiplayerSession.status === "completed"
@@ -2291,6 +2331,44 @@ export default function App() {
                         >
                           <Flag />
                         </Button>
+                      ) : null}
+                      {activeMultiplayerCanResign ? (
+                        <AlertDialog open={isResignDialogOpen} onOpenChange={setIsResignDialogOpen}>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label="Resign multiplayer game"
+                              title="Resign multiplayer game"
+                            >
+                              <Handshake />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Resign this game?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Your opponent wins immediately. Rated games apply the usual Elo change. This cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel disabled={isResigningActiveMultiplayerGame}>
+                                Keep playing
+                              </AlertDialogCancel>
+                              <AlertDialogAction
+                                variant="destructive"
+                                disabled={isResigningActiveMultiplayerGame}
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  void resignLoadedActiveMultiplayerGame();
+                                }}
+                              >
+                                {isResigningActiveMultiplayerGame ? "Resigning..." : "Resign"}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       ) : null}
                     </strong>
                   </div>

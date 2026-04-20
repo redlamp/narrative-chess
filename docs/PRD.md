@@ -148,6 +148,7 @@ Typography zoo + visual hierarchy reference. Design support, not gameplay.
 - server-side `append_game_move` validation for participant, side, turn, square format, promotion, and ply ordering
 - completed multiplayer games moved out of Games > Active and shown in Games > Yours
 - `claim_game_timeout` RPC lets the opposing active participant settle a game when the live clock or correspondence deadline has passed, with Elo applied for rated games
+- `resign_game` RPC lets an active participant concede an in-progress match from the Play header, scoring the opponent and settling Elo when rated
 
 ---
 
@@ -228,7 +229,7 @@ Remaining:
 - revision history + conflict handling
 
 ### Milestone 7 — Multiplayer 🔄 In Progress
-Done: optional Supabase username/profile foundation, game thread/participant/move schema, direct invites, open games, time-control presets, active game list, turn-aware Play loading, server-side move append validation, live-clock state, basic Elo settlement on rated completion, completed games shown in Games > Yours, timeout claims for expired clocks and missed correspondence deadlines via `claim_game_timeout`, cancel path for pending invites via `cancel_game_invite`, auto-polled Games list with a relative refresh timestamp, per-user archive/unarchive for finished multiplayer games
+Done: optional Supabase username/profile foundation, game thread/participant/move schema, direct invites, open games, time-control presets, active game list, turn-aware Play loading, server-side move append validation, live-clock state, basic Elo settlement on rated completion, completed games shown in Games > Yours, timeout claims for expired clocks and missed correspondence deadlines via `claim_game_timeout`, cancel path for pending invites via `cancel_game_invite`, auto-polled Games list with a relative refresh timestamp, per-user archive/unarchive for finished multiplayer games, active-game resignation via `resign_game`
 
 Remaining:
 - apply and verify migrations in the live Supabase project before relying on production multiplayer enforcement

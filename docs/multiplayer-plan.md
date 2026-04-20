@@ -311,6 +311,7 @@ Done:
 12. cancel pending direct and open multiplayer invites through `cancel_game_invite`
 13. `Games > Active` auto-polls every 20s and shows a relative "Updated Xs ago" timestamp beside the manual refresh control
 14. per-user archive/unarchive of finished multiplayer games through `archive_game` and `unarchive_game`, with an include-archived toggle in `Games > Yours`
+15. resign an active multiplayer game from the Play header through `resign_game`, settling Elo if the match is rated
 
 Remaining:
 
