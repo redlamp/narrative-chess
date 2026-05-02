@@ -64,3 +64,55 @@ Three-way split:
 
 When unsure where a piece of info belongs: half-formed thoughts → `wiki/`; AI-context facts
 → `.claude/memory/`; formal/public docs → `docs/`.
+
+## AI rails for v2 implementation
+
+### Stack pin
+
+Next.js 16.2, React 19, TypeScript, Tailwind v4, shadcn/ui, Supabase JS + SSR, chess.js, Zod.
+
+### Knowledge cutoff caveat
+
+Claude's training cutoff is older than this stack. Verify Next.js / Supabase syntax against
+current docs (use WebFetch on the relevant docs page) before introducing patterns not already
+in the repo.
+
+### File invariants
+
+- DB writes only via Server Actions. Client never imports `service_role` key.
+- Migrations only via `supabase migration new <name>`. Never edit a migration after `supabase db push`.
+- chess.js imported only in `lib/chess/engine.ts`. Wrap, never spread.
+- RLS policies live in same migration as the table they guard.
+- Realtime publication changes always co-located with the relevant table migration.
+
+### What NOT to touch
+
+- `node_modules/` (rebuild from `bun install`)
+- Past migrations (write a new one that alters)
+- `auth.users` table directly — use `public.profiles` for app data
+
+### Verification commands
+
+- `bun run lint` — ESLint
+- `bunx tsc --noEmit` — TypeScript check
+- `bunx playwright test` — e2e
+- `supabase db lint` — Supabase advisors (when Supabase CLI is installed)
+
+### Pulling content from v1
+
+`git clone https://github.com/redlamp/narrative-chess-v1 ../narrative-chess-v1` separately.
+Copy what's needed by hand. Never auto-import.
+
+### Branch + commit conventions
+
+- `feat/<short-name>` off `dev`. PR back to `dev`.
+- `dev` → `main` via PR with linear history (no merge commits) and CI green.
+- Conventional Commits: `feat:`, `fix:`, `chore:`, `docs:`, `test:`, `refactor:`, `ci:`.
+
+### Source of truth
+
+- Design spec: `docs/superpowers/specs/2026-05-02-v2-foundation-design.md`
+- Active implementation plan: `docs/superpowers/plans/` (latest dated file = current phase)
+- Decisions: `wiki/notes/decision-*.md`, indexed at `wiki/mocs/decisions.md`
+- Realtime+RLS gate procedure: `wiki/notes/realtime-rls-gate-procedure.md` (run whenever
+  RLS or Realtime publication changes)
