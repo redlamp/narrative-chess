@@ -13,10 +13,31 @@
 **Prerequisites (Phase 1 must be done):** scaffold complete; `@supabase/supabase-js`, `@supabase/ssr`, `zod` installed; Vercel project linked; CI green.
 
 **Working branches:**
-- `feat/phase-2a-content-export` for Tasks 1-5 (spec Step G)
-- `feat/phase-2b-supabase-auth` for Tasks 6-26 (spec Step H)
+- `feat/phase-2a-content-export` for Tasks 1-5 (spec Step G) — **DONE 2026-05-02 evening, merged to dev as `7779aa5`**
+- `feat/phase-2b-supabase-auth` for Tasks 6-26 (spec Step H) — **partially pre-staged on `feat/phase-2b-code-draft` (NOT merged); rest needs user attendance**
 
 Two branches because Step G can ship independently (just adds files; touches no app code) and merging it first reduces blast radius if Step H needs rework.
+
+## Status as of 2026-05-02 EOD
+
+| Task | Status | Notes |
+|---|---|---|
+| 1-5 (Phase 2A export) | **DONE** | Merged to dev. Branch `feat/phase-2a-content-export` persists on remote pending cleanup. |
+| 6 (pause v1 project) | **DONE** | Paused via Supabase MCP `pause_project`. Status `PAUSING` → `PAUSED`. Restore via dashboard if needed. |
+| 7 (create v2 SB project) | PENDING | Needs user — dashboard work; cost-conscious flag respected; free tier slot needed. |
+| 8 (env vars in Vercel) | PENDING | Needs Task 7 first. |
+| 9 (`supabase init` + `link`) | PENDING | Needs `supabase login` (browser OAuth on user machine). |
+| 10 (init_profiles migration) | **PRE-STAGED** | SQL drafted on `feat/phase-2b-code-draft` at `supabase/migrations/20260502120000_init_profiles.sql`. Awaits `supabase db push` after Task 9. |
+| 11 (lib/env.ts) | **PRE-STAGED** | On `feat/phase-2b-code-draft`. |
+| 12-14 (Supabase clients + middleware) | **PRE-STAGED** | On `feat/phase-2b-code-draft`. |
+| 15-18 (auth pages, logout, landing) | PENDING | Skipped pre-stage to avoid conflict with `bun create next-app` output. Add on a sub-branch off `feat/scaffold-next` after scaffold ships. |
+| 19 (manual auth flow verify) | PENDING | Needs Tasks 7-18 first. |
+| 20 (redirect URL allow list) | PENDING | Dashboard work. |
+| 21 (smoke test on dev preview) | PENDING | Needs Tasks 19-20 first. |
+
+**Pickup order when user returns:** Phase 1 scaffold first → merge `feat/conventions-stage` and `feat/phase-2b-code-draft` into `feat/scaffold-next` → continue Phase 1 → then Phase 2 Tasks 7+ (start with creating v2 Supabase project).
+
+
 
 ---
 
