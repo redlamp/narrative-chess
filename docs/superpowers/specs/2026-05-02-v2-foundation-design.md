@@ -318,11 +318,17 @@ Verify: `gh repo view redlamp/narrative-chess` shows fresh repo, both branches p
 ```bash
 cd C:/workspace/narrative-chess-v2
 bun create next-app@latest . --ts --tailwind --app --import-alias="@/*" --no-src-dir --use-bun
-# (note: scaffold runs in the existing folder; merges with existing .claude/, wiki/, docs/, CLAUDE.md)
 bunx shadcn@latest init
 bun add @supabase/supabase-js @supabase/ssr chess.js zod
 bun add -d @playwright/test
 ```
+
+**Caveat:** `create-next-app` may refuse to scaffold into a non-empty directory or warn about conflicts with existing `CLAUDE.md`, `.gitignore`, `.git`. Two safe paths:
+
+- **A.** Scaffold to a sibling temp folder (e.g., `C:/workspace/_v2-scaffold`), then `cp -r _v2-scaffold/* narrative-chess-v2/` excluding `.git`, then resolve conflicts on `.gitignore` and `README.md` by hand.
+- **B.** Move existing repo contents (`.claude/`, `wiki/`, `docs/`, `CLAUDE.md`, `.git/`) into a temp dir, run scaffold, then move conventions back in.
+
+Either is ~10 minutes. Pick A; it preserves `.git` history without interruption.
 
 Pin Bun in `package.json#packageManager`. Commit on a `feat/scaffold-next` branch off `dev`.
 
