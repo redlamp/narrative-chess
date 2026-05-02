@@ -1,4 +1,9 @@
 import { defineConfig } from "@playwright/test";
+import { config as loadEnv } from "dotenv";
+
+// Mirror Next.js: load .env.local first, then .env (CI sets vars directly).
+loadEnv({ path: ".env.local" });
+loadEnv({ path: ".env" });
 
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 const usingLocalServer = BASE_URL === "http://localhost:3000";

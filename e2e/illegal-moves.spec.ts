@@ -33,7 +33,7 @@ test("server action rejects illegal moves before reaching the RPC", async ({
 
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
-  await loginAs(ctx, "e2e-illegal@example.com", "test1234password!", BASE_URL);
+  await loginAs(ctx, page, "e2e-illegal@example.com", "test1234password!", BASE_URL);
 
   const response = await page.request.post(
     `${BASE_URL}/api/games/${gameId}/move`,
