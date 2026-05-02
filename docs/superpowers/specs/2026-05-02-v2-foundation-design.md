@@ -39,7 +39,7 @@ The original `docs/V2_PLAN.md` was the starting point. This spec is the result o
 |---|---|---|
 | Stack | Next.js 16.2 + React 19 + TypeScript + Tailwind v4 + shadcn/ui + Zod | Next.js 16.2 ships agent-ready `create-next-app`, browser log forwarding, Server Fast Refresh. See [[decision-stack-nextjs-16]]. |
 | Backend | **Fresh** Supabase project. v1 project paused after content export. | v1 schema couples chess to narrative (`game_threads.city_edition_id` FK). RLS history is messy. Only data with real value: 4 city_versions (~133 KB total) — exportable as JSON. See [[decision-fresh-supabase-project]]. |
-| Hosting | Vercel Hobby + branch filter (`vercel.json` enables auto-deploy only for `main` + `dev`) | Avoids preview clutter; gives 2 stable URLs. See [[decision-vercel-branch-filter]]. |
+| Hosting | Vercel Hobby + branch filter (`vercel.json` enables auto-deploy only for `main` + `dev`). Production alias `narrative-chess.vercel.app`; dev alias `dev-narrative-chess.vercel.app` (hyphen, not subdomain — Vercel free tier doesn't allow custom subdomains on `.vercel.app`). | Avoids preview clutter; gives 2 stable URLs. See [[decision-vercel-branch-filter]]. |
 | Auth | Email + password (Supabase Auth). OAuth deferred to M2+. | Cheapest happy path. No external provider config. See [[decision-auth-email-password]]. |
 | Move append | Postgres RPC `make_move(p_game_id, p_uci, p_expected_ply)` with `SECURITY DEFINER`. Server Action calls RPC. | Single transaction (insert move + update game) and optimistic concurrency check. Server Actions cannot wrap multiple supabase-js calls in a DB transaction. See [[decision-rpc-move-append]]. |
 | Profile creation | Postgres trigger on `auth.users` insert auto-creates `public.profiles` row. | Set-and-forget. No app-level race. |
@@ -131,7 +131,7 @@ alter publication supabase_realtime add table game_moves;
 
 ### 6.2. RLS policies
 
-Both `games` and `game_moves`: **SELECT** allowed for participants; **INSERT/UPDATE** allowed only via the RPC (which runs `SECURITY DEFINER`, bypassing RLS).
+Both `games` and `game_moves`: **SELECT** allowed for participants only. **NO** `INSERT` / `UPDATE` / `DELETE` policies — writes happen exclusively through `SECURITY DEFINER` Postgres functions (the move RPC, plus a future create-game RPC). Without an INSERT policy, the `authenticated` role cannot insert directly via `supabase-js` or the REST API; only the RPC's elevated context can write. This is a deliberate locked-by-default posture: any attempt to write outside the RPC fails closed.
 
 ```sql
 alter table games enable row level security;
@@ -155,7 +155,11 @@ create policy "profiles_update_own" on profiles for update to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 ```
 
-**Critical**: before writing any board UI, run a two-browser sanity check that confirms Realtime fires AND the subscriber's RLS allows SELECT of the new row. v1's failure mode was Realtime firing with subscribers seeing nothing because RLS denied the SELECT.
+**Critical**: before writing any board UI, run a two-browser sanity check that confirms Realtime fires AND the subscriber's RLS allows SELECT of the new row. v1's failure mode was Realtime firing with subscribers seeing nothing because RLS denied the SELECT. Phase 3 plan operationalizes this gate with explicit pass/fail criteria and a reusable diagnostic page (`/diagnostics/realtime`) that survives Phase 3 for future regression checks.
+
+**Migration ordering:** `init_profiles` (Phase 2) must run before `init_games` (Phase 3) because `games.white_id` and `games.black_id` carry FK references to `profiles.user_id`. Supabase CLI applies migrations in timestamp order, so as long as Phase 2 ships before Phase 3 (which is the natural ordering), this just works. Don't try to run them out of order locally.
+
+**Programmatic auth helper:** Phase 4 will add a Playwright fixture that programmatically signs users in (using the Supabase admin API + a stored session cookie injection trick) so that future `e2e/realtime-rls-gate.spec.ts` regressions can run unattended in CI. Until then, the gate is a manual procedure (Phase 3 plan Tasks 6+7).
 
 ### 6.3. Move append RPC
 
@@ -353,8 +357,8 @@ Verify: a junk PR triggers CI and gets blocked on red.
 1. `vercel.com` → "Add New Project" → import `redlamp/narrative-chess` → grant repo access via GitHub OAuth.
 2. `cd narrative-chess-v2 && vercel link` (associates local folder).
 3. Add env vars in Vercel dashboard with correct scopes (Production + Preview only for service_role; all three for public keys). See spec §3.
-4. Verify: push to `dev` deploys to `dev.narrative-chess.vercel.app`; push to feat branch does **not** deploy.
-5. Custom alias: `dev.narrative-chess.vercel.app` → `dev` branch via Vercel dashboard.
+4. Verify: push to `dev` deploys to `dev-narrative-chess.vercel.app`; push to feat branch does **not** deploy.
+5. Custom alias: `dev-narrative-chess.vercel.app` (hyphen, not subdomain — Vercel free tier doesn't allow custom subdomains on `.vercel.app`) → `dev` branch via Vercel dashboard. If that exact name is taken, fall back to `narrative-chess-dev.vercel.app` or similar.
 
 ### Step G — Export v1 narrative content
 

@@ -16,7 +16,7 @@ Hobby tier limits: no cap on deployment count, but 100 GB bandwidth, 6000 build 
 ## Options considered
 
 1. **A. Branch filter via `vercel.json`**: auto-deploy only `main` + `dev`. feat branches run locally or manual `vercel` CLI. (chosen)
-2. B. Stable preview alias: deploy everything but pin one URL (`dev.narrative-chess.vercel.app`) to `dev` branch
+2. B. Stable preview alias: deploy everything but pin one URL (`dev-narrative-chess.vercel.app`) to `dev` branch
 3. C. PR-label gating: GH Action triggers Vercel deploy only when PR has `deploy-preview` label
 4. D. Default behavior: every push deploys
 
@@ -35,17 +35,17 @@ Hobby tier limits: no cap on deployment count, but 100 GB bandwidth, 6000 build 
 }
 ```
 
-Plus: in Vercel dashboard → Domains, add custom alias `dev.narrative-chess.vercel.app` tracking `dev` branch.
+Plus: in Vercel dashboard → Domains, add custom alias `dev-narrative-chess.vercel.app` tracking `dev` branch. Note hyphen, not subdomain — Vercel free tier doesn't allow custom subdomains on `.vercel.app`. If that exact name is taken, use `narrative-chess-dev.vercel.app` or another flat alias.
 
 Net result:
 - `narrative-chess.vercel.app` (production) → `main`
-- `dev.narrative-chess.vercel.app` (preview) → `dev`
+- `dev-narrative-chess.vercel.app` (preview) → `dev`
 - feat branches → no auto-deploy. Local `bun run dev` for active iteration; manual `vercel` CLI when a hosted preview is needed.
 
 ## Why
 
 - Two stable URLs are bookmark-friendly and shareable
-- Supabase Auth allow list stays tight: only `narrative-chess.vercel.app`, `dev.narrative-chess.vercel.app`, `localhost:3000`. No wildcard needed.
+- Supabase Auth allow list stays tight: only `narrative-chess.vercel.app`, `dev-narrative-chess.vercel.app`, `localhost:3000`. No wildcard needed.
 - feat-branch WIP doesn't spam deployment history
 - Consumes fewer build minutes (margin, not bottleneck — but tidier)
 - Approach B (stable alias) was tempting but doesn't reduce build count; only addresses URL stability
