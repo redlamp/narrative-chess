@@ -1,0 +1,21 @@
+# Plugin auto-logs (do not commit)
+.remember/logs/
+
+# Obsidian — commit shared config (app.json, appearance.json, core-plugins.json,
+# community-plugins.json, hotkeys.json); ignore per-user state
+**/.obsidian/workspace.json
+**/.obsidian/workspace-mobile.json
+**/.obsidian/cache/
+**/.obsidian/graph.json
+**/.trash/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor scratch
+.vscode/
+.idea/
+
+# (Stack-specific entries — node_modules/, .next/, .env* — add when stack lands)
