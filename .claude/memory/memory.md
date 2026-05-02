@@ -5,6 +5,7 @@ Read this file at session start. Load specific topic files only when relevant.
 | File | Description | Last updated |
 |------|-------------|--------------|
 | `general.md` | Project conventions, workflow preferences, workspace pointers | 2026-05-02 |
+| `domain/theming.md` | shadcn New York + Slate, CSS-var-only theming for multi-theme future | 2026-05-02 |
 
 ## Cross-Memory Sync Rule
 
