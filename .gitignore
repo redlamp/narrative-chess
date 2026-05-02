@@ -56,3 +56,4 @@ next-env.d.ts
 **/.obsidian/cache/
 **/.obsidian/graph.json
 **/.trash/
+test-results/
