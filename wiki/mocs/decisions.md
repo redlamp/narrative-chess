@@ -4,4 +4,16 @@ Significant project decisions and their rationale. Each entry should link to a `
 
 ## Decision Log
 
-(Empty — add as `notes/decision-*.md` files are created)
+### Infrastructure / repo
+
+- [[decision-three-way-info-split]] — `.claude/memory/` vs `wiki/` vs `docs/` (2026-05-02)
+- [[decision-memory-injection-via-hook]] — auto-load memory via PreToolUse hook (2026-05-02)
+
+### v2 foundation (from 2026-05-02 design audit)
+
+- [[decision-stack-nextjs-16]] — Next.js 16.2 + React 19 + TS + Tailwind v4 + shadcn + Zod
+- [[decision-fresh-supabase-project]] — new v2 Supabase project; v1 narrative content exported to JSON first
+- [[decision-rpc-move-append]] — move append via Postgres RPC with `expected_ply` optimistic concurrency
+- [[decision-supabase-local-dev]] — hosted-first; Docker deferred until trigger condition fires
+- [[decision-vercel-branch-filter]] — auto-deploy only `main` + `dev`
+- [[decision-auth-email-password]] — email + password for M1; OAuth deferred to M2+

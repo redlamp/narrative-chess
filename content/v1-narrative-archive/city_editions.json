@@ -1,0 +1,13 @@
+[
+  {
+    "id": "edinburgh-modern",
+    "slug": "edinburgh-modern",
+    "label": "Modern Edinburgh",
+    "theme": null,
+    "city_id": "edinburgh",
+    "created_at": "2026-04-18T06:46:11.839565+00:00",
+    "is_default": true,
+    "updated_at": "2026-04-18T06:46:11.839565+00:00",
+    "time_period": "modern"
+  }
+]
