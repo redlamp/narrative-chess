@@ -4,7 +4,7 @@ Read this file at session start. Load specific topic files only when relevant.
 
 | File | Description | Last updated |
 |------|-------------|--------------|
-| `general.md` | Project conventions and preferences | 2026-05-02 |
+| `general.md` | Project conventions, workflow preferences, workspace pointers | 2026-05-02 |
 
 ## Cross-Memory Sync Rule
 
