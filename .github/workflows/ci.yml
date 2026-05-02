@@ -26,10 +26,23 @@ jobs:
       - name: Type-check
         run: bunx tsc --noEmit
 
+      - name: Detect e2e specs
+        id: detect_e2e
+        shell: bash
+        run: |
+          if compgen -G "e2e/**/*.spec.ts" > /dev/null 2>&1; then
+            echo "has_specs=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_specs=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No Playwright specs found under e2e/ — skipping e2e step (will activate when Phase 3+ adds specs)"
+          fi
+
       - name: Install Playwright browsers
+        if: steps.detect_e2e.outputs.has_specs == 'true'
         run: bunx playwright install --with-deps chromium
 
       - name: Run e2e
+        if: steps.detect_e2e.outputs.has_specs == 'true'
         run: bunx playwright test
         env:
           CI: true
