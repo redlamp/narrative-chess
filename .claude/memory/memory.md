@@ -12,7 +12,7 @@ Read this file at session start. Load specific topic files only when relevant.
 
 At session start, after reading this file:
 1. Note the Last updated dates in the table above
-2. If any entry has content worth promoting to a global `~/.claude/memory/` file, flag it
+2. If an entry contains a fact that would apply across projects (tool gotcha, OS workaround, language quirk), promote it to `~/.claude/memory/tools/` or `~/.claude/memory/domain/`
 3. Update the Last updated date on this file after any changes
 
 ## Domain Knowledge Lifecycle
