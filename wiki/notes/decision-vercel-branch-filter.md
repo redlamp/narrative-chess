@@ -31,9 +31,12 @@ Hobby tier limits: no cap on deployment count, but 100 GB bandwidth, 6000 build 
       "main": true,
       "dev": true
     }
-  }
+  },
+  "ignoreCommand": "if [ \"$VERCEL_GIT_COMMIT_REF\" = \"main\" ] || [ \"$VERCEL_GIT_COMMIT_REF\" = \"dev\" ]; then exit 1; else exit 0; fi"
 }
 ```
+
+**Verified 2026-05-02:** `git.deploymentEnabled` alone did NOT prevent preview deploys on unlisted branches in the Hobby tier — pushing a `test/no-deploy` branch still triggered a preview build. Added `ignoreCommand` as defense-in-depth: any branch other than `main` or `dev` exits 0 (skip build) before container resources spin up. ignoreCommand is the source of truth for the filter; `deploymentEnabled` retained for clarity.
 
 Plus: in Vercel dashboard → Domains, add custom alias `dev-narrative-chess.vercel.app` tracking `dev` branch. Note hyphen, not subdomain — Vercel free tier doesn't allow custom subdomains on `.vercel.app`. If that exact name is taken, use `narrative-chess-dev.vercel.app` or another flat alias.
 
