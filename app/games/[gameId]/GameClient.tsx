@@ -628,8 +628,54 @@ export function GameClient({
     if (!check || check.side !== side) return null;
     return check.mate ? "rgba(220, 38, 38, 0.6)" : "rgba(245, 158, 11, 0.6)";
   };
-  const blackOverlay = checkOverlay("b");
-  const whiteOverlay = checkOverlay("w");
+
+  // Sidebar layout: viewer's pill always on the LEFT, opponent on the right,
+  // turn pill in the middle. Observers (no myColor) fall back to the
+  // alphabetical [black | turn | white] order.
+  const leftSide: "w" | "b" = myColor ?? "b";
+  const rightSide: "w" | "b" = leftSide === "w" ? "b" : "w";
+  const activeSide: "w" | "b" | null = inProgress
+    ? isWhitesTurn
+      ? "w"
+      : "b"
+    : null;
+  // Arrow points at the active player's pill: ◀ if active is on the left,
+  // ▶ if active is on the right.
+  const arrowChar = activeSide === leftSide ? "◀" : "▶";
+
+  const renderPlayerPill = (side: "w" | "b") => {
+    const isBlack = side === "b";
+    const name = isBlack ? blackName : whiteName;
+    const isYou = myColor === side;
+    const isActive = activeSide === side;
+    const overlay = checkOverlay(side);
+    return (
+      <div
+        className={cn(
+          "relative flex-1 rounded border px-3 py-2 transition-shadow overflow-hidden",
+          isBlack
+            ? "bg-zinc-900 text-zinc-100 border-zinc-700"
+            : "bg-white text-zinc-900 border-zinc-300",
+          isActive && "ring-2 ring-amber-400",
+        )}
+      >
+        {overlay && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0"
+            style={{ backgroundColor: overlay }}
+          />
+        )}
+        <div className="relative">
+          <p className="text-[10px] uppercase tracking-wide opacity-60">
+            {isBlack ? "Black" : "White"}
+            {isYou ? " (you)" : ""}
+          </p>
+          <p className="font-medium truncate">{name}</p>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <main className="container mx-auto max-w-6xl py-8 px-6 space-y-4">
@@ -675,31 +721,13 @@ export function GameClient({
         </div>
       </div>
 
-      {/* Sidebar — single horizontal row of three pills. Player pills
-          render in their team's colors (black bg / white bg); the turn
-          pill in the middle adopts the active side's palette and shows
-          an arrow pointing to whichever player is to move. */}
+      {/* Sidebar — single horizontal row of three pills. Viewer's pill is
+          always on the LEFT regardless of whether they're light or dark.
+          Player pills render in their team's colors (black bg / white bg);
+          the turn pill in the middle adopts the active side's palette and
+          shows an arrow pointing to whichever player is to move. */}
       <aside className="flex items-stretch gap-2 max-w-xl mx-auto w-full text-sm">
-        <div
-          className={cn(
-            "relative flex-1 rounded border px-3 py-2 bg-zinc-900 text-zinc-100 border-zinc-700 transition-shadow overflow-hidden",
-            blackActive && "ring-2 ring-amber-400",
-          )}
-        >
-          {blackOverlay && (
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0"
-              style={{ backgroundColor: blackOverlay }}
-            />
-          )}
-          <div className="relative">
-            <p className="text-[10px] uppercase tracking-wide opacity-60">
-              Black{myColor === "b" ? " (you)" : ""}
-            </p>
-            <p className="font-medium truncate">{blackName}</p>
-          </div>
-        </div>
+        {renderPlayerPill(leftSide)}
 
         <div
           className={cn(
@@ -716,32 +744,13 @@ export function GameClient({
               aria-hidden="true"
               title={whiteActive ? "white to move" : "black to move"}
             >
-              {whiteActive ? "▶" : "◀"}
+              {arrowChar}
             </span>
           )}
           <span className="text-[10px] opacity-60 mt-0.5">ply {state.ply}</span>
         </div>
 
-        <div
-          className={cn(
-            "relative flex-1 rounded border px-3 py-2 bg-white text-zinc-900 border-zinc-300 transition-shadow overflow-hidden",
-            whiteActive && "ring-2 ring-amber-400",
-          )}
-        >
-          {whiteOverlay && (
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0"
-              style={{ backgroundColor: whiteOverlay }}
-            />
-          )}
-          <div className="relative">
-            <p className="text-[10px] uppercase tracking-wide opacity-60">
-              White{myColor === "w" ? " (you)" : ""}
-            </p>
-            <p className="font-medium truncate">{whiteName}</p>
-          </div>
-        </div>
+        {renderPlayerPill(rightSide)}
       </aside>
 
       {/* Game actions — resign + abort buttons. Self-hides for observers
