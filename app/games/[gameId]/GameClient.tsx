@@ -290,12 +290,15 @@ export function GameClient({
 
   return (
     <main className="container mx-auto max-w-6xl py-8 px-6 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8">
-      {/* Test hook — version-agnostic state probe for e2e specs. */}
+      {/* Test hook — version-agnostic state probe for e2e specs.
+          E2E specs assert against data-ply and data-status; the hook
+          stays library-DOM-agnostic so it survives react-chessboard
+          version bumps without spec churn. */}
       <div
         data-testid="game-state"
         data-ply={state.ply}
         data-status={state.status}
-        data-fen={state.fen}
+        aria-hidden="true"
         className="sr-only"
       />
 
