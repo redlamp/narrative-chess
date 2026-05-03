@@ -185,10 +185,12 @@ export function GameClient({
             toast.error("Invalid move");
             break;
           default:
+            console.error("makeMove unknown error:", result);
             toast.error("Something went wrong — try again");
         }
         return false;
-      } catch {
+      } catch (err) {
+        console.error("makeMove transport error:", err);
         toast.error("Connection error — try again");
         return false;
       } finally {
