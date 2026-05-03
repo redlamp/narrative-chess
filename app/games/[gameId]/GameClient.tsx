@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Chessboard } from "react-chessboard";
 import type { Piece, PromotionPieceOption, Square } from "@/lib/chess/board-types";
@@ -33,11 +33,12 @@ type State = {
 
 const TERMINAL: GameStatus[] = ["white_won", "black_won", "draw", "aborted"];
 
-function computeMyTurn(fen: string, myColor: "w" | "b"): boolean {
+/** chess.js .turn() against a fen, or null on parse failure. */
+function fenTurn(fen: string): "w" | "b" | null {
   try {
-    return new Chess(fen).turn() === myColor;
+    return new Chess(fen).turn();
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -142,10 +143,11 @@ export function GameClient({
     };
   }, [gameId, applyStatusLocal]);
 
+  // Memoize the chess.js parse — fen.turn() is consulted twice per render
+  // (myTurn + isWhitesTurn), and parsing the FEN is the expensive bit.
+  const turn = useMemo(() => fenTurn(state.fen), [state.fen]);
   const myTurn =
-    state.status === "in_progress" &&
-    !state.pending &&
-    computeMyTurn(state.fen, myColor);
+    state.status === "in_progress" && !state.pending && turn === myColor;
 
   /** Send a move to the server and reconcile state. */
   const submitMove = useCallback(
@@ -276,7 +278,7 @@ export function GameClient({
     [myTurn, state.status, state.fen, state.ply, submitMove],
   );
 
-  const isWhitesTurn = computeMyTurn(state.fen, "w");
+  const isWhitesTurn = turn === "w";
   const turnText =
     state.status !== "in_progress"
       ? statusLabel(state.status)
