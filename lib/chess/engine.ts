@@ -130,6 +130,49 @@ export function checkState(fen: string): CheckState | null {
 }
 
 /**
+ * True if the piece at `from` is a pawn and `to` lands on its
+ * promoting rank (8 for white, 1 for black). Useful for click-move
+ * flows that need to decide whether to inline-promote (default
+ * queen) or open a chooser.
+ */
+export function isPromotionMove(fen: string, from: string, to: string): boolean {
+  let chess: Chess;
+  try {
+    chess = new Chess(fen);
+  } catch {
+    return false;
+  }
+  const piece = chess.get(from as Square);
+  if (!piece || piece.type !== "p") return false;
+  const targetRank = to[1];
+  return (
+    (piece.color === "w" && targetRank === "8") ||
+    (piece.color === "b" && targetRank === "1")
+  );
+}
+
+/**
+ * Returns the set of occupied squares in the position. Intended for
+ * batched lookups during legal-move highlighting (one parse, many
+ * checks) instead of per-square parses.
+ */
+export function occupiedSquares(fen: string): Set<string> {
+  const set = new Set<string>();
+  let chess: Chess;
+  try {
+    chess = new Chess(fen);
+  } catch {
+    return set;
+  }
+  for (const row of chess.board()) {
+    for (const sq of row) {
+      if (sq) set.add(sq.square);
+    }
+  }
+  return set;
+}
+
+/**
  * Returns the algebraic square ("e1", "g8", ...) of the king of the
  * given side, or null if the fen is invalid or the king is missing
  * (the latter is impossible in a legal position).

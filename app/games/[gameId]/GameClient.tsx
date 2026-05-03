@@ -7,7 +7,14 @@ import { Chessboard } from "react-chessboard";
 import type { Piece, PromotionPieceOption, Square } from "@/lib/chess/board-types";
 import { toast } from "sonner";
 import { Chess } from "chess.js";
-import { checkState, kingSquare, validateMove } from "@/lib/chess/engine";
+import {
+  checkState,
+  isPromotionMove,
+  kingSquare,
+  legalMovesFrom,
+  occupiedSquares,
+  validateMove,
+} from "@/lib/chess/engine";
 import { makeMove } from "./actions";
 import {
   subscribeToMoves,
@@ -95,6 +102,11 @@ export function GameClient({
     pending: false,
   });
 
+  // Click-to-move: square the user has tapped/clicked to start a move
+  // (null when nothing is selected). Also clears whenever the position
+  // advances — so an opponent's realtime move drops any stale selection.
+  const [selected, setSelected] = useState<Square | null>(null);
+
   const applyMoveLocal = useCallback(
     (next: { ply: number; fen: string; status?: GameStatus }) => {
       setState((prev) => {
@@ -169,22 +181,57 @@ export function GameClient({
   const myTurn =
     state.status === "in_progress" && !state.pending && turn === myColor;
 
-  // Check / checkmate king-square highlight via customSquareStyles.
+  // Squares the currently-selected piece can legally move to.
+  const legalTargets = useMemo(
+    () => (selected ? legalMovesFrom(state.fen, selected) : []),
+    [selected, state.fen],
+  );
+
+  // customSquareStyles composes three overlays:
+  //   1. legal-move targets — small dot on empty squares, ring on capture squares
+  //   2. selected source square — yellow tint
+  //   3. king-in-check (amber) / king-in-checkmate (red)
+  // Later overlays merge over earlier ones via spread; the king highlight
+  // wins over the selection tint, which is what we want visually.
   const customSquareStyles = useMemo(() => {
     const styles: Record<string, React.CSSProperties> = {};
+
+    if (legalTargets.length > 0) {
+      const occupied = occupiedSquares(state.fen);
+      for (const sq of legalTargets) {
+        styles[sq] = occupied.has(sq)
+          ? {
+              boxShadow: "inset 0 0 0 4px rgba(0, 0, 0, 0.35)",
+            }
+          : {
+              backgroundImage:
+                "radial-gradient(circle, rgba(0, 0, 0, 0.32) 22%, transparent 23%)",
+            };
+      }
+    }
+
+    if (selected) {
+      styles[selected] = {
+        ...styles[selected],
+        backgroundColor: "rgba(255, 235, 59, 0.45)", // yellow-400-ish
+      };
+    }
+
     const cs = checkState(state.fen);
     if (cs) {
       const ks = kingSquare(state.fen, cs.side);
       if (ks) {
         styles[ks] = {
+          ...styles[ks],
           backgroundColor: cs.mate
             ? "rgba(220, 38, 38, 0.55)" // red-600 @ ~55%
             : "rgba(245, 158, 11, 0.55)", // amber-500 @ ~55%
         };
       }
     }
+
     return styles;
-  }, [state.fen]);
+  }, [selected, legalTargets, state.fen]);
 
   // Restrict dragging to the side-to-move's own pieces. Library calls this
   // for every piece on the board on every render; keep it cheap.
@@ -350,6 +397,64 @@ export function GameClient({
     [myTurn, state.status, state.fen, commitOptimisticAndSubmit],
   );
 
+  /**
+   * Click-to-move handler. Two-step interaction:
+   *   1. First click on an own piece (myTurn) selects it; legal targets
+   *      light up via customSquareStyles.
+   *   2. Second click on a legal target submits the move. Click on the
+   *      same selected square deselects. Click on another own piece
+   *      reselects. Click anywhere else deselects.
+   *
+   * Promotion via click defaults to queen — most users want queen, and
+   * non-queen promotions are still available via drag (which routes
+   * through the library's promotion dialog).
+   */
+  const onSquareClick = useCallback(
+    (square: Square, piece?: Piece): void => {
+      if (state.status !== "in_progress") return;
+
+      // With a selection in hand:
+      if (selected) {
+        // Deselect on click of the same square.
+        if (square === selected) {
+          setSelected(null);
+          return;
+        }
+        // Submit on legal target.
+        if (legalTargets.includes(square)) {
+          const promo = isPromotionMove(state.fen, selected, square) ? "q" : "";
+          const uci = `${selected}${square}${promo}`;
+          const local = validateMove(state.fen, uci);
+          setSelected(null);
+          if (local.ok) commitOptimisticAndSubmit(uci, local.fenAfter);
+          return;
+        }
+        // Reselect another own piece.
+        if (piece && piece.charAt(0) === myColor && myTurn) {
+          setSelected(square);
+          return;
+        }
+        // Otherwise deselect.
+        setSelected(null);
+        return;
+      }
+
+      // No selection: first click on an own piece on own turn selects it.
+      if (myTurn && piece && piece.charAt(0) === myColor) {
+        setSelected(square);
+      }
+    },
+    [
+      state.status,
+      state.fen,
+      selected,
+      legalTargets,
+      myColor,
+      myTurn,
+      commitOptimisticAndSubmit,
+    ],
+  );
+
   const isWhitesTurn = turn === "w";
   const turnText =
     state.status !== "in_progress"
@@ -383,6 +488,7 @@ export function GameClient({
             boardOrientation={myColor === "b" ? "black" : "white"}
             onPieceDrop={onPieceDrop}
             onPromotionPieceSelect={onPromotionPieceSelect}
+            onSquareClick={onSquareClick}
             arePiecesDraggable={inProgress}
             isDraggablePiece={isDraggablePiece}
             customSquareStyles={customSquareStyles}

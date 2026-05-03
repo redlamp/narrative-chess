@@ -2,8 +2,10 @@ import { describe, expect, test } from "bun:test";
 import {
   applyMove,
   checkState,
+  isPromotionMove,
   kingSquare,
   legalMovesFrom,
+  occupiedSquares,
   validateMove,
 } from "./engine";
 
@@ -173,5 +175,41 @@ describe("kingSquare", () => {
   });
   test("invalid fen returns null", () => {
     expect(kingSquare("not-a-fen", "w")).toBeNull();
+  });
+});
+
+describe("isPromotionMove", () => {
+  test("white pawn 7->8 is a promotion", () => {
+    // White pawn on e7, black king elsewhere.
+    const fen = "4k3/4P3/8/8/8/8/8/4K3 w - - 0 1";
+    expect(isPromotionMove(fen, "e7", "e8")).toBe(true);
+  });
+  test("black pawn 2->1 is a promotion", () => {
+    const fen = "4k3/8/8/8/8/8/4p3/4K3 b - - 0 1";
+    expect(isPromotionMove(fen, "e2", "e1")).toBe(true);
+  });
+  test("non-pawn move is not a promotion", () => {
+    expect(isPromotionMove(STARTING_FEN, "g1", "f3")).toBe(false);
+  });
+  test("pawn move not to last rank is not a promotion", () => {
+    expect(isPromotionMove(STARTING_FEN, "e2", "e4")).toBe(false);
+  });
+  test("invalid fen returns false", () => {
+    expect(isPromotionMove("not-a-fen", "e7", "e8")).toBe(false);
+  });
+});
+
+describe("occupiedSquares", () => {
+  test("starting position has 32 pieces", () => {
+    expect(occupiedSquares(STARTING_FEN).size).toBe(32);
+  });
+  test("includes corners", () => {
+    const occ = occupiedSquares(STARTING_FEN);
+    expect(occ.has("a1")).toBe(true);
+    expect(occ.has("h8")).toBe(true);
+    expect(occ.has("e4")).toBe(false);
+  });
+  test("invalid fen returns empty set", () => {
+    expect(occupiedSquares("not-a-fen").size).toBe(0);
   });
 });
