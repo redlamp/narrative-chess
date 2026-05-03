@@ -1,3 +1,11 @@
+---
+tags:
+  - domain/supabase
+  - status/adopted
+  - scope/foundation
+  - origin/v1-failure
+---
+
 # Decision — Fresh Supabase Project for v2
 
 **Date:** 2026-05-02

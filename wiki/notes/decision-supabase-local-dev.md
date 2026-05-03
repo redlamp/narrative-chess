@@ -1,3 +1,10 @@
+---
+tags:
+  - domain/supabase
+  - status/deferred
+  - scope/foundation
+---
+
 # Decision — Supabase Local Dev Deferred (Hosted-First)
 
 **Date:** 2026-05-02

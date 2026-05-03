@@ -1,3 +1,12 @@
+---
+tags:
+  - domain/vercel
+  - domain/ci-cd
+  - domain/auth
+  - status/adopted
+  - scope/foundation
+---
+
 # Decision — Vercel Branch Filter (Auto-Deploy main + dev Only)
 
 **Date:** 2026-05-02

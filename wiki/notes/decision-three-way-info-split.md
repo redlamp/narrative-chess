@@ -1,3 +1,10 @@
+---
+tags:
+  - domain/memory
+  - status/adopted
+  - scope/foundation
+---
+
 # Decision — Three-Way Info Split
 
 **Date:** 2026-05-02

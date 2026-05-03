@@ -1,3 +1,10 @@
+---
+tags:
+  - domain/stack
+  - status/adopted
+  - scope/foundation
+---
+
 # Narrative Chess V2
 
 Rewrite of [[narrative-chess-v1]]. Chess-first rebuild with narrative layer, designed AI-collaboration-friendly from day one.

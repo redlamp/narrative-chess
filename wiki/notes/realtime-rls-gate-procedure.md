@@ -1,3 +1,13 @@
+---
+tags:
+  - domain/realtime
+  - domain/security
+  - status/verified
+  - scope/foundation
+  - origin/v1-failure
+  - origin/verification-gate
+---
+
 # Realtime + RLS Gate Procedure
 
 **Purpose:** Catch the v1 failure mode where Realtime fires events but RLS denies the SELECT, so subscribers receive empty rows. Run this procedure whenever:

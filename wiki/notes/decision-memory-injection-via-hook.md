@@ -1,3 +1,10 @@
+---
+tags:
+  - domain/memory
+  - status/adopted
+  - scope/foundation
+---
+
 # Decision — Memory Injection via PreToolUse Hook
 
 **Date:** 2026-05-02
