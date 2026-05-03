@@ -8,6 +8,8 @@ import {
   TerminationReasonSchema,
   ResignInputSchema,
   AbortInputSchema,
+  RegisterObserverInputSchema,
+  ObserverPresenceEventSchema,
 } from "./game";
 
 const UUID = "00000000-0000-0000-0000-000000000001";
@@ -153,5 +155,31 @@ describe("GameStatusUpdateEventSchema (extended)", () => {
       black_id: UUID,
     });
     expect(r.success).toBe(true);
+  });
+});
+
+describe("RegisterObserverInputSchema", () => {
+  test("accepts a v4-shaped uuid", () => {
+    expect(
+      RegisterObserverInputSchema.safeParse({ gameId: UUID_V4 }).success
+    ).toBe(true);
+  });
+  test("rejects non-uuid", () => {
+    expect(
+      RegisterObserverInputSchema.safeParse({ gameId: "abc" }).success
+    ).toBe(false);
+  });
+});
+
+describe("ObserverPresenceEventSchema", () => {
+  test("accepts a payload with joined_at timestamp", () => {
+    expect(
+      ObserverPresenceEventSchema.safeParse({
+        joined_at: "2026-05-03T12:00:00Z",
+      }).success
+    ).toBe(true);
+  });
+  test("rejects missing joined_at", () => {
+    expect(ObserverPresenceEventSchema.safeParse({}).success).toBe(false);
   });
 });

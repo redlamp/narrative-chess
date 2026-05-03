@@ -62,3 +62,14 @@ export const GameStatusUpdateEventSchema = z.object({
   termination_reason: TerminationReasonSchema.nullable().optional(),
 });
 export type GameStatusUpdateEvent = z.infer<typeof GameStatusUpdateEventSchema>;
+
+export const RegisterObserverInputSchema = z.object({
+  gameId: z.string().uuid(),
+});
+export type RegisterObserverInput = z.infer<typeof RegisterObserverInputSchema>;
+
+// Presence-channel state we track per joined client.
+export const ObserverPresenceEventSchema = z.object({
+  joined_at: z.string(), // ISO timestamp
+});
+export type ObserverPresenceEvent = z.infer<typeof ObserverPresenceEventSchema>;

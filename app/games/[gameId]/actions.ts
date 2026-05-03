@@ -7,7 +7,7 @@ import {
   type MakeMoveResult,
 } from "@/lib/schemas/move";
 import { createClient } from "@/lib/supabase/server";
-import { JoinGameInputSchema, ResignInputSchema, AbortInputSchema } from "@/lib/schemas/game";
+import { JoinGameInputSchema, ResignInputSchema, AbortInputSchema, RegisterObserverInputSchema } from "@/lib/schemas/game";
 
 type ErrorCode =
   | "validation"
@@ -255,4 +255,43 @@ export async function abortGame(input: unknown): Promise<AbortOutcome> {
   }
 
   return { ok: true };
+}
+
+export type RegisterObserverErrorCode =
+  | "validation"
+  | "unauthenticated"
+  | "unknown";
+
+export type RegisterObserverOutcome =
+  | { ok: true; count: number }
+  | { ok: false; code: RegisterObserverErrorCode; message: string };
+
+export async function registerObserver(
+  input: unknown,
+): Promise<RegisterObserverOutcome> {
+  const parsed = RegisterObserverInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      code: "validation",
+      message: parsed.error.issues[0]?.message ?? "invalid input",
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, code: "unauthenticated", message: "not signed in" };
+  }
+
+  const { data, error } = await supabase.rpc("register_observer", {
+    p_game_id: parsed.data.gameId,
+  });
+  if (error) {
+    return { ok: false, code: "unknown", message: error.message };
+  }
+  const count = typeof data === "number" ? data : 0;
+  return { ok: true, count };
 }
