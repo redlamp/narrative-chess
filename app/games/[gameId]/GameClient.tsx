@@ -38,10 +38,8 @@ type Props = {
   initialStatus: GameStatus;
   /**
    * How the game ended (when terminal). Null while open / in progress.
-   * Optional so existing call sites that haven't yet been updated still
-   * type-check; defaulted to null in the destructure below.
    */
-  initialTerminationReason?: TerminationReason | null;
+  initialTerminationReason: TerminationReason | null;
 };
 
 type State = {
@@ -106,7 +104,7 @@ export function GameClient({
   initialFen,
   initialPly,
   initialStatus,
-  initialTerminationReason = null,
+  initialTerminationReason,
 }: Props) {
   const router = useRouter();
   const isObserver = myColor === null;
