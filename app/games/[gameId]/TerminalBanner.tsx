@@ -64,9 +64,18 @@ export function TerminalBanner({ status, terminationReason, isObserver }: Props)
         <p className="text-sm text-muted-foreground truncate">{subtitle}</p>
       </div>
       {!isObserver && (
-        <Button type="button" onClick={() => router.push("/games/new")}>
-          Start new game
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.push("/games")}
+          >
+            Back to games
+          </Button>
+          <Button type="button" onClick={() => router.push("/games/new")}>
+            Start new game
+          </Button>
+        </div>
       )}
     </div>
   );
