@@ -3,11 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Chessboard } from "react-chessboard";
-import type {
-  Piece,
-  PromotionPieceOption,
-  Square,
-} from "react-chessboard/dist/chessboard/types";
+import type { Piece, PromotionPieceOption, Square } from "@/lib/chess/board-types";
 import { toast } from "sonner";
 import { Chess } from "chess.js";
 import { validateMove } from "@/lib/chess/engine";
