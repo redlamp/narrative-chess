@@ -171,7 +171,11 @@ test("two browsers — fool's mate over realtime", async ({ browser, baseURL }) 
 
   // "Black wins" toast is triggered when GameClient receives the terminal move.
   // After a reload the status label is shown in the sidebar turn indicator instead.
-  await expect(alice.getByText(/black wins/i)).toBeVisible();
+  await expect(alice.getByRole("heading", { name: /black wins/i })).toBeVisible();
+
+  // Banner is rendered for terminal status.
+  await expect(alice.getByRole("status").getByText(/black wins/i)).toBeVisible();
+  await expect(alice.getByRole("status").getByText(/by checkmate/i)).toBeVisible();
 
   await aliceCtx.close();
   await bobCtx.close();
