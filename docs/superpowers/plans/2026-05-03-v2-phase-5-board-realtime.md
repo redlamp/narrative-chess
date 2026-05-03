@@ -16,6 +16,49 @@
 
 ---
 
+## Subagent dispatch guidance
+
+This plan is intended to be executed via `superpowers:subagent-driven-development`. That skill instructs the controller to pick the **least powerful model that can handle each role**, with three tiers (per its `SKILL.md` §"Model Selection"):
+
+- **Mechanical** (1–2 files, fully specified, no design choices) → **Haiku**.
+- **Integration** (multi-file coordination, pattern matching, library wiring) → **Sonnet**.
+- **Architecture / judgment** (broad codebase understanding, race-safety design, library API verification) → **Opus**.
+
+**Effort tiering** (parent-controller setting that affects thinking budget):
+
+- **Low** — pure mechanics: git ops, dependency installs, command runners.
+- **Standard** — most implementation work. Default for Sonnet tasks.
+- **High** — tasks where a subtle correctness property must hold (race-safety, library-API edge cases). Use sparingly; pair with Opus.
+- **Max** — only after a BLOCKED retry. Don't pre-allocate.
+
+Per-task assignment for phase 5 (15 tasks total, distribution: 4 Haiku, 10 Sonnet, 1 Opus):
+
+| # | Task | Model | Effort | Why |
+|---|------|-------|--------|-----|
+| 1  | Branch off dev | Haiku | low | git only |
+| 2  | Install deps + Toaster mount | Haiku | low | `bun add` + 1 file edit |
+| 3  | Game schemas + tests | Sonnet | low | Zod + bun:test, fully specified |
+| 4  | Realtime subscribe helper + tests | Sonnet | standard | Supabase JS wrapper, RealtimeChannel typing |
+| 5  | Migration: create_game + join_open_game RPCs | Sonnet | standard | plpgsql with row-locking + auth.uid() checks |
+| 6  | Server Actions: createGame + joinGame | Sonnet | standard | Zod parse + RPC + redirect plumbing |
+| 7  | NewGameForm + new/page.tsx | Sonnet | low | client form + auth gate |
+| 8  | GameClient (board + sidebar + realtime) | **Opus** | **high** | react-chessboard 4.x API verification + race-safe applyMove + 13-code error map |
+| 9  | JoinGameForm + WaitingForOpponent | Sonnet | low | client components, well-specified |
+| 10 | `[gameId]/page.tsx` server branching | Sonnet | standard | server component + Supabase embed select + branch logic |
+| 11 | E2E multiplayer-untimed | Sonnet | standard | Playwright two-context, test-hook driven |
+| 12 | E2E concurrency-conflict | Sonnet | standard | direct RPC parallel calls via supabase-js |
+| 13 | E2E join-race | Sonnet | standard | direct RPC parallel calls |
+| 14 | Verification gate | Haiku | low | runs lint / tsc / playwright / supabase db lint |
+| 15 | Open PR feat → dev | Haiku | low | git push + `gh pr create` |
+
+**Spec/code review subagents** (the second-stage reviewers dispatched after each implementation per the skill): default to **Sonnet, standard effort**. Bump to Opus only for the GameClient task (Task 8), which has subtle race conditions that benefit from the higher-judgment review.
+
+**Final implementation reviewer** (after all 15 tasks): **Opus**, standard effort. Cross-task integration concerns benefit from broad context.
+
+**BLOCKED escalation rule:** If an implementer subagent reports BLOCKED on a task, the first retry escalates one tier (Haiku → Sonnet, Sonnet → Opus). If still blocked at Opus, escalate to the human controller per `subagent-driven-development` SKILL.md §"Handling Implementer Status".
+
+---
+
 ## File structure (this phase creates / modifies)
 
 | Path | Responsibility |
@@ -46,6 +89,8 @@
 
 ### Task 1: Branch off dev
 
+**Subagent:** Haiku · low effort
+
 **Files:** none (git only).
 
 - [ ] **Step 1: Pull latest dev and branch**
@@ -62,6 +107,8 @@ Expected: switched to new branch.
 ---
 
 ### Task 2: Install board + toast deps and mount Toaster
+
+**Subagent:** Haiku · low effort
 
 **Files:**
 - Modify: `package.json` (via `bun add` + `bunx shadcn`)
@@ -149,6 +196,8 @@ git commit -m "feat(phase 5): add react-chessboard + sonner deps and mount Toast
 ---
 
 ### Task 3: Game schemas + unit tests
+
+**Subagent:** Sonnet · low effort
 
 **Files:**
 - Create: `lib/schemas/game.ts`
@@ -351,6 +400,8 @@ git commit -m "feat(phase 5): zod schemas for game create/join + realtime payloa
 
 ### Task 4: Realtime subscribe helper + unit tests
 
+**Subagent:** Sonnet · standard effort
+
 **Files:**
 - Create: `lib/realtime/subscribe.ts`
 - Create: `lib/realtime/subscribe.test.ts`
@@ -537,6 +588,8 @@ git commit -m "feat(phase 5): realtime subscribe helpers (moves + status) with z
 ---
 
 ### Task 5: Migration — `create_game` + `join_open_game` RPCs
+
+**Subagent:** Sonnet · standard effort
 
 **Files:**
 - Create: `supabase/migrations/<ts>_create_game_and_join_rpc.sql`
@@ -728,6 +781,8 @@ git commit -m "feat(phase 5): create_game + join_open_game RPCs (SECURITY DEFINE
 
 ### Task 6: Server Actions — `createGame` + `joinGame`
 
+**Subagent:** Sonnet · standard effort
+
 **Files:**
 - Create: `app/games/new/actions.ts`
 - Modify: `app/games/[gameId]/actions.ts` (add `joinGame` next to existing `makeMove`)
@@ -870,6 +925,8 @@ git commit -m "feat(phase 5): server actions createGame + joinGame"
 
 ### Task 7: New-game form + page
 
+**Subagent:** Sonnet · low effort
+
 **Files:**
 - Create: `app/games/new/NewGameForm.tsx`
 - Create: `app/games/new/page.tsx`
@@ -988,6 +1045,8 @@ git commit -m "feat(phase 5): new-game route + side-picker form"
 ---
 
 ### Task 8: GameClient (board + sidebar + realtime)
+
+**Subagent:** Opus · high effort _(only Opus task in phase 5 — see dispatch guidance)_
 
 **Files:**
 - Create: `app/games/[gameId]/GameClient.tsx`
@@ -1270,6 +1329,8 @@ git commit -m "feat(phase 5): GameClient — board, sidebar, realtime sync, race
 
 ### Task 9: JoinGameForm + WaitingForOpponent
 
+**Subagent:** Sonnet · low effort
+
 **Files:**
 - Create: `app/games/[gameId]/JoinGameForm.tsx`
 - Create: `app/games/[gameId]/WaitingForOpponent.tsx`
@@ -1416,6 +1477,8 @@ git commit -m "feat(phase 5): join + waiting client components"
 
 ### Task 10: Game route — server component + branching
 
+**Subagent:** Sonnet · standard effort
+
 **Files:**
 - Create: `app/games/[gameId]/page.tsx`
 
@@ -1559,6 +1622,8 @@ git commit -m "feat(phase 5): game route — fetch + auth + branch to GameClient
 
 ### Task 11: E2E — multiplayer-untimed (happy path)
 
+**Subagent:** Sonnet · standard effort
+
 **Files:**
 - Create: `e2e/multiplayer-untimed.spec.ts`
 
@@ -1677,6 +1742,8 @@ git commit -m "test(phase 5): e2e multiplayer-untimed — fool's mate over realt
 
 ### Task 12: E2E — concurrency-conflict
 
+**Subagent:** Sonnet · standard effort
+
 **Files:**
 - Create: `e2e/concurrency-conflict.spec.ts`
 
@@ -1778,6 +1845,8 @@ git commit -m "test(phase 5): e2e concurrency-conflict — two parallel make_mov
 
 ### Task 13: E2E — join-race
 
+**Subagent:** Sonnet · standard effort
+
 **Files:**
 - Create: `e2e/join-race.spec.ts`
 
@@ -1862,6 +1931,8 @@ git commit -m "test(phase 5): e2e join-race — two viewers, row-locked single w
 
 ### Task 14: Verification gate
 
+**Subagent:** Haiku · low effort
+
 **Files:** none (verification only).
 
 - [ ] **Step 1: Lint**
@@ -1918,6 +1989,8 @@ If any step fails, debug and re-run the gate.
 ---
 
 ### Task 15: Open PR `feat/phase-5-board-realtime` → `dev`
+
+**Subagent:** Haiku · low effort
 
 **Files:** none (git/GitHub only).
 

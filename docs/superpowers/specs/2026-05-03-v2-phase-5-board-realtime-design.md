@@ -364,6 +364,7 @@ These are not design unknowns; they are points the implementer must resolve when
 - **`<Chessboard>` SSR**: library is client-only; importing from inside `'use client'` is sufficient. No `dynamic({ ssr: false })` wrapper needed unless hydration warnings appear in dev.
 - **Sonner mount point**: `<Toaster>` goes in `app/layout.tsx` once; client toasts call `toast.error(...)` directly.
 - **Theming wiring**: pass CSS-var-based custom square styles per `domain/theming.md` so dark mode works.
+- **Subagent dispatch tier**: `GameClient` is the highest-judgment task in phase 5 — it carries react-chessboard 4.x API verification, the race-safe `applyMove` reducer, and the 13-code error map. The phase 5 plan flags it as the only Opus + high-effort task; all other tasks dispatch at Sonnet or Haiku. See the dispatch table in `docs/superpowers/plans/2026-05-03-v2-phase-5-board-realtime.md` §"Subagent dispatch guidance".
 
 ## 9. References
 
