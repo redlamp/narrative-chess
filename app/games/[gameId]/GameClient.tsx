@@ -12,6 +12,7 @@ import {
   isPromotionMove,
   kingSquare,
   legalMovesFrom,
+  occupiedSquares,
   validateMove,
 } from "@/lib/chess/engine";
 import { makeMove } from "./actions";
@@ -111,6 +112,11 @@ export function GameClient({
   // moves while the piece is in their hand.
   const [dragSource, setDragSource] = useState<Square | null>(null);
 
+  // Hover-target: the square the mouse / drag is currently over. Used to
+  // paint a stronger border highlight on the prospective drop square,
+  // layered on top of the legal-target circle.
+  const [hoverSquare, setHoverSquare] = useState<Square | null>(null);
+
   const applyMoveLocal = useCallback(
     (next: { ply: number; fen: string; status?: GameStatus }) => {
       setState((prev) => {
@@ -200,18 +206,37 @@ export function GameClient({
     [highlightSource, state.fen],
   );
 
-  // customSquareStyles composes three overlays:
-  //   1. legal-move targets — inset border (no background fill)
-  //   2. selected source square — yellow tint (click-selection only)
-  //   3. king-in-check (amber) / king-in-checkmate (red)
-  // Later overlays merge over earlier ones via spread; the king highlight
-  // wins over the selection tint, which is what we want visually.
+  // customSquareStyles composes layered overlays. Later layers spread
+  // over earlier so priority is: check > selected-source > hover-border
+  // > legal-target circle. The king highlight wins so a check on the
+  // hovered square still reads as check.
   const customSquareStyles = useMemo(() => {
     const styles: Record<string, React.CSSProperties> = {};
 
-    for (const sq of legalTargets) {
-      styles[sq] = {
-        boxShadow: "inset 0 0 0 3px rgba(0, 0, 0, 0.5)",
+    // 1. Legal-target circles — small dot on empty squares, ring on
+    //    capture (occupied) squares so the underlying piece stays visible.
+    if (legalTargets.length > 0) {
+      const occupied = occupiedSquares(state.fen);
+      for (const sq of legalTargets) {
+        styles[sq] = occupied.has(sq)
+          ? {
+              boxShadow: "inset 0 0 0 4px rgba(0, 0, 0, 0.35)",
+            }
+          : {
+              backgroundImage:
+                "radial-gradient(circle, rgba(0, 0, 0, 0.32) 22%, transparent 23%)",
+            };
+      }
+    }
+
+    // 2. Hover border — only when a target is in play (click-selected or
+    //    being dragged) AND the hovered square is a legal target. Painted
+    //    as an inset amber ring on top of the circle so the user sees a
+    //    confirm-style cue before committing the move.
+    if (highlightSource && hoverSquare && legalTargets.includes(hoverSquare)) {
+      styles[hoverSquare] = {
+        ...styles[hoverSquare],
+        boxShadow: "inset 0 0 0 4px rgba(245, 158, 11, 0.85)",
       };
     }
 
@@ -235,7 +260,7 @@ export function GameClient({
     }
 
     return styles;
-  }, [selected, legalTargets, state.fen, check]);
+  }, [selected, legalTargets, state.fen, check, hoverSquare, highlightSource]);
 
   // Restrict dragging to the side-to-move's own pieces. Library calls this
   // for every piece on the board on every render; keep it cheap.
@@ -363,6 +388,21 @@ export function GameClient({
    */
   const onPieceDragEnd = useCallback(() => {
     setDragSource(null);
+    setHoverSquare(null);
+  }, []);
+
+  /**
+   * Hover handlers — track which square the mouse / drag is over so the
+   * customSquareStyles memo can paint a confirm-border on the prospective
+   * drop square. Fires on every square crossing; the renderer trivially
+   * memoizes on hoverSquare so this is fine for a 64-square board.
+   */
+  const onSquareMouseOver = useCallback((square: Square) => {
+    setHoverSquare(square);
+  }, []);
+
+  const onSquareMouseOut = useCallback((square: Square) => {
+    setHoverSquare((prev) => (prev === square ? null : prev));
   }, []);
 
   /**
@@ -527,6 +567,8 @@ export function GameClient({
             onPieceDragEnd={onPieceDragEnd}
             onPromotionPieceSelect={onPromotionPieceSelect}
             onSquareClick={onSquareClick}
+            onMouseOverSquare={onSquareMouseOver}
+            onMouseOutSquare={onSquareMouseOut}
             arePiecesDraggable={inProgress}
             isDraggablePiece={isDraggablePiece}
             customSquareStyles={customSquareStyles}
