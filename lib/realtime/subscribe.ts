@@ -23,26 +23,32 @@ export type SubscribeStatus = "idle" | "subscribing" | "subscribed" | "error";
 
 const DEV = process.env.NODE_ENV !== "production";
 
-export function subscribeToMoves(
+/**
+ * Ensure the singleton realtime client has the current user's access token
+ * before any channel subscribes. Without this, the channel's phx_join
+ * frame goes out anonymous and `realtime.subscription.user_sub` ends up
+ * null on the server, so RLS evaluates auth.uid() = null and no rows are
+ * delivered. setAuth is synchronous; we await getSession() once.
+ */
+async function authRealtime(supabase: ReturnType<typeof createClient>): Promise<boolean> {
+  const { data } = await supabase.auth.getSession();
+  if (data.session) {
+    supabase.realtime.setAuth(data.session.access_token);
+    return true;
+  }
+  return false;
+}
+
+export async function subscribeToMoves(
   gameId: string,
   onMove: (m: MoveEvent) => void,
   onStatus?: (s: SubscribeStatus) => void,
-): { unsubscribe: () => void } {
+): Promise<{ unsubscribe: () => void }> {
   const supabase = createClient();
   onStatus?.("subscribing");
 
-  // Ensure realtime sees the latest auth token. createBrowserClient from
-  // @supabase/ssr does not always propagate the access token to the
-  // realtime socket on first mount; without it, postgres_changes RLS
-  // silently denies row delivery.
-  void supabase.auth.getSession().then(({ data }) => {
-    if (data.session) {
-      void supabase.realtime.setAuth(data.session.access_token);
-      if (DEV) console.log("[realtime] setAuth ok for moves channel", { gameId });
-    } else if (DEV) {
-      console.warn("[realtime] no session for moves channel", { gameId });
-    }
-  });
+  const authed = await authRealtime(supabase);
+  if (DEV) console.log("[realtime] moves channel auth", { gameId, authed });
 
   const channel: RealtimeChannel = supabase
     .channel(`moves:${gameId}`)
@@ -76,20 +82,14 @@ export function subscribeToMoves(
   };
 }
 
-export function subscribeToGameStatus(
+export async function subscribeToGameStatus(
   gameId: string,
   onUpdate: (u: GameStatusUpdateEvent) => void,
-): { unsubscribe: () => void } {
+): Promise<{ unsubscribe: () => void }> {
   const supabase = createClient();
 
-  void supabase.auth.getSession().then(({ data }) => {
-    if (data.session) {
-      void supabase.realtime.setAuth(data.session.access_token);
-      if (DEV) console.log("[realtime] setAuth ok for status channel", { gameId });
-    } else if (DEV) {
-      console.warn("[realtime] no session for status channel", { gameId });
-    }
-  });
+  const authed = await authRealtime(supabase);
+  if (DEV) console.log("[realtime] status channel auth", { gameId, authed });
 
   const channel: RealtimeChannel = supabase
     .channel(`game_status:${gameId}`)

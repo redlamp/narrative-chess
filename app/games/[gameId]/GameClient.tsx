@@ -118,16 +118,32 @@ export function GameClient({
 
   // Realtime: opponent's (and our own) move INSERTs.
   useEffect(() => {
-    const sub = subscribeToMoves(gameId, (m) => {
+    let sub: { unsubscribe: () => void } | null = null;
+    let cancelled = false;
+    void subscribeToMoves(gameId, (m) => {
       applyMoveLocal({ ply: m.ply, fen: m.fen_after });
+    }).then((s) => {
+      if (cancelled) s.unsubscribe();
+      else sub = s;
     });
-    return () => sub.unsubscribe();
+    return () => {
+      cancelled = true;
+      sub?.unsubscribe();
+    };
   }, [gameId, applyMoveLocal]);
 
   // Realtime: status flips (open -> in_progress on join; later resign/abort).
   useEffect(() => {
-    const sub = subscribeToGameStatus(gameId, (u) => applyStatusLocal(u.status));
-    return () => sub.unsubscribe();
+    let sub: { unsubscribe: () => void } | null = null;
+    let cancelled = false;
+    void subscribeToGameStatus(gameId, (u) => applyStatusLocal(u.status)).then((s) => {
+      if (cancelled) s.unsubscribe();
+      else sub = s;
+    });
+    return () => {
+      cancelled = true;
+      sub?.unsubscribe();
+    };
   }, [gameId, applyStatusLocal]);
 
   const myTurn =

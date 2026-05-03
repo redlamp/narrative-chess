@@ -16,13 +16,21 @@ export function WaitingForOpponent({ gameId, shareUrl }: Props) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    const sub = subscribeToGameStatus(gameId, (u) => {
+    let sub: { unsubscribe: () => void } | null = null;
+    let cancelled = false;
+    void subscribeToGameStatus(gameId, (u) => {
       if (u.status === "in_progress") {
         toast.success("Opponent joined!");
         router.refresh();
       }
+    }).then((s) => {
+      if (cancelled) s.unsubscribe();
+      else sub = s;
     });
-    return () => sub.unsubscribe();
+    return () => {
+      cancelled = true;
+      sub?.unsubscribe();
+    };
   }, [gameId, router]);
 
   const onCopy = async () => {
