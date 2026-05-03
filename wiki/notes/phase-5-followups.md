@@ -46,6 +46,24 @@ All three items resolved 2026-05-03 on `feat/phase-5-polish`:
 - `e77e8cb` — extract react-chessboard type re-exports to `lib/chess/board-types.ts`.
 - `6306007` — memoize `fen.turn()` once per render via `useMemo` keyed on `state.fen`.
 
+## UX additions from manual smoke — RESOLVED
+
+All landed in PR #9 (squashed to dev as `eaf38e0`):
+
+- **Sidebar redesign** — single horizontal row of three pills, team-colored (black bg / white bg), turn pill in the middle adopts the active side's palette and shows a directional arrow (◀ / ▶). Active player name pill gets an amber ring. (commit `98a5571`)
+- **`(you)` marker** moved next to the side label rather than next to the player name, so longer display names no longer wrap. (`7701587`)
+- **Drag-restrict** to the side-to-move's own pieces via `isDraggablePiece` — opponent's pieces and own pieces on opponent's turn are no longer draggable. (`a078bbb`)
+- **King-in-check / checkmate** square highlight on the board (amber / red @ ~55%). (`a078bbb`)
+- **Player namecard overlay** — same amber / red palette at ~60% alpha on the affected player's pill so the team color stays legible underneath. Status pill text promotes to "Check", "Check — your move", "Checkmate", "Checkmate — you lose". (`1990388`)
+- **Click-to-move** with two-step interaction (select → click target). Promotion via click defaults to queen; drag-promotion still routes through the library dialog for non-queen pieces. (`d1d751b`)
+- **Legal-target circles** — small dot on empty squares, inset ring on capture squares (lichess-style). (`d1d751b`, restored in `4d7e080`)
+- **Hover-confirm border** — when a piece is selected (click) or being dragged AND the mouse is over a legal target, that square gets a strong amber inset border layered above the circle. (`4d7e080`)
+- **Drag also lights legal targets** — `onPieceDragBegin` records the drag source so the same legal-target circles light up while dragging. (`f3b14cd`)
+
+## Observer mode — RESOLVED
+
+Any authenticated user with the URL can watch a game live (read-only). RLS widened with two new policies (one per table) so realtime postgres_changes delivers INSERTs to non-participant subscribers. Writes still require participant status (enforced by RPCs). Trust model: unguessable UUID gameId IS the access grant — same as the existing share-URL-to-join pattern. A `games.public` boolean for strict-private games is left for when a real product need surfaces. (commit `29a5e63`, migration `20260503124751_add_observer_select_policies.sql`)
+
 ## See also
 
 - `docs/superpowers/specs/2026-05-03-v2-phase-5-board-realtime-design.md` — phase 5 design
