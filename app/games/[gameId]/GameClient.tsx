@@ -630,9 +630,9 @@ export function GameClient({
   };
 
   // Sidebar layout: viewer's pill always on the LEFT, opponent on the right,
-  // turn pill in the middle. Observers (no myColor) fall back to the
-  // alphabetical [black | turn | white] order.
-  const leftSide: "w" | "b" = myColor ?? "b";
+  // turn pill in the middle. Observers (no myColor) default to white on the
+  // left, mirroring the standard chess perspective.
+  const leftSide: "w" | "b" = myColor ?? "w";
   const rightSide: "w" | "b" = leftSide === "w" ? "b" : "w";
   const activeSide: "w" | "b" | null = inProgress
     ? isWhitesTurn
