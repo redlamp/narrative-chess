@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { GameClient } from "./GameClient";
 import { JoinGameForm } from "./JoinGameForm";
 import { WaitingForOpponent } from "./WaitingForOpponent";
-import { GameStatusSchema } from "@/lib/schemas/game";
+import { GameStatusSchema, TerminationReasonSchema } from "@/lib/schemas/game";
 
 const ParamsSchema = z.object({ gameId: z.string().uuid() });
 
@@ -17,6 +17,7 @@ const RowSchema = z.object({
   ply: z.number().int().nonnegative(),
   status: GameStatusSchema,
   current_turn: z.enum(["w", "b"]),
+  termination_reason: TerminationReasonSchema.nullable(),
   white_name: z.string().nullable(),
   black_name: z.string().nullable(),
 });
@@ -47,6 +48,7 @@ export default async function GamePage({
       ply,
       status,
       current_turn,
+      termination_reason,
       white_name:white_id ( display_name ),
       black_name:black_id ( display_name )
     `)
@@ -101,6 +103,7 @@ export default async function GamePage({
       initialFen={row.current_fen}
       initialPly={row.ply}
       initialStatus={row.status}
+      initialTerminationReason={row.termination_reason}
     />
   );
 }

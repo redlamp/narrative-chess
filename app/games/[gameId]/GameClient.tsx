@@ -20,7 +20,9 @@ import {
   subscribeToMoves,
   subscribeToGameStatus,
 } from "@/lib/realtime/subscribe";
-import type { GameStatus } from "@/lib/schemas/game";
+import type { GameStatus, TerminationReason } from "@/lib/schemas/game";
+import { GameActions } from "./GameActions";
+import { TerminalBanner } from "./TerminalBanner";
 
 type Props = {
   gameId: string;
@@ -34,12 +36,17 @@ type Props = {
   initialFen: string;
   initialPly: number;
   initialStatus: GameStatus;
+  /**
+   * How the game ended (when terminal). Null while open / in progress.
+   */
+  initialTerminationReason: TerminationReason | null;
 };
 
 type State = {
   fen: string;
   ply: number;
   status: GameStatus;
+  terminationReason: TerminationReason | null;
   pending: boolean;
 };
 
@@ -97,6 +104,7 @@ export function GameClient({
   initialFen,
   initialPly,
   initialStatus,
+  initialTerminationReason,
 }: Props) {
   const router = useRouter();
   const isObserver = myColor === null;
@@ -104,6 +112,7 @@ export function GameClient({
     fen: initialFen,
     ply: initialPly,
     status: initialStatus,
+    terminationReason: initialTerminationReason,
     pending: false,
   });
 
@@ -123,23 +132,46 @@ export function GameClient({
   const [hoverSquare, setHoverSquare] = useState<Square | null>(null);
 
   const applyMoveLocal = useCallback(
-    (next: { ply: number; fen: string; status?: GameStatus }) => {
+    (next: {
+      ply: number;
+      fen: string;
+      status?: GameStatus;
+      terminationReason?: TerminationReason | null;
+    }) => {
       setState((prev) => {
+        // Race-safe ply guard: realtime events arrive interleaved with the
+        // server-confirm path; we only advance forward. terminationReason is
+        // applied alongside status under the same guard so a late realtime
+        // payload doesn't overwrite a fresher server-confirm reason.
         if (next.ply <= prev.ply) return prev;
         return {
           ...prev,
           ply: next.ply,
           fen: next.fen,
           status: next.status ?? prev.status,
+          terminationReason:
+            next.terminationReason !== undefined
+              ? next.terminationReason
+              : prev.terminationReason,
         };
       });
     },
     [],
   );
 
-  const applyStatusLocal = useCallback((status: GameStatus) => {
-    setState((prev) => ({ ...prev, status }));
-  }, []);
+  const applyStatusLocal = useCallback(
+    (status: GameStatus, terminationReason?: TerminationReason | null) => {
+      setState((prev) => ({
+        ...prev,
+        status,
+        terminationReason:
+          terminationReason !== undefined
+            ? terminationReason
+            : prev.terminationReason,
+      }));
+    },
+    [],
+  );
 
   // Tracks the in-flight optimistic fen + the prior fen, so a server
   // rejection can roll back the visual state — but only if no realtime
@@ -176,11 +208,15 @@ export function GameClient({
     };
   }, [gameId, applyMoveLocal]);
 
-  // Realtime: status flips (open -> in_progress on join; later resign/abort).
+  // Realtime: status flips (open -> in_progress on join; later resign/abort
+  // and engine terminal transitions). Passes termination_reason through so
+  // the banner can render the right subtitle (checkmate / resignation / ...).
   useEffect(() => {
     let sub: { unsubscribe: () => void } | null = null;
     let cancelled = false;
-    void subscribeToGameStatus(gameId, (u) => applyStatusLocal(u.status)).then((s) => {
+    void subscribeToGameStatus(gameId, (u) =>
+      applyStatusLocal(u.status, u.termination_reason ?? null),
+    ).then((s) => {
       if (cancelled) s.unsubscribe();
       else sub = s;
     });
@@ -189,6 +225,34 @@ export function GameClient({
       sub?.unsubscribe();
     };
   }, [gameId, applyStatusLocal]);
+
+  // Defensive cleanup on terminal transition: when status flips to
+  // resign / abort / checkmate / draw, drop any pending optimistic move
+  // and clear interaction residue (selection / drag / hover). The
+  // make_move RPC already rejects with `not_active` if the game ended
+  // mid-pending; this just makes sure the UI doesn't keep a dangling
+  // "your move" affordance after status flips via realtime (e.g. the
+  // opponent resigned during our drag gesture).
+  //
+  // Watching state.status with an effect is the simplest correct shape
+  // — the realtime callbacks update setState on a different microtask
+  // than the gesture handlers, so doing the cleanup synchronously inside
+  // a setState updater would race with concurrent-mode batching. The
+  // setState calls below run only when status was already terminal in
+  // the rendered state (so prev.status is stable on re-runs); React
+  // batches them into a single commit and the next effect pass sees
+  // clean values + early-returns. The lint rule guards against
+  // cascading render hazards which don't apply here, so it's suppressed
+  // on the directly flagged setter calls.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!TERMINAL.includes(state.status)) return;
+    pendingMoveRef.current = null;
+    setSelected(null);
+    setDragSource(null);
+    setHoverSquare(null);
+  }, [state.status]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Memoize the chess.js parse — fen.turn() is consulted twice per render
   // (myTurn + isWhitesTurn), and parsing the FEN is the expensive bit.
@@ -294,6 +358,7 @@ export function GameClient({
             ply: result.data.ply,
             fen: result.data.fen_after,
             status: result.data.status,
+            terminationReason: result.data.termination_reason ?? null,
           });
           if (TERMINAL.includes(result.data.status)) {
             toast.success(`Game over: ${statusLabel(result.data.status)}`);
@@ -563,8 +628,54 @@ export function GameClient({
     if (!check || check.side !== side) return null;
     return check.mate ? "rgba(220, 38, 38, 0.6)" : "rgba(245, 158, 11, 0.6)";
   };
-  const blackOverlay = checkOverlay("b");
-  const whiteOverlay = checkOverlay("w");
+
+  // Sidebar layout: viewer's pill always on the LEFT, opponent on the right,
+  // turn pill in the middle. Observers (no myColor) default to white on the
+  // left, mirroring the standard chess perspective.
+  const leftSide: "w" | "b" = myColor ?? "w";
+  const rightSide: "w" | "b" = leftSide === "w" ? "b" : "w";
+  const activeSide: "w" | "b" | null = inProgress
+    ? isWhitesTurn
+      ? "w"
+      : "b"
+    : null;
+  // Arrow points at the active player's pill: ◀ if active is on the left,
+  // ▶ if active is on the right.
+  const arrowChar = activeSide === leftSide ? "◀" : "▶";
+
+  const renderPlayerPill = (side: "w" | "b") => {
+    const isBlack = side === "b";
+    const name = isBlack ? blackName : whiteName;
+    const isYou = myColor === side;
+    const isActive = activeSide === side;
+    const overlay = checkOverlay(side);
+    return (
+      <div
+        className={cn(
+          "relative flex-1 rounded border px-3 py-2 transition-shadow overflow-hidden",
+          isBlack
+            ? "bg-zinc-900 text-zinc-100 border-zinc-700"
+            : "bg-white text-zinc-900 border-zinc-300",
+          isActive && "ring-2 ring-amber-400",
+        )}
+      >
+        {overlay && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0"
+            style={{ backgroundColor: overlay }}
+          />
+        )}
+        <div className="relative">
+          <p className="text-[10px] uppercase tracking-wide opacity-60 flex items-center justify-between gap-2">
+            <span>{isBlack ? "Black" : "White"}</span>
+            {isYou && <span>(you)</span>}
+          </p>
+          <p className="font-medium truncate">{name}</p>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <main className="container mx-auto max-w-6xl py-8 px-6 space-y-4">
@@ -578,6 +689,16 @@ export function GameClient({
         data-status={state.status}
         aria-hidden="true"
         className="sr-only"
+      />
+
+      {/* Terminal banner — renders only on terminal status (returns null
+          otherwise). Mounted above the board so the result is the first
+          thing the eye lands on after a game ends. Width matches the
+          sidebar/board column for visual alignment. */}
+      <TerminalBanner
+        status={state.status}
+        terminationReason={state.terminationReason}
+        isObserver={isObserver}
       />
 
       <div className="flex justify-center">
@@ -600,31 +721,13 @@ export function GameClient({
         </div>
       </div>
 
-      {/* Sidebar — single horizontal row of three pills. Player pills
-          render in their team's colors (black bg / white bg); the turn
-          pill in the middle adopts the active side's palette and shows
-          an arrow pointing to whichever player is to move. */}
+      {/* Sidebar — single horizontal row of three pills. Viewer's pill is
+          always on the LEFT regardless of whether they're light or dark.
+          Player pills render in their team's colors (black bg / white bg);
+          the turn pill in the middle adopts the active side's palette and
+          shows an arrow pointing to whichever player is to move. */}
       <aside className="flex items-stretch gap-2 max-w-xl mx-auto w-full text-sm">
-        <div
-          className={cn(
-            "relative flex-1 rounded border px-3 py-2 bg-zinc-900 text-zinc-100 border-zinc-700 transition-shadow overflow-hidden",
-            blackActive && "ring-2 ring-amber-400",
-          )}
-        >
-          {blackOverlay && (
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0"
-              style={{ backgroundColor: blackOverlay }}
-            />
-          )}
-          <div className="relative">
-            <p className="text-[10px] uppercase tracking-wide opacity-60">
-              Black{myColor === "b" ? " (you)" : ""}
-            </p>
-            <p className="font-medium truncate">{blackName}</p>
-          </div>
-        </div>
+        {renderPlayerPill(leftSide)}
 
         <div
           className={cn(
@@ -641,33 +744,27 @@ export function GameClient({
               aria-hidden="true"
               title={whiteActive ? "white to move" : "black to move"}
             >
-              {whiteActive ? "▶" : "◀"}
+              {arrowChar}
             </span>
           )}
           <span className="text-[10px] opacity-60 mt-0.5">ply {state.ply}</span>
         </div>
 
-        <div
-          className={cn(
-            "relative flex-1 rounded border px-3 py-2 bg-white text-zinc-900 border-zinc-300 transition-shadow overflow-hidden",
-            whiteActive && "ring-2 ring-amber-400",
-          )}
-        >
-          {whiteOverlay && (
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0"
-              style={{ backgroundColor: whiteOverlay }}
-            />
-          )}
-          <div className="relative">
-            <p className="text-[10px] uppercase tracking-wide opacity-60">
-              White{myColor === "w" ? " (you)" : ""}
-            </p>
-            <p className="font-medium truncate">{whiteName}</p>
-          </div>
-        </div>
+        {renderPlayerPill(rightSide)}
       </aside>
+
+      {/* Game actions — resign + abort buttons. Self-hides for observers
+          and for non-active games, so this is safe to mount unconditionally.
+          Sits beneath the sidebar so the player-card row stays a clean
+          three-pill identity strip. */}
+      <div className="max-w-xl mx-auto w-full">
+        <GameActions
+          gameId={gameId}
+          status={state.status}
+          ply={state.ply}
+          isObserver={isObserver}
+        />
+      </div>
     </main>
   );
 }

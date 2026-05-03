@@ -1,8 +1,13 @@
 import { z } from "zod";
-import { GameStatusSchema, type GameStatus } from "./move";
+import {
+  GameStatusSchema,
+  TerminationReasonSchema,
+  type GameStatus,
+  type TerminationReason,
+} from "./move";
 
-export { GameStatusSchema };
-export type { GameStatus };
+export { GameStatusSchema, TerminationReasonSchema };
+export type { GameStatus, TerminationReason };
 
 export const ColorChoiceSchema = z.enum(["white", "black", "random"]);
 export type ColorChoice = z.infer<typeof ColorChoiceSchema>;
@@ -39,10 +44,21 @@ export const MoveEventSchema = z.object({
 });
 export type MoveEvent = z.infer<typeof MoveEventSchema>;
 
+export const ResignInputSchema = z.object({
+  gameId: z.string().uuid(),
+});
+export type ResignInput = z.infer<typeof ResignInputSchema>;
+
+export const AbortInputSchema = z.object({
+  gameId: z.string().uuid(),
+});
+export type AbortInput = z.infer<typeof AbortInputSchema>;
+
 export const GameStatusUpdateEventSchema = z.object({
   id: z.guid(),
   status: GameStatusSchema,
   white_id: z.guid().nullable(),
   black_id: z.guid().nullable(),
+  termination_reason: TerminationReasonSchema.nullable().optional(),
 });
 export type GameStatusUpdateEvent = z.infer<typeof GameStatusUpdateEventSchema>;

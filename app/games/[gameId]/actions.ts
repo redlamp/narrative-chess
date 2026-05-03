@@ -7,7 +7,7 @@ import {
   type MakeMoveResult,
 } from "@/lib/schemas/move";
 import { createClient } from "@/lib/supabase/server";
-import { JoinGameInputSchema } from "@/lib/schemas/game";
+import { JoinGameInputSchema, ResignInputSchema, AbortInputSchema } from "@/lib/schemas/game";
 
 type ErrorCode =
   | "validation"
@@ -160,6 +160,98 @@ export async function joinGame(input: unknown): Promise<JoinGameOutcome> {
   const { error } = await supabase.rpc("join_open_game", { p_game_id: parsed.data.gameId });
   if (error) {
     return { ok: false, code: mapJoinPgError(error.message), message: error.message };
+  }
+
+  return { ok: true };
+}
+
+export type ResignErrorCode =
+  | "validation"
+  | "unauthenticated"
+  | "game_not_found"
+  | "not_active"
+  | "not_a_participant"
+  | "unknown";
+
+export type ResignOutcome =
+  | { ok: true }
+  | { ok: false; code: ResignErrorCode; message: string };
+
+function mapResignPgError(msg: string): ResignErrorCode {
+  if (msg.includes("not_a_participant")) return "not_a_participant";
+  if (msg.includes("not_active")) return "not_active";
+  if (msg.includes("game_not_found")) return "game_not_found";
+  if (msg.includes("unauthenticated")) return "unauthenticated";
+  return "unknown";
+}
+
+export async function resign(input: unknown): Promise<ResignOutcome> {
+  const parsed = ResignInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      code: "validation",
+      message: parsed.error.issues[0]?.message ?? "invalid input",
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, code: "unauthenticated", message: "not signed in" };
+  }
+
+  const { error } = await supabase.rpc("resign", { p_game_id: parsed.data.gameId });
+  if (error) {
+    return { ok: false, code: mapResignPgError(error.message), message: error.message };
+  }
+
+  return { ok: true };
+}
+
+export type AbortErrorCode =
+  | "validation"
+  | "unauthenticated"
+  | "game_not_found"
+  | "not_a_participant"
+  | "not_abortable"
+  | "unknown";
+
+export type AbortOutcome =
+  | { ok: true }
+  | { ok: false; code: AbortErrorCode; message: string };
+
+function mapAbortPgError(msg: string): AbortErrorCode {
+  if (msg.includes("not_abortable")) return "not_abortable";
+  if (msg.includes("not_a_participant")) return "not_a_participant";
+  if (msg.includes("game_not_found")) return "game_not_found";
+  if (msg.includes("unauthenticated")) return "unauthenticated";
+  return "unknown";
+}
+
+export async function abortGame(input: unknown): Promise<AbortOutcome> {
+  const parsed = AbortInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      code: "validation",
+      message: parsed.error.issues[0]?.message ?? "invalid input",
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, code: "unauthenticated", message: "not signed in" };
+  }
+
+  const { error } = await supabase.rpc("abort_game", { p_game_id: parsed.data.gameId });
+  if (error) {
+    return { ok: false, code: mapAbortPgError(error.message), message: error.message };
   }
 
   return { ok: true };

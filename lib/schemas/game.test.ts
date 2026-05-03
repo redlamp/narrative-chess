@@ -5,9 +5,14 @@ import {
   GameRowSchema,
   MoveEventSchema,
   GameStatusUpdateEventSchema,
+  TerminationReasonSchema,
+  ResignInputSchema,
+  AbortInputSchema,
 } from "./game";
 
 const UUID = "00000000-0000-0000-0000-000000000001";
+// v4-shaped UUID for schemas that use strict .uuid() (version=4 in pos 13, variant=8 in pos 17)
+const UUID_V4 = "00000000-0000-4000-8000-000000000001";
 const FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 describe("CreateGameInputSchema", () => {
@@ -90,6 +95,57 @@ describe("MoveEventSchema", () => {
 
 describe("GameStatusUpdateEventSchema", () => {
   test("accepts shape with new status", () => {
+    const r = GameStatusUpdateEventSchema.safeParse({
+      id: UUID,
+      status: "in_progress",
+      white_id: UUID,
+      black_id: UUID,
+    });
+    expect(r.success).toBe(true);
+  });
+});
+
+describe("TerminationReasonSchema", () => {
+  test("accepts the seven valid reasons", () => {
+    for (const r of [
+      "checkmate", "stalemate", "threefold",
+      "fifty_move", "insufficient", "resignation", "abort",
+    ] as const) {
+      expect(TerminationReasonSchema.safeParse(r).success).toBe(true);
+    }
+  });
+  test("rejects unknown reasons", () => {
+    expect(TerminationReasonSchema.safeParse("forfeit").success).toBe(false);
+  });
+});
+
+describe("ResignInputSchema", () => {
+  test("accepts a uuid", () => {
+    expect(ResignInputSchema.safeParse({ gameId: UUID_V4 }).success).toBe(true);
+  });
+  test("rejects non-uuid", () => {
+    expect(ResignInputSchema.safeParse({ gameId: "abc" }).success).toBe(false);
+  });
+});
+
+describe("AbortInputSchema", () => {
+  test("accepts a uuid", () => {
+    expect(AbortInputSchema.safeParse({ gameId: UUID_V4 }).success).toBe(true);
+  });
+});
+
+describe("GameStatusUpdateEventSchema (extended)", () => {
+  test("accepts shape with termination_reason", () => {
+    const r = GameStatusUpdateEventSchema.safeParse({
+      id: UUID,
+      status: "white_won",
+      white_id: UUID,
+      black_id: UUID,
+      termination_reason: "resignation",
+    });
+    expect(r.success).toBe(true);
+  });
+  test("accepts shape without termination_reason", () => {
     const r = GameStatusUpdateEventSchema.safeParse({
       id: UUID,
       status: "in_progress",
