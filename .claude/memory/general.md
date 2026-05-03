@@ -17,9 +17,17 @@
 ## Workspace Pointers
 
 - Source of truth for project design: `docs/superpowers/specs/2026-05-02-v2-foundation-design.md`
-- Active implementation plan: `docs/superpowers/plans/2026-05-02-v2-phase-1-repo-and-ci.md` (latest dated file is current)
+- All M1 phase plans are shipped (`docs/superpowers/plans/2026-05-02-*` through `2026-05-03-v2-phase-6-*`). Latest dated file in `docs/superpowers/plans/` is the current plan; if no later-dated file exists than phase 6, M1 is closed and the next milestone (M1.5 or M2) hasn't started.
+- Project status snapshot: `wiki/projects/narrative-chess-v2.md` Status section.
 - Wiki conventions: `wiki/CLAUDE.md`
 - Three-way info split (per [[decision-three-way-info-split]]):
   - `.claude/memory/` (this) — AI auto-context: preferences, conventions, identity
   - `wiki/` — human knowledge graph: decisions, daily logs, projects, research
   - `docs/` — formal artifacts: specs, plans, ADRs, public docs
+
+## M1 ship facts
+
+- Production URL: https://narrative-chess-70w492vd6-taylor-8571s-projects.vercel.app
+- M1 squash commit on `main`: `e81a3d9` (2026-05-03).
+- Post-M1 lessons live as `wiki/notes/lesson-*.md`.
+- Step N — `gh repo edit redlamp/narrative-chess-v1 --visibility private --accept-visibility-change-consequences` — NOT yet run; do after production smoke is satisfying.
