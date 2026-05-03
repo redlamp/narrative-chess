@@ -7,6 +7,7 @@ import {
   type MakeMoveResult,
 } from "@/lib/schemas/move";
 import { createClient } from "@/lib/supabase/server";
+import { JoinGameInputSchema } from "@/lib/schemas/game";
 
 type ErrorCode =
   | "validation"
@@ -114,4 +115,52 @@ function mapPgError(msg: string): ErrorCode {
   if (msg.includes("game_not_found")) return "game_not_found";
   if (msg.includes("unauthenticated")) return "unauthenticated";
   return "unknown";
+}
+
+export type JoinGameErrorCode =
+  | "validation"
+  | "unauthenticated"
+  | "game_not_found"
+  | "not_open"
+  | "already_a_participant"
+  | "already_filled"
+  | "unknown";
+
+export type JoinGameOutcome =
+  | { ok: true }
+  | { ok: false; code: JoinGameErrorCode; message: string };
+
+function mapJoinPgError(msg: string): JoinGameErrorCode {
+  if (msg.includes("already_filled")) return "already_filled";
+  if (msg.includes("already_a_participant")) return "already_a_participant";
+  if (msg.includes("not_open")) return "not_open";
+  if (msg.includes("game_not_found")) return "game_not_found";
+  if (msg.includes("unauthenticated")) return "unauthenticated";
+  return "unknown";
+}
+
+export async function joinGame(input: unknown): Promise<JoinGameOutcome> {
+  const parsed = JoinGameInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      code: "validation",
+      message: parsed.error.issues[0]?.message ?? "invalid input",
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, code: "unauthenticated", message: "not signed in" };
+  }
+
+  const { error } = await supabase.rpc("join_open_game", { p_game_id: parsed.data.gameId });
+  if (error) {
+    return { ok: false, code: mapJoinPgError(error.message), message: error.message };
+  }
+
+  return { ok: true };
 }
