@@ -7,7 +7,7 @@ import { Chessboard } from "react-chessboard";
 import type { Piece, PromotionPieceOption, Square } from "@/lib/chess/board-types";
 import { toast } from "sonner";
 import { Chess } from "chess.js";
-import { validateMove } from "@/lib/chess/engine";
+import { checkState, kingSquare, validateMove } from "@/lib/chess/engine";
 import { makeMove } from "./actions";
 import {
   subscribeToMoves,
@@ -168,6 +168,34 @@ export function GameClient({
   const turn = useMemo(() => fenTurn(state.fen), [state.fen]);
   const myTurn =
     state.status === "in_progress" && !state.pending && turn === myColor;
+
+  // Check / checkmate king-square highlight via customSquareStyles.
+  const customSquareStyles = useMemo(() => {
+    const styles: Record<string, React.CSSProperties> = {};
+    const cs = checkState(state.fen);
+    if (cs) {
+      const ks = kingSquare(state.fen, cs.side);
+      if (ks) {
+        styles[ks] = {
+          backgroundColor: cs.mate
+            ? "rgba(220, 38, 38, 0.55)" // red-600 @ ~55%
+            : "rgba(245, 158, 11, 0.55)", // amber-500 @ ~55%
+        };
+      }
+    }
+    return styles;
+  }, [state.fen]);
+
+  // Restrict dragging to the side-to-move's own pieces. Library calls this
+  // for every piece on the board on every render; keep it cheap.
+  const isDraggablePiece = useCallback(
+    ({ piece }: { piece: Piece }): boolean => {
+      if (!myTurn) return false;
+      // piece is "wP" | "bP" | "wN" | etc — first char is color.
+      return piece.charAt(0) === myColor;
+    },
+    [myTurn, myColor],
+  );
 
   /** Send a move to the server and reconcile state. */
   const submitMove = useCallback(
@@ -356,6 +384,8 @@ export function GameClient({
             onPieceDrop={onPieceDrop}
             onPromotionPieceSelect={onPromotionPieceSelect}
             arePiecesDraggable={inProgress}
+            isDraggablePiece={isDraggablePiece}
+            customSquareStyles={customSquareStyles}
             customBoardStyle={{ borderRadius: 6 }}
           />
         </div>
