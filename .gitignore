@@ -57,3 +57,8 @@ next-env.d.ts
 **/.obsidian/graph.json
 **/.trash/
 test-results/
+.superpowers/
+
+# Claude Code runtime + per-machine settings (do not commit)
+.claude/scheduled_tasks.lock
+.claude/settings.local.json

@@ -1,5 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { applyMove, validateMove } from "./engine";
+import {
+  applyMove,
+  checkState,
+  isPromotionMove,
+  kingSquare,
+  legalMovesFrom,
+  occupiedSquares,
+  validateMove,
+} from "./engine";
 
 const STARTING_FEN =
   "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -112,5 +120,96 @@ describe("applyMove", () => {
   test("returns result on legal move", () => {
     const r = applyMove(STARTING_FEN, "e2e4");
     expect(r.san).toBe("e4");
+  });
+});
+
+describe("legalMovesFrom", () => {
+  test("opening pawn has two squares (e3, e4)", () => {
+    const moves = legalMovesFrom(STARTING_FEN, "e2");
+    expect(moves.sort()).toEqual(["e3", "e4"]);
+  });
+  test("empty square returns []", () => {
+    expect(legalMovesFrom(STARTING_FEN, "e4")).toEqual([]);
+  });
+  test("invalid fen returns []", () => {
+    expect(legalMovesFrom("not-a-fen", "e2")).toEqual([]);
+  });
+  test("knight from g1 has Nf3, Nh3", () => {
+    const moves = legalMovesFrom(STARTING_FEN, "g1");
+    expect(moves.sort()).toEqual(["f3", "h3"]);
+  });
+});
+
+describe("checkState", () => {
+  test("starting position has no check", () => {
+    expect(checkState(STARTING_FEN)).toBeNull();
+  });
+  test("scholar's mate position is mate against black", () => {
+    // After 1.e4 e5 2.Bc4 Nc6 3.Qh5 Nf6?? 4.Qxf7#
+    const fen = "r1bqkb1r/pppp1Qpp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4";
+    const cs = checkState(fen);
+    expect(cs).not.toBeNull();
+    expect(cs!.side).toBe("b");
+    expect(cs!.mate).toBe(true);
+  });
+  test("simple check (not mate)", () => {
+    // After 1.e4 e5 2.Bc4 Nc6 3.Qh5 — black is NOT in check yet.
+    // After 4.Qxf7+ in the Italian: r1bqkbnr/pppp1Qpp/2n5/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4
+    // (different position — Qxf7+ check on e8 king)
+    // Use a hand-crafted check: 1.e4 e5 2.Bc4 Nf6 3.Bxf7+
+    const fen = "rnbqkb1r/pppp1Bpp/5n2/4p3/4P3/8/PPPP1PPP/RNBQK1NR b KQkq - 0 3";
+    const cs = checkState(fen);
+    expect(cs).not.toBeNull();
+    expect(cs!.side).toBe("b");
+    expect(cs!.mate).toBe(false);
+  });
+  test("invalid fen returns null", () => {
+    expect(checkState("not-a-fen")).toBeNull();
+  });
+});
+
+describe("kingSquare", () => {
+  test("starting position: white king on e1, black king on e8", () => {
+    expect(kingSquare(STARTING_FEN, "w")).toBe("e1");
+    expect(kingSquare(STARTING_FEN, "b")).toBe("e8");
+  });
+  test("invalid fen returns null", () => {
+    expect(kingSquare("not-a-fen", "w")).toBeNull();
+  });
+});
+
+describe("isPromotionMove", () => {
+  test("white pawn 7->8 is a promotion", () => {
+    // White pawn on e7, black king elsewhere.
+    const fen = "4k3/4P3/8/8/8/8/8/4K3 w - - 0 1";
+    expect(isPromotionMove(fen, "e7", "e8")).toBe(true);
+  });
+  test("black pawn 2->1 is a promotion", () => {
+    const fen = "4k3/8/8/8/8/8/4p3/4K3 b - - 0 1";
+    expect(isPromotionMove(fen, "e2", "e1")).toBe(true);
+  });
+  test("non-pawn move is not a promotion", () => {
+    expect(isPromotionMove(STARTING_FEN, "g1", "f3")).toBe(false);
+  });
+  test("pawn move not to last rank is not a promotion", () => {
+    expect(isPromotionMove(STARTING_FEN, "e2", "e4")).toBe(false);
+  });
+  test("invalid fen returns false", () => {
+    expect(isPromotionMove("not-a-fen", "e7", "e8")).toBe(false);
+  });
+});
+
+describe("occupiedSquares", () => {
+  test("starting position has 32 pieces", () => {
+    expect(occupiedSquares(STARTING_FEN).size).toBe(32);
+  });
+  test("includes corners", () => {
+    const occ = occupiedSquares(STARTING_FEN);
+    expect(occ.has("a1")).toBe(true);
+    expect(occ.has("h8")).toBe(true);
+    expect(occ.has("e4")).toBe(false);
+  });
+  test("invalid fen returns empty set", () => {
+    expect(occupiedSquares("not-a-fen").size).toBe(0);
   });
 });

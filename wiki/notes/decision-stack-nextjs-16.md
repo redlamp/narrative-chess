@@ -1,3 +1,10 @@
+---
+tags:
+  - domain/stack
+  - status/adopted
+  - scope/foundation
+---
+
 # Decision — Stack: Next.js 16.2 + React 19
 
 **Date:** 2026-05-02

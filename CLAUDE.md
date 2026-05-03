@@ -107,7 +107,27 @@ Copy what's needed by hand. Never auto-import.
 
 - `feat/<short-name>` off `dev`. PR back to `dev`.
 - `dev` → `main` via PR with linear history (no merge commits) and CI green.
+- **Never commit directly to `main`.** All work lands via `dev`. If you find yourself
+  on `main` with uncommitted changes, switch to `dev` (or a feature branch off `dev`)
+  before committing.
 - Conventional Commits: `feat:`, `fix:`, `chore:`, `docs:`, `test:`, `refactor:`, `ci:`.
+
+### Commit policy (overrides default "only commit when asked")
+
+- **Commit proactively** when a coherent unit of work is finished. Don't fragment a
+  single solution across prompt-commit-prompt-commit cycles — that pattern is wasteful
+  and obscures intent. A solid commit captures one complete change with full context.
+- **One topic per commit.** If the working tree contains unrelated changes
+  (e.g., a spec doc + wiki edits + a `.gitignore` tweak), split them into separate
+  commits — one per topic. Don't bundle unrelated edits because they happened in
+  the same session.
+- **Stage files explicitly by name.** Avoid `git add -A` / `git add .` to prevent
+  accidental inclusion of secrets, runtime artifacts, or stray scratch files.
+- **Destructive operations still need explicit approval.** Force-push, hard reset,
+  branch deletion, amending published commits — ask first, even when committing
+  routinely is fine.
+- When in doubt about whether something is "ready," err toward committing the
+  finished part and leaving the in-flight part uncommitted.
 
 ### Source of truth
 

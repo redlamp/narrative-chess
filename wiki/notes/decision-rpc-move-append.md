@@ -1,3 +1,12 @@
+---
+tags:
+  - domain/chess-engine
+  - domain/supabase
+  - domain/security
+  - status/adopted
+  - scope/m1
+---
+
 # Decision — Move Append via Postgres RPC, Not App Orchestration
 
 **Date:** 2026-05-02

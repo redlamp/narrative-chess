@@ -1,3 +1,11 @@
+---
+tags:
+  - domain/auth
+  - domain/supabase
+  - status/adopted
+  - scope/m1
+---
+
 # Decision — Auth: Email + Password for M1, OAuth Deferred
 
 **Date:** 2026-05-02

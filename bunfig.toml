@@ -1,0 +1,6 @@
+[test]
+# Restrict bun test discovery to lib/ — keeps Playwright e2e specs at e2e/*.spec.ts
+# from being picked up by Bun's test runner (they use Playwright's `test.skip()`
+# API which is not compatible with bun:test).
+root = "./lib"
+preload = ["./test/setup.ts"]
