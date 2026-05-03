@@ -12,7 +12,6 @@ import {
   isPromotionMove,
   kingSquare,
   legalMovesFrom,
-  occupiedSquares,
   validateMove,
 } from "@/lib/chess/engine";
 import { makeMove } from "./actions";
@@ -107,6 +106,11 @@ export function GameClient({
   // advances — so an opponent's realtime move drops any stale selection.
   const [selected, setSelected] = useState<Square | null>(null);
 
+  // Drag-source: square of the piece currently being dragged. Drives the
+  // same legal-target highlight as click-selection so users see valid
+  // moves while the piece is in their hand.
+  const [dragSource, setDragSource] = useState<Square | null>(null);
+
   const applyMoveLocal = useCallback(
     (next: { ply: number; fen: string; status?: GameStatus }) => {
       setState((prev) => {
@@ -186,33 +190,29 @@ export function GameClient({
   // + status pill text).
   const check = useMemo(() => checkState(state.fen), [state.fen]);
 
-  // Squares the currently-selected piece can legally move to.
+  // Source square for the legal-target highlight: prefer the drag source
+  // (active gesture), fall back to the click selection.
+  const highlightSource = dragSource ?? selected;
+
+  // Squares the highlighted piece can legally move to.
   const legalTargets = useMemo(
-    () => (selected ? legalMovesFrom(state.fen, selected) : []),
-    [selected, state.fen],
+    () => (highlightSource ? legalMovesFrom(state.fen, highlightSource) : []),
+    [highlightSource, state.fen],
   );
 
   // customSquareStyles composes three overlays:
-  //   1. legal-move targets — small dot on empty squares, ring on capture squares
-  //   2. selected source square — yellow tint
+  //   1. legal-move targets — inset border (no background fill)
+  //   2. selected source square — yellow tint (click-selection only)
   //   3. king-in-check (amber) / king-in-checkmate (red)
   // Later overlays merge over earlier ones via spread; the king highlight
   // wins over the selection tint, which is what we want visually.
   const customSquareStyles = useMemo(() => {
     const styles: Record<string, React.CSSProperties> = {};
 
-    if (legalTargets.length > 0) {
-      const occupied = occupiedSquares(state.fen);
-      for (const sq of legalTargets) {
-        styles[sq] = occupied.has(sq)
-          ? {
-              boxShadow: "inset 0 0 0 4px rgba(0, 0, 0, 0.35)",
-            }
-          : {
-              backgroundImage:
-                "radial-gradient(circle, rgba(0, 0, 0, 0.32) 22%, transparent 23%)",
-            };
-      }
+    for (const sq of legalTargets) {
+      styles[sq] = {
+        boxShadow: "inset 0 0 0 3px rgba(0, 0, 0, 0.5)",
+      };
     }
 
     if (selected) {
@@ -344,6 +344,26 @@ export function GameClient({
     },
     [state.fen, state.ply, submitMove],
   );
+
+  /**
+   * Drag-begin handler — record the source square so customSquareStyles
+   * can light up the same legal-target highlight that click-selection
+   * provides. Drag overrides any prior click selection so we don't render
+   * two highlight sources at once.
+   */
+  const onPieceDragBegin = useCallback((_piece: Piece, sourceSquare: Square) => {
+    setDragSource(sourceSquare);
+    setSelected(null);
+  }, []);
+
+  /**
+   * Drag-end handler — clear the drag source regardless of whether the
+   * drop succeeded. Move state advancement / rollback happens through
+   * onPieceDrop -> commitOptimisticAndSubmit.
+   */
+  const onPieceDragEnd = useCallback(() => {
+    setDragSource(null);
+  }, []);
 
   /**
    * Sync handler for non-promotion drops.
@@ -503,6 +523,8 @@ export function GameClient({
             position={state.fen}
             boardOrientation={myColor === "b" ? "black" : "white"}
             onPieceDrop={onPieceDrop}
+            onPieceDragBegin={onPieceDragBegin}
+            onPieceDragEnd={onPieceDragEnd}
             onPromotionPieceSelect={onPromotionPieceSelect}
             onSquareClick={onSquareClick}
             arePiecesDraggable={inProgress}
