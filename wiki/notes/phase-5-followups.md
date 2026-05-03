@@ -2,7 +2,7 @@
 tags:
   - domain/chess-engine
   - domain/realtime
-  - status/open
+  - status/adopted
   - scope/m1
   - origin/manual-smoke
 ---
@@ -23,17 +23,11 @@ Backlog of items surfaced during phase 5 implementation and the post-PR manual t
 
 **Lesson:** when a Supabase realtime subscription appears to subscribe successfully but no events arrive, query `select user_sub from realtime.subscription order by created_at desc` — `null` means the JWT didn't make it to the phx_join frame.
 
-### Drag UX: piece snaps back, then snaps to target
+### Drag UX: piece snaps back, then snaps to target — RESOLVED
 
-**Status:** known consequence of the optimistic-then-reconcile pattern in `app/games/[gameId]/GameClient.tsx`.
+**Status:** resolved 2026-05-03 on `feat/phase-5-polish`. Committed in `927b40b`.
 
-**Symptoms:** When user drops a piece, the board briefly shows it returning to source, then jumps to target — visible flicker.
-
-**Root cause:** `react-chessboard@4.7` exposes a sync `onPieceDrop` returning `boolean`. The implementation returns `true` to commit visually, then awaits the server. While awaiting, the controlled `position` prop hasn't updated, so any internal re-render makes the library snap back to the prior position. Once `applyMoveLocal` updates `position`, the library re-syncs to the new fen.
-
-**Possible fixes:**
-- Manually update local `state.fen` to the chess.js-computed post-move fen in `onPieceDrop` before returning `true`. Reconcile to server-confirmed fen on success (idempotent if same), or revert to pre-move fen on failure.
-- Or: switch to click-to-move via `onSquareClick` (no DnD flicker possible).
+**Approach taken:** optimistic fen update inside `onPieceDrop` / `onPromotionPieceSelect` synchronously to chess.js's computed post-move fen, BEFORE returning `true`. The controlled `position` prop now matches the library's internal state on the next render — no snap-back. ply intentionally stays at the canonical (server-confirmed) value during the optimistic window so a concurrent opponent move at ply+1 still passes the `applyMoveLocal` ply guard. Rollback via a ref-tracked optimistic fen — only fires if state.fen still equals our optimistic (otherwise realtime has already replaced it with the opponent's truth, which we leave alone).
 
 ## Medium priority — Next.js 16 deprecation — RESOLVED
 
@@ -45,11 +39,12 @@ Renamed root `middleware.ts` → `proxy.ts` with exported function `middleware` 
 
 Reference URL → https://nextjs.org/docs/messages/middleware-to-proxy
 
-## Lower priority — code quality (deferred from Task 8 review)
+## Lower priority — code quality (deferred from Task 8 review) — RESOLVED
 
-- Memoize `computeMyTurn` once per render in `app/games/[gameId]/GameClient.tsx` (currently invoked twice per render with `new Chess(fen)` inside).
-- Extract react-chessboard type re-exports to `lib/chess/board-types.ts` so the deep `dist/` import is centralized to one file.
-- `data-fen` on the test hook is unused by current e2e specs — comment its intent or drop.
+All three items resolved 2026-05-03 on `feat/phase-5-polish`:
+- `f511c22` — drop unused `data-fen` from the test hook + add `aria-hidden`.
+- `e77e8cb` — extract react-chessboard type re-exports to `lib/chess/board-types.ts`.
+- `6306007` — memoize `fen.turn()` once per render via `useMemo` keyed on `state.fen`.
 
 ## See also
 

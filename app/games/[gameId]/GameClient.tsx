@@ -1,16 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { Chessboard } from "react-chessboard";
-import type {
-  Piece,
-  PromotionPieceOption,
-  Square,
-} from "react-chessboard/dist/chessboard/types";
+import type { Piece, PromotionPieceOption, Square } from "@/lib/chess/board-types";
 import { toast } from "sonner";
 import { Chess } from "chess.js";
-import { validateMove } from "@/lib/chess/engine";
+import {
+  checkState,
+  isPromotionMove,
+  kingSquare,
+  legalMovesFrom,
+  occupiedSquares,
+  validateMove,
+} from "@/lib/chess/engine";
 import { makeMove } from "./actions";
 import {
   subscribeToMoves,
@@ -20,7 +24,11 @@ import type { GameStatus } from "@/lib/schemas/game";
 
 type Props = {
   gameId: string;
-  myColor: "w" | "b";
+  /**
+   * "w" | "b" — viewer is the white or black participant.
+   * null         — viewer is an observer (read-only).
+   */
+  myColor: "w" | "b" | null;
   whiteName: string;
   blackName: string;
   initialFen: string;
@@ -37,11 +45,12 @@ type State = {
 
 const TERMINAL: GameStatus[] = ["white_won", "black_won", "draw", "aborted"];
 
-function computeMyTurn(fen: string, myColor: "w" | "b"): boolean {
+/** chess.js .turn() against a fen, or null on parse failure. */
+function fenTurn(fen: string): "w" | "b" | null {
   try {
-    return new Chess(fen).turn() === myColor;
+    return new Chess(fen).turn();
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -90,12 +99,28 @@ export function GameClient({
   initialStatus,
 }: Props) {
   const router = useRouter();
+  const isObserver = myColor === null;
   const [state, setState] = useState<State>({
     fen: initialFen,
     ply: initialPly,
     status: initialStatus,
     pending: false,
   });
+
+  // Click-to-move: square the user has tapped/clicked to start a move
+  // (null when nothing is selected). Also clears whenever the position
+  // advances — so an opponent's realtime move drops any stale selection.
+  const [selected, setSelected] = useState<Square | null>(null);
+
+  // Drag-source: square of the piece currently being dragged. Drives the
+  // same legal-target highlight as click-selection so users see valid
+  // moves while the piece is in their hand.
+  const [dragSource, setDragSource] = useState<Square | null>(null);
+
+  // Hover-target: the square the mouse / drag is currently over. Used to
+  // paint a stronger border highlight on the prospective drop square,
+  // layered on top of the legal-target circle.
+  const [hoverSquare, setHoverSquare] = useState<Square | null>(null);
 
   const applyMoveLocal = useCallback(
     (next: { ply: number; fen: string; status?: GameStatus }) => {
@@ -114,6 +139,25 @@ export function GameClient({
 
   const applyStatusLocal = useCallback((status: GameStatus) => {
     setState((prev) => ({ ...prev, status }));
+  }, []);
+
+  // Tracks the in-flight optimistic fen + the prior fen, so a server
+  // rejection can roll back the visual state — but only if no realtime
+  // event has already replaced our optimistic fen with an opponent's
+  // move at the next ply.
+  const pendingMoveRef = useRef<{ prevFen: string; optFen: string } | null>(null);
+
+  const rollbackOptimistic = useCallback(() => {
+    const m = pendingMoveRef.current;
+    pendingMoveRef.current = null;
+    if (!m) return;
+    setState((prev) => {
+      // Realtime delivered an opponent move at ply+1 already; their fen
+      // overwrites ours via the ply guard, so prev.fen no longer matches
+      // our optimistic. Don't clobber the opponent's truth.
+      if (prev.fen !== m.optFen) return prev;
+      return { ...prev, fen: m.prevFen };
+    });
   }, []);
 
   // Realtime: opponent's (and our own) move INSERTs.
@@ -146,19 +190,106 @@ export function GameClient({
     };
   }, [gameId, applyStatusLocal]);
 
+  // Memoize the chess.js parse — fen.turn() is consulted twice per render
+  // (myTurn + isWhitesTurn), and parsing the FEN is the expensive bit.
+  const turn = useMemo(() => fenTurn(state.fen), [state.fen]);
   const myTurn =
-    state.status === "in_progress" &&
-    !state.pending &&
-    computeMyTurn(state.fen, myColor);
+    state.status === "in_progress" && !state.pending && turn === myColor;
+
+  // Side currently in check (or null) and whether it's mate. Used by both
+  // the board (king-square highlight) and the sidebar (player-card overlay
+  // + status pill text).
+  const check = useMemo(() => checkState(state.fen), [state.fen]);
+
+  // Source square for the legal-target highlight: prefer the drag source
+  // (active gesture), fall back to the click selection.
+  const highlightSource = dragSource ?? selected;
+
+  // Squares the highlighted piece can legally move to.
+  const legalTargets = useMemo(
+    () => (highlightSource ? legalMovesFrom(state.fen, highlightSource) : []),
+    [highlightSource, state.fen],
+  );
+
+  // customSquareStyles composes layered overlays. Later layers spread
+  // over earlier so priority is: check > selected-source > hover-border
+  // > legal-target circle. The king highlight wins so a check on the
+  // hovered square still reads as check.
+  const customSquareStyles = useMemo(() => {
+    const styles: Record<string, React.CSSProperties> = {};
+
+    // 1. Legal-target circles — small dot on empty squares, ring on
+    //    capture (occupied) squares so the underlying piece stays visible.
+    if (legalTargets.length > 0) {
+      const occupied = occupiedSquares(state.fen);
+      for (const sq of legalTargets) {
+        styles[sq] = occupied.has(sq)
+          ? {
+              boxShadow: "inset 0 0 0 4px rgba(0, 0, 0, 0.35)",
+            }
+          : {
+              backgroundImage:
+                "radial-gradient(circle, rgba(0, 0, 0, 0.32) 22%, transparent 23%)",
+            };
+      }
+    }
+
+    // 2. Hover border — only when a target is in play (click-selected or
+    //    being dragged) AND the hovered square is a legal target. Painted
+    //    as an inset amber ring on top of the circle so the user sees a
+    //    confirm-style cue before committing the move.
+    if (highlightSource && hoverSquare && legalTargets.includes(hoverSquare)) {
+      styles[hoverSquare] = {
+        ...styles[hoverSquare],
+        boxShadow: "inset 0 0 0 4px rgba(245, 158, 11, 0.85)",
+      };
+    }
+
+    if (selected) {
+      styles[selected] = {
+        ...styles[selected],
+        backgroundColor: "rgba(255, 235, 59, 0.45)", // yellow-400-ish
+      };
+    }
+
+    if (check) {
+      const ks = kingSquare(state.fen, check.side);
+      if (ks) {
+        styles[ks] = {
+          ...styles[ks],
+          backgroundColor: check.mate
+            ? "rgba(220, 38, 38, 0.55)" // red-600 @ ~55%
+            : "rgba(245, 158, 11, 0.55)", // amber-500 @ ~55%
+        };
+      }
+    }
+
+    return styles;
+  }, [selected, legalTargets, state.fen, check, hoverSquare, highlightSource]);
+
+  // Restrict dragging to the side-to-move's own pieces. Library calls this
+  // for every piece on the board on every render; keep it cheap.
+  // Observers (myColor === null) get a flat false — no piece is draggable.
+  const isDraggablePiece = useCallback(
+    ({ piece }: { piece: Piece }): boolean => {
+      if (isObserver) return false;
+      if (!myTurn) return false;
+      // piece is "wP" | "bP" | "wN" | etc — first char is color.
+      return piece.charAt(0) === myColor;
+    },
+    [isObserver, myTurn, myColor],
+  );
 
   /** Send a move to the server and reconcile state. */
   const submitMove = useCallback(
     async (uci: string, expectedPly: number) => {
-      setState((prev) => ({ ...prev, pending: true }));
       try {
         const result = await makeMove({ gameId, uci, expectedPly });
 
         if (result.ok) {
+          // Server confirmed; clear the rollback target — the server's
+          // ply will land via applyMoveLocal and supersede our optimistic fen.
+          pendingMoveRef.current = null;
           applyMoveLocal({
             ply: result.data.ply,
             fen: result.data.fen_after,
@@ -169,6 +300,9 @@ export function GameClient({
           }
           return true;
         }
+
+        // Server rejected — undo the optimistic fen if it's still in place.
+        rollbackOptimistic();
 
         switch (result.code) {
           case "concurrency_conflict":
@@ -206,6 +340,7 @@ export function GameClient({
         }
         return false;
       } catch (err) {
+        rollbackOptimistic();
         console.error("makeMove transport error:", err);
         toast.error("Connection error — try again");
         return false;
@@ -213,17 +348,76 @@ export function GameClient({
         setState((prev) => ({ ...prev, pending: false }));
       }
     },
-    [gameId, applyMoveLocal, router],
+    [gameId, applyMoveLocal, rollbackOptimistic, router],
   );
 
   /**
+   * Commit an optimistic fen update + kick off the server call.
+   *
+   * react-chessboard 4.x requires a sync `boolean` return from drop /
+   * promotion handlers — we can't await the server. To avoid a snap-back
+   * flicker on the controlled `position` prop, we update local fen
+   * synchronously to chess.js's computed post-move fen, then fire the
+   * Server Action async. On server success, applyMoveLocal advances ply
+   * (idempotent for the fen); on failure, rollbackOptimistic reverts
+   * the fen if no opponent move has replaced it via realtime in the
+   * meantime.
+   *
+   * ply stays at the canonical (server-confirmed) value during the
+   * optimistic window, so a concurrent opponent move at ply+1 still
+   * passes the applyMoveLocal ply guard and overwrites our optimistic
+   * fen — which is the right thing.
+   */
+  const commitOptimisticAndSubmit = useCallback(
+    (uci: string, optFen: string) => {
+      pendingMoveRef.current = { prevFen: state.fen, optFen };
+      setState((prev) => ({ ...prev, fen: optFen, pending: true }));
+      void submitMove(uci, state.ply);
+    },
+    [state.fen, state.ply, submitMove],
+  );
+
+  /**
+   * Drag-begin handler — record the source square so customSquareStyles
+   * can light up the same legal-target highlight that click-selection
+   * provides. Drag overrides any prior click selection so we don't render
+   * two highlight sources at once.
+   */
+  const onPieceDragBegin = useCallback(
+    (_piece: Piece, sourceSquare: Square) => {
+      if (isObserver) return;
+      setDragSource(sourceSquare);
+      setSelected(null);
+    },
+    [isObserver],
+  );
+
+  /**
+   * Drag-end handler — clear the drag source regardless of whether the
+   * drop succeeded. Move state advancement / rollback happens through
+   * onPieceDrop -> commitOptimisticAndSubmit.
+   */
+  const onPieceDragEnd = useCallback(() => {
+    setDragSource(null);
+    setHoverSquare(null);
+  }, []);
+
+  /**
+   * Hover handlers — track which square the mouse / drag is over so the
+   * customSquareStyles memo can paint a confirm-border on the prospective
+   * drop square. Fires on every square crossing; the renderer trivially
+   * memoizes on hoverSquare so this is fine for a 64-square board.
+   */
+  const onSquareMouseOver = useCallback((square: Square) => {
+    setHoverSquare(square);
+  }, []);
+
+  const onSquareMouseOut = useCallback((square: Square) => {
+    setHoverSquare((prev) => (prev === square ? null : prev));
+  }, []);
+
+  /**
    * Sync handler for non-promotion drops.
-   * react-chessboard 4.x requires a sync `boolean` return — we cannot await the
-   * server here. We pre-validate locally (cheap), kick off the server call, and
-   * return `true` on local-valid drops so the board commits visually. The
-   * controlled `position` prop reconciles when the server confirms (via
-   * `applyMoveLocal`) or rolls back on failure (state.fen never advances, so
-   * the board snaps to the previous FEN on the next render).
    */
   const onPieceDrop = useCallback(
     (sourceSquare: Square, targetSquare: Square, piece: Piece): boolean => {
@@ -240,17 +434,15 @@ export function GameClient({
 
       const uci = `${sourceSquare}${targetSquare}`;
 
-      // Local pre-validate via the existing engine wrapper — skip the server
-      // round-trip on obviously-illegal drops.
+      // Local pre-validate — skip the server round-trip on illegal drops
+      // and capture the post-move fen for the optimistic update.
       const local = validateMove(state.fen, uci);
       if (!local.ok) return false;
 
-      // Fire-and-forget server submission; reconciliation flows back through
-      // `applyMoveLocal` (success) or the unchanged `state.fen` (failure).
-      void submitMove(uci, state.ply);
+      commitOptimisticAndSubmit(uci, local.fenAfter);
       return true;
     },
-    [myTurn, state.status, state.fen, state.ply, submitMove],
+    [myTurn, state.status, state.fen, commitOptimisticAndSubmit],
   );
 
   /**
@@ -274,28 +466,117 @@ export function GameClient({
       const local = validateMove(state.fen, uci);
       if (!local.ok) return false;
 
-      void submitMove(uci, state.ply);
+      commitOptimisticAndSubmit(uci, local.fenAfter);
       return true;
     },
-    [myTurn, state.status, state.fen, state.ply, submitMove],
+    [myTurn, state.status, state.fen, commitOptimisticAndSubmit],
   );
 
-  const isWhitesTurn = computeMyTurn(state.fen, "w");
-  const turnText =
-    state.status !== "in_progress"
-      ? statusLabel(state.status)
-      : myTurn
-        ? "Your turn"
-        : "Opponent's turn";
+  /**
+   * Click-to-move handler. Two-step interaction:
+   *   1. First click on an own piece (myTurn) selects it; legal targets
+   *      light up via customSquareStyles.
+   *   2. Second click on a legal target submits the move. Click on the
+   *      same selected square deselects. Click on another own piece
+   *      reselects. Click anywhere else deselects.
+   *
+   * Promotion via click defaults to queen — most users want queen, and
+   * non-queen promotions are still available via drag (which routes
+   * through the library's promotion dialog).
+   */
+  const onSquareClick = useCallback(
+    (square: Square, piece?: Piece): void => {
+      if (isObserver) return;
+      if (state.status !== "in_progress") return;
+
+      // With a selection in hand:
+      if (selected) {
+        // Deselect on click of the same square.
+        if (square === selected) {
+          setSelected(null);
+          return;
+        }
+        // Submit on legal target.
+        if (legalTargets.includes(square)) {
+          const promo = isPromotionMove(state.fen, selected, square) ? "q" : "";
+          const uci = `${selected}${square}${promo}`;
+          const local = validateMove(state.fen, uci);
+          setSelected(null);
+          if (local.ok) commitOptimisticAndSubmit(uci, local.fenAfter);
+          return;
+        }
+        // Reselect another own piece.
+        if (piece && piece.charAt(0) === myColor && myTurn) {
+          setSelected(square);
+          return;
+        }
+        // Otherwise deselect.
+        setSelected(null);
+        return;
+      }
+
+      // No selection: first click on an own piece on own turn selects it.
+      if (myTurn && piece && piece.charAt(0) === myColor) {
+        setSelected(square);
+      }
+    },
+    [
+      isObserver,
+      state.status,
+      state.fen,
+      selected,
+      legalTargets,
+      myColor,
+      myTurn,
+      commitOptimisticAndSubmit,
+    ],
+  );
+
+  const isWhitesTurn = turn === "w";
+  const inProgress = state.status === "in_progress";
+  const blackActive = inProgress && !isWhitesTurn;
+  const whiteActive = inProgress && isWhitesTurn;
+
+  // Status-pill text — promotes check / checkmate over the generic
+  // "your turn" / "opponent's turn" copy so the player notices. Observers
+  // get a flat "Observing" + the side-to-move so they can follow along.
+  const turnText = (() => {
+    if (!inProgress) return statusLabel(state.status);
+    if (isObserver) {
+      if (check?.mate) {
+        return `Checkmate — ${check.side === "w" ? "black" : "white"} wins`;
+      }
+      if (check) {
+        return `Check on ${check.side === "w" ? "white" : "black"}`;
+      }
+      return `Observing — ${isWhitesTurn ? "white" : "black"} to move`;
+    }
+    if (check?.mate) return check.side === myColor ? "Checkmate — you lose" : "Checkmate";
+    if (check) return check.side === myColor ? "Check — your move" : "Check";
+    return myTurn ? "Your turn" : "Opponent's turn";
+  })();
+
+  // Per-pill overlay color when the corresponding king is in check / mate.
+  // Same palette as the king-square highlight, ~60% alpha so the team's
+  // light/dark base color is still legible underneath.
+  const checkOverlay = (side: "w" | "b"): string | null => {
+    if (!check || check.side !== side) return null;
+    return check.mate ? "rgba(220, 38, 38, 0.6)" : "rgba(245, 158, 11, 0.6)";
+  };
+  const blackOverlay = checkOverlay("b");
+  const whiteOverlay = checkOverlay("w");
 
   return (
-    <main className="container mx-auto max-w-6xl py-8 px-6 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8">
-      {/* Test hook — version-agnostic state probe for e2e specs. */}
+    <main className="container mx-auto max-w-6xl py-8 px-6 space-y-4">
+      {/* Test hook — version-agnostic state probe for e2e specs.
+          E2E specs assert against data-ply and data-status; the hook
+          stays library-DOM-agnostic so it survives react-chessboard
+          version bumps without spec churn. */}
       <div
         data-testid="game-state"
         data-ply={state.ply}
         data-status={state.status}
-        data-fen={state.fen}
+        aria-hidden="true"
         className="sr-only"
       />
 
@@ -305,47 +586,86 @@ export function GameClient({
             position={state.fen}
             boardOrientation={myColor === "b" ? "black" : "white"}
             onPieceDrop={onPieceDrop}
+            onPieceDragBegin={onPieceDragBegin}
+            onPieceDragEnd={onPieceDragEnd}
             onPromotionPieceSelect={onPromotionPieceSelect}
-            arePiecesDraggable={state.status === "in_progress"}
+            onSquareClick={onSquareClick}
+            onMouseOverSquare={onSquareMouseOver}
+            onMouseOutSquare={onSquareMouseOut}
+            arePiecesDraggable={inProgress && !isObserver}
+            isDraggablePiece={isDraggablePiece}
+            customSquareStyles={customSquareStyles}
             customBoardStyle={{ borderRadius: 6 }}
           />
         </div>
       </div>
 
-      <aside className="space-y-6">
+      {/* Sidebar — single horizontal row of three pills. Player pills
+          render in their team's colors (black bg / white bg); the turn
+          pill in the middle adopts the active side's palette and shows
+          an arrow pointing to whichever player is to move. */}
+      <aside className="flex items-stretch gap-2 max-w-xl mx-auto w-full text-sm">
         <div
-          className={
-            "rounded border p-4 " +
-            (!isWhitesTurn && state.status === "in_progress"
-              ? "border-foreground"
-              : "border-border")
-          }
+          className={cn(
+            "relative flex-1 rounded border px-3 py-2 bg-zinc-900 text-zinc-100 border-zinc-700 transition-shadow overflow-hidden",
+            blackActive && "ring-2 ring-amber-400",
+          )}
         >
-          <p className="text-xs uppercase text-muted-foreground">Black</p>
-          <p className="font-medium">
-            {blackName}
-            {myColor === "b" ? " (you)" : ""}
-          </p>
+          {blackOverlay && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0"
+              style={{ backgroundColor: blackOverlay }}
+            />
+          )}
+          <div className="relative">
+            <p className="text-[10px] uppercase tracking-wide opacity-60">
+              Black{myColor === "b" ? " (you)" : ""}
+            </p>
+            <p className="font-medium truncate">{blackName}</p>
+          </div>
         </div>
 
-        <div className="rounded border border-dashed p-4 text-center">
-          <p className="text-sm font-medium">{turnText}</p>
-          <p className="text-xs text-muted-foreground mt-1">ply {state.ply}</p>
+        <div
+          className={cn(
+            "flex flex-col items-center justify-center rounded border px-3 py-2 min-w-[112px] transition-colors",
+            !inProgress && "bg-muted text-muted-foreground border-border",
+            whiteActive && "bg-white text-zinc-900 border-zinc-300",
+            blackActive && "bg-zinc-900 text-zinc-100 border-zinc-700",
+          )}
+        >
+          <span className="font-medium text-xs">{turnText}</span>
+          {inProgress && (
+            <span
+              className="text-base leading-none mt-0.5"
+              aria-hidden="true"
+              title={whiteActive ? "white to move" : "black to move"}
+            >
+              {whiteActive ? "▶" : "◀"}
+            </span>
+          )}
+          <span className="text-[10px] opacity-60 mt-0.5">ply {state.ply}</span>
         </div>
 
         <div
-          className={
-            "rounded border p-4 " +
-            (isWhitesTurn && state.status === "in_progress"
-              ? "border-foreground"
-              : "border-border")
-          }
+          className={cn(
+            "relative flex-1 rounded border px-3 py-2 bg-white text-zinc-900 border-zinc-300 transition-shadow overflow-hidden",
+            whiteActive && "ring-2 ring-amber-400",
+          )}
         >
-          <p className="text-xs uppercase text-muted-foreground">White</p>
-          <p className="font-medium">
-            {whiteName}
-            {myColor === "w" ? " (you)" : ""}
-          </p>
+          {whiteOverlay && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0"
+              style={{ backgroundColor: whiteOverlay }}
+            />
+          )}
+          <div className="relative">
+            <p className="text-[10px] uppercase tracking-wide opacity-60">
+              White{myColor === "w" ? " (you)" : ""}
+            </p>
+            <p className="font-medium truncate">{whiteName}</p>
+          </div>
         </div>
       </aside>
     </main>
