@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { Chessboard } from "react-chessboard";
 import type { Piece, PromotionPieceOption, Square } from "@/lib/chess/board-types";
@@ -329,8 +330,12 @@ export function GameClient({
         ? "Your turn"
         : "Opponent's turn";
 
+  const inProgress = state.status === "in_progress";
+  const blackActive = inProgress && !isWhitesTurn;
+  const whiteActive = inProgress && isWhitesTurn;
+
   return (
-    <main className="container mx-auto max-w-6xl py-8 px-6 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8">
+    <main className="container mx-auto max-w-6xl py-8 px-6 space-y-4">
       {/* Test hook — version-agnostic state probe for e2e specs.
           E2E specs assert against data-ply and data-status; the hook
           stays library-DOM-agnostic so it survives react-chessboard
@@ -350,43 +355,59 @@ export function GameClient({
             boardOrientation={myColor === "b" ? "black" : "white"}
             onPieceDrop={onPieceDrop}
             onPromotionPieceSelect={onPromotionPieceSelect}
-            arePiecesDraggable={state.status === "in_progress"}
+            arePiecesDraggable={inProgress}
             customBoardStyle={{ borderRadius: 6 }}
           />
         </div>
       </div>
 
-      <aside className="space-y-6">
+      {/* Sidebar — single horizontal row of three pills. Player pills
+          render in their team's colors (black bg / white bg); the turn
+          pill in the middle adopts the active side's palette and shows
+          an arrow pointing to whichever player is to move. */}
+      <aside className="flex items-stretch gap-2 max-w-xl mx-auto w-full text-sm">
         <div
-          className={
-            "rounded border p-4 " +
-            (!isWhitesTurn && state.status === "in_progress"
-              ? "border-foreground"
-              : "border-border")
-          }
+          className={cn(
+            "flex-1 rounded border px-3 py-2 bg-zinc-900 text-zinc-100 border-zinc-700 transition-shadow",
+            blackActive && "ring-2 ring-amber-400",
+          )}
         >
-          <p className="text-xs uppercase text-muted-foreground">Black</p>
-          <p className="font-medium">
+          <p className="text-[10px] uppercase tracking-wide opacity-60">Black</p>
+          <p className="font-medium truncate">
             {blackName}
             {myColor === "b" ? " (you)" : ""}
           </p>
         </div>
 
-        <div className="rounded border border-dashed p-4 text-center">
-          <p className="text-sm font-medium">{turnText}</p>
-          <p className="text-xs text-muted-foreground mt-1">ply {state.ply}</p>
+        <div
+          className={cn(
+            "flex flex-col items-center justify-center rounded border px-3 py-2 min-w-[112px] transition-colors",
+            !inProgress && "bg-muted text-muted-foreground border-border",
+            whiteActive && "bg-white text-zinc-900 border-zinc-300",
+            blackActive && "bg-zinc-900 text-zinc-100 border-zinc-700",
+          )}
+        >
+          <span className="font-medium text-xs">{turnText}</span>
+          {inProgress && (
+            <span
+              className="text-base leading-none mt-0.5"
+              aria-hidden="true"
+              title={whiteActive ? "white to move" : "black to move"}
+            >
+              {whiteActive ? "▶" : "◀"}
+            </span>
+          )}
+          <span className="text-[10px] opacity-60 mt-0.5">ply {state.ply}</span>
         </div>
 
         <div
-          className={
-            "rounded border p-4 " +
-            (isWhitesTurn && state.status === "in_progress"
-              ? "border-foreground"
-              : "border-border")
-          }
+          className={cn(
+            "flex-1 rounded border px-3 py-2 bg-white text-zinc-900 border-zinc-300 transition-shadow",
+            whiteActive && "ring-2 ring-amber-400",
+          )}
         >
-          <p className="text-xs uppercase text-muted-foreground">White</p>
-          <p className="font-medium">
+          <p className="text-[10px] uppercase tracking-wide opacity-60">White</p>
+          <p className="font-medium truncate">
             {whiteName}
             {myColor === "w" ? " (you)" : ""}
           </p>
