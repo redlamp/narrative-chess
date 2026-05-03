@@ -181,6 +181,11 @@ export function GameClient({
   const myTurn =
     state.status === "in_progress" && !state.pending && turn === myColor;
 
+  // Side currently in check (or null) and whether it's mate. Used by both
+  // the board (king-square highlight) and the sidebar (player-card overlay
+  // + status pill text).
+  const check = useMemo(() => checkState(state.fen), [state.fen]);
+
   // Squares the currently-selected piece can legally move to.
   const legalTargets = useMemo(
     () => (selected ? legalMovesFrom(state.fen, selected) : []),
@@ -217,13 +222,12 @@ export function GameClient({
       };
     }
 
-    const cs = checkState(state.fen);
-    if (cs) {
-      const ks = kingSquare(state.fen, cs.side);
+    if (check) {
+      const ks = kingSquare(state.fen, check.side);
       if (ks) {
         styles[ks] = {
           ...styles[ks],
-          backgroundColor: cs.mate
+          backgroundColor: check.mate
             ? "rgba(220, 38, 38, 0.55)" // red-600 @ ~55%
             : "rgba(245, 158, 11, 0.55)", // amber-500 @ ~55%
         };
@@ -231,7 +235,7 @@ export function GameClient({
     }
 
     return styles;
-  }, [selected, legalTargets, state.fen]);
+  }, [selected, legalTargets, state.fen, check]);
 
   // Restrict dragging to the side-to-move's own pieces. Library calls this
   // for every piece on the board on every render; keep it cheap.
@@ -456,16 +460,28 @@ export function GameClient({
   );
 
   const isWhitesTurn = turn === "w";
-  const turnText =
-    state.status !== "in_progress"
-      ? statusLabel(state.status)
-      : myTurn
-        ? "Your turn"
-        : "Opponent's turn";
-
   const inProgress = state.status === "in_progress";
   const blackActive = inProgress && !isWhitesTurn;
   const whiteActive = inProgress && isWhitesTurn;
+
+  // Status-pill text — promotes check / checkmate over the generic
+  // "your turn" / "opponent's turn" copy so the player notices.
+  const turnText = (() => {
+    if (!inProgress) return statusLabel(state.status);
+    if (check?.mate) return check.side === myColor ? "Checkmate — you lose" : "Checkmate";
+    if (check) return check.side === myColor ? "Check — your move" : "Check";
+    return myTurn ? "Your turn" : "Opponent's turn";
+  })();
+
+  // Per-pill overlay color when the corresponding king is in check / mate.
+  // Same palette as the king-square highlight, ~60% alpha so the team's
+  // light/dark base color is still legible underneath.
+  const checkOverlay = (side: "w" | "b"): string | null => {
+    if (!check || check.side !== side) return null;
+    return check.mate ? "rgba(220, 38, 38, 0.6)" : "rgba(245, 158, 11, 0.6)";
+  };
+  const blackOverlay = checkOverlay("b");
+  const whiteOverlay = checkOverlay("w");
 
   return (
     <main className="container mx-auto max-w-6xl py-8 px-6 space-y-4">
@@ -504,14 +520,23 @@ export function GameClient({
       <aside className="flex items-stretch gap-2 max-w-xl mx-auto w-full text-sm">
         <div
           className={cn(
-            "flex-1 rounded border px-3 py-2 bg-zinc-900 text-zinc-100 border-zinc-700 transition-shadow",
+            "relative flex-1 rounded border px-3 py-2 bg-zinc-900 text-zinc-100 border-zinc-700 transition-shadow overflow-hidden",
             blackActive && "ring-2 ring-amber-400",
           )}
         >
-          <p className="text-[10px] uppercase tracking-wide opacity-60">
-            Black{myColor === "b" ? " (you)" : ""}
-          </p>
-          <p className="font-medium truncate">{blackName}</p>
+          {blackOverlay && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0"
+              style={{ backgroundColor: blackOverlay }}
+            />
+          )}
+          <div className="relative">
+            <p className="text-[10px] uppercase tracking-wide opacity-60">
+              Black{myColor === "b" ? " (you)" : ""}
+            </p>
+            <p className="font-medium truncate">{blackName}</p>
+          </div>
         </div>
 
         <div
@@ -537,14 +562,23 @@ export function GameClient({
 
         <div
           className={cn(
-            "flex-1 rounded border px-3 py-2 bg-white text-zinc-900 border-zinc-300 transition-shadow",
+            "relative flex-1 rounded border px-3 py-2 bg-white text-zinc-900 border-zinc-300 transition-shadow overflow-hidden",
             whiteActive && "ring-2 ring-amber-400",
           )}
         >
-          <p className="text-[10px] uppercase tracking-wide opacity-60">
-            White{myColor === "w" ? " (you)" : ""}
-          </p>
-          <p className="font-medium truncate">{whiteName}</p>
+          {whiteOverlay && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0"
+              style={{ backgroundColor: whiteOverlay }}
+            />
+          )}
+          <div className="relative">
+            <p className="text-[10px] uppercase tracking-wide opacity-60">
+              White{myColor === "w" ? " (you)" : ""}
+            </p>
+            <p className="font-medium truncate">{whiteName}</p>
+          </div>
         </div>
       </aside>
     </main>
