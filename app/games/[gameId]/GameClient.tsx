@@ -24,7 +24,11 @@ import type { GameStatus } from "@/lib/schemas/game";
 
 type Props = {
   gameId: string;
-  myColor: "w" | "b";
+  /**
+   * "w" | "b" — viewer is the white or black participant.
+   * null         — viewer is an observer (read-only).
+   */
+  myColor: "w" | "b" | null;
   whiteName: string;
   blackName: string;
   initialFen: string;
@@ -95,6 +99,7 @@ export function GameClient({
   initialStatus,
 }: Props) {
   const router = useRouter();
+  const isObserver = myColor === null;
   const [state, setState] = useState<State>({
     fen: initialFen,
     ply: initialPly,
@@ -264,13 +269,15 @@ export function GameClient({
 
   // Restrict dragging to the side-to-move's own pieces. Library calls this
   // for every piece on the board on every render; keep it cheap.
+  // Observers (myColor === null) get a flat false — no piece is draggable.
   const isDraggablePiece = useCallback(
     ({ piece }: { piece: Piece }): boolean => {
+      if (isObserver) return false;
       if (!myTurn) return false;
       // piece is "wP" | "bP" | "wN" | etc — first char is color.
       return piece.charAt(0) === myColor;
     },
-    [myTurn, myColor],
+    [isObserver, myTurn, myColor],
   );
 
   /** Send a move to the server and reconcile state. */
@@ -376,10 +383,14 @@ export function GameClient({
    * provides. Drag overrides any prior click selection so we don't render
    * two highlight sources at once.
    */
-  const onPieceDragBegin = useCallback((_piece: Piece, sourceSquare: Square) => {
-    setDragSource(sourceSquare);
-    setSelected(null);
-  }, []);
+  const onPieceDragBegin = useCallback(
+    (_piece: Piece, sourceSquare: Square) => {
+      if (isObserver) return;
+      setDragSource(sourceSquare);
+      setSelected(null);
+    },
+    [isObserver],
+  );
 
   /**
    * Drag-end handler — clear the drag source regardless of whether the
@@ -475,6 +486,7 @@ export function GameClient({
    */
   const onSquareClick = useCallback(
     (square: Square, piece?: Piece): void => {
+      if (isObserver) return;
       if (state.status !== "in_progress") return;
 
       // With a selection in hand:
@@ -509,6 +521,7 @@ export function GameClient({
       }
     },
     [
+      isObserver,
       state.status,
       state.fen,
       selected,
@@ -525,9 +538,19 @@ export function GameClient({
   const whiteActive = inProgress && isWhitesTurn;
 
   // Status-pill text — promotes check / checkmate over the generic
-  // "your turn" / "opponent's turn" copy so the player notices.
+  // "your turn" / "opponent's turn" copy so the player notices. Observers
+  // get a flat "Observing" + the side-to-move so they can follow along.
   const turnText = (() => {
     if (!inProgress) return statusLabel(state.status);
+    if (isObserver) {
+      if (check?.mate) {
+        return `Checkmate — ${check.side === "w" ? "black" : "white"} wins`;
+      }
+      if (check) {
+        return `Check on ${check.side === "w" ? "white" : "black"}`;
+      }
+      return `Observing — ${isWhitesTurn ? "white" : "black"} to move`;
+    }
     if (check?.mate) return check.side === myColor ? "Checkmate — you lose" : "Checkmate";
     if (check) return check.side === myColor ? "Check — your move" : "Check";
     return myTurn ? "Your turn" : "Opponent's turn";
@@ -569,7 +592,7 @@ export function GameClient({
             onSquareClick={onSquareClick}
             onMouseOverSquare={onSquareMouseOver}
             onMouseOutSquare={onSquareMouseOut}
-            arePiecesDraggable={inProgress}
+            arePiecesDraggable={inProgress && !isObserver}
             isDraggablePiece={isDraggablePiece}
             customSquareStyles={customSquareStyles}
             customBoardStyle={{ borderRadius: 6 }}

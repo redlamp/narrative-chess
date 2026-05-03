@@ -88,19 +88,19 @@ export default async function GamePage({
   if (row.status === "open" && !viewerIsParticipant && emptySide) {
     return <JoinGameForm gameId={gameId} emptySide={emptySide} />;
   }
-  if (viewerIsParticipant) {
-    return (
-      <GameClient
-        gameId={gameId}
-        myColor={viewerIsWhite ? "w" : "b"}
-        whiteName={row.white_name ?? "(unknown)"}
-        blackName={row.black_name ?? "(unknown)"}
-        initialFen={row.current_fen}
-        initialPly={row.ply}
-        initialStatus={row.status}
-      />
-    );
-  }
 
-  notFound();
+  // Participants OR observers (any other authenticated user with the URL)
+  // both render <GameClient>. Observers pass myColor=null and the client
+  // disables drag/click and shows an "Observing" status.
+  return (
+    <GameClient
+      gameId={gameId}
+      myColor={viewerIsWhite ? "w" : viewerIsBlack ? "b" : null}
+      whiteName={row.white_name ?? "(unknown)"}
+      blackName={row.black_name ?? "(unknown)"}
+      initialFen={row.current_fen}
+      initialPly={row.ply}
+      initialStatus={row.status}
+    />
+  );
 }
