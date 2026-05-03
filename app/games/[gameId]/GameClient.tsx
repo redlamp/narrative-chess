@@ -508,11 +508,10 @@ export function GameClient({
             blackActive && "ring-2 ring-amber-400",
           )}
         >
-          <p className="text-[10px] uppercase tracking-wide opacity-60">Black</p>
-          <p className="font-medium truncate">
-            {blackName}
-            {myColor === "b" ? " (you)" : ""}
+          <p className="text-[10px] uppercase tracking-wide opacity-60">
+            Black{myColor === "b" ? " (you)" : ""}
           </p>
+          <p className="font-medium truncate">{blackName}</p>
         </div>
 
         <div
@@ -542,11 +541,10 @@ export function GameClient({
             whiteActive && "ring-2 ring-amber-400",
           )}
         >
-          <p className="text-[10px] uppercase tracking-wide opacity-60">White</p>
-          <p className="font-medium truncate">
-            {whiteName}
-            {myColor === "w" ? " (you)" : ""}
+          <p className="text-[10px] uppercase tracking-wide opacity-60">
+            White{myColor === "w" ? " (you)" : ""}
           </p>
+          <p className="font-medium truncate">{whiteName}</p>
         </div>
       </aside>
     </main>
