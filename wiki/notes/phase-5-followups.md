@@ -13,24 +13,15 @@ Backlog of items surfaced during phase 5 implementation and the post-PR manual t
 
 ## High priority — found during manual smoke
 
-### Realtime moves do not propagate to the other browser
+### Realtime moves do not propagate to the other browser — RESOLVED
 
-**Status:** investigating (2026-05-03 session)
+**Status:** resolved 2026-05-03. Committed in `0813c6a` (await setAuth before subscribing) preceded by `8a1b5d6` (singleton browser client + verbose realtime logs) and `cac3e16` (initial setAuth attempt + dev logging).
 
-**Symptoms:**
-- Player 1 makes a move; player 2 does not see it without a manual browser refresh.
-- Both browsers must reload to see the latest state.
-- Turn enforcement appears wrong on the stale side (because `state.fen` is stale, `myTurn` is computed from old fen).
+**Root cause:** `setAuth` was firing in a fire-and-forget promise; `.subscribe()` ran synchronously and sent the `phx_join` frame to the realtime server BEFORE setAuth resolved. The server-side `realtime.subscription` row was created with `user_sub = null` (anonymous), so RLS on `game_moves` evaluated `auth.uid() = null` and silently denied every row delivery. Confirmed by querying `realtime.subscription` via Supabase MCP after a failed two-browser smoke.
 
-**Suspected causes (ranked):**
-1. Browser realtime client not authenticated against Supabase realtime — RLS blocks the SELECT that backs the postgres_changes event delivery. `@supabase/ssr`'s `createBrowserClient` should sync auth automatically, but may not be invoking `realtime.setAuth(...)` after sign-in in this version.
-2. Subscription connects but events never arrive due to filter mismatch or RLS denial.
-3. WebSocket connection itself failing silently — needs DevTools Network → WS frame inspection.
+**Fix:** converted `subscribeToMoves` and `subscribeToGameStatus` to async; `await getSession()` and call `setAuth` (synchronous) before creating the channel. `GameClient` and `WaitingForOpponent` useEffects updated with a cancelled-flag pattern so unsubscribe still fires correctly if the component unmounts before the subscription is established.
 
-**Next steps:**
-- Add verbose logging in `lib/realtime/subscribe.ts` to log channel status transitions and every payload received (dev-only).
-- Run dev server and capture DevTools console output during a two-browser session.
-- If WS shows no INSERT events arriving, suspect realtime auth — call `supabase.realtime.setAuth(session.access_token)` in `lib/supabase/client.ts` after `getSession()`.
+**Lesson:** when a Supabase realtime subscription appears to subscribe successfully but no events arrive, query `select user_sub from realtime.subscription order by created_at desc` — `null` means the JWT didn't make it to the phx_join frame.
 
 ### Drag UX: piece snaps back, then snaps to target
 
@@ -44,15 +35,15 @@ Backlog of items surfaced during phase 5 implementation and the post-PR manual t
 - Manually update local `state.fen` to the chess.js-computed post-move fen in `onPieceDrop` before returning `true`. Reconcile to server-confirmed fen on success (idempotent if same), or revert to pre-move fen on failure.
 - Or: switch to click-to-move via `onSquareClick` (no DnD flicker possible).
 
-## Medium priority — Next.js 16 deprecation
+## Medium priority — Next.js 16 deprecation — RESOLVED
 
 ### `middleware.ts` → `proxy.ts` rename
 
-**Symptom:** dev server logs `⚠ The "middleware" file convention is deprecated. Please use "proxy" instead.` See URL → https://nextjs.org/docs/messages/middleware-to-proxy
+**Status:** resolved 2026-05-03. Committed in `98217e1`.
 
-**Action:** rename `middleware.ts` → `proxy.ts` (or whatever Next.js 16 docs prescribe), update any imports/exports, verify auth session refresh still works.
+Renamed root `middleware.ts` → `proxy.ts` with exported function `middleware` → `proxy`. Also renamed helper `lib/supabase/middleware.ts` → `lib/supabase/proxy.ts` for vocabulary consistency. Behavior unchanged — auth session refresh still runs on every matched request.
 
-**Scope:** small — single-file rename + Next.js docs read.
+Reference URL → https://nextjs.org/docs/messages/middleware-to-proxy
 
 ## Lower priority — code quality (deferred from Task 8 review)
 
