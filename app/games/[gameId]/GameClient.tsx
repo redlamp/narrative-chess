@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Chessboard } from "react-chessboard";
 import type { Piece, PromotionPieceOption, Square } from "@/lib/chess/board-types";
@@ -113,6 +113,25 @@ export function GameClient({
     setState((prev) => ({ ...prev, status }));
   }, []);
 
+  // Tracks the in-flight optimistic fen + the prior fen, so a server
+  // rejection can roll back the visual state — but only if no realtime
+  // event has already replaced our optimistic fen with an opponent's
+  // move at the next ply.
+  const pendingMoveRef = useRef<{ prevFen: string; optFen: string } | null>(null);
+
+  const rollbackOptimistic = useCallback(() => {
+    const m = pendingMoveRef.current;
+    pendingMoveRef.current = null;
+    if (!m) return;
+    setState((prev) => {
+      // Realtime delivered an opponent move at ply+1 already; their fen
+      // overwrites ours via the ply guard, so prev.fen no longer matches
+      // our optimistic. Don't clobber the opponent's truth.
+      if (prev.fen !== m.optFen) return prev;
+      return { ...prev, fen: m.prevFen };
+    });
+  }, []);
+
   // Realtime: opponent's (and our own) move INSERTs.
   useEffect(() => {
     let sub: { unsubscribe: () => void } | null = null;
@@ -152,11 +171,13 @@ export function GameClient({
   /** Send a move to the server and reconcile state. */
   const submitMove = useCallback(
     async (uci: string, expectedPly: number) => {
-      setState((prev) => ({ ...prev, pending: true }));
       try {
         const result = await makeMove({ gameId, uci, expectedPly });
 
         if (result.ok) {
+          // Server confirmed; clear the rollback target — the server's
+          // ply will land via applyMoveLocal and supersede our optimistic fen.
+          pendingMoveRef.current = null;
           applyMoveLocal({
             ply: result.data.ply,
             fen: result.data.fen_after,
@@ -167,6 +188,9 @@ export function GameClient({
           }
           return true;
         }
+
+        // Server rejected — undo the optimistic fen if it's still in place.
+        rollbackOptimistic();
 
         switch (result.code) {
           case "concurrency_conflict":
@@ -204,6 +228,7 @@ export function GameClient({
         }
         return false;
       } catch (err) {
+        rollbackOptimistic();
         console.error("makeMove transport error:", err);
         toast.error("Connection error — try again");
         return false;
@@ -211,17 +236,37 @@ export function GameClient({
         setState((prev) => ({ ...prev, pending: false }));
       }
     },
-    [gameId, applyMoveLocal, router],
+    [gameId, applyMoveLocal, rollbackOptimistic, router],
+  );
+
+  /**
+   * Commit an optimistic fen update + kick off the server call.
+   *
+   * react-chessboard 4.x requires a sync `boolean` return from drop /
+   * promotion handlers — we can't await the server. To avoid a snap-back
+   * flicker on the controlled `position` prop, we update local fen
+   * synchronously to chess.js's computed post-move fen, then fire the
+   * Server Action async. On server success, applyMoveLocal advances ply
+   * (idempotent for the fen); on failure, rollbackOptimistic reverts
+   * the fen if no opponent move has replaced it via realtime in the
+   * meantime.
+   *
+   * ply stays at the canonical (server-confirmed) value during the
+   * optimistic window, so a concurrent opponent move at ply+1 still
+   * passes the applyMoveLocal ply guard and overwrites our optimistic
+   * fen — which is the right thing.
+   */
+  const commitOptimisticAndSubmit = useCallback(
+    (uci: string, optFen: string) => {
+      pendingMoveRef.current = { prevFen: state.fen, optFen };
+      setState((prev) => ({ ...prev, fen: optFen, pending: true }));
+      void submitMove(uci, state.ply);
+    },
+    [state.fen, state.ply, submitMove],
   );
 
   /**
    * Sync handler for non-promotion drops.
-   * react-chessboard 4.x requires a sync `boolean` return — we cannot await the
-   * server here. We pre-validate locally (cheap), kick off the server call, and
-   * return `true` on local-valid drops so the board commits visually. The
-   * controlled `position` prop reconciles when the server confirms (via
-   * `applyMoveLocal`) or rolls back on failure (state.fen never advances, so
-   * the board snaps to the previous FEN on the next render).
    */
   const onPieceDrop = useCallback(
     (sourceSquare: Square, targetSquare: Square, piece: Piece): boolean => {
@@ -238,17 +283,15 @@ export function GameClient({
 
       const uci = `${sourceSquare}${targetSquare}`;
 
-      // Local pre-validate via the existing engine wrapper — skip the server
-      // round-trip on obviously-illegal drops.
+      // Local pre-validate — skip the server round-trip on illegal drops
+      // and capture the post-move fen for the optimistic update.
       const local = validateMove(state.fen, uci);
       if (!local.ok) return false;
 
-      // Fire-and-forget server submission; reconciliation flows back through
-      // `applyMoveLocal` (success) or the unchanged `state.fen` (failure).
-      void submitMove(uci, state.ply);
+      commitOptimisticAndSubmit(uci, local.fenAfter);
       return true;
     },
-    [myTurn, state.status, state.fen, state.ply, submitMove],
+    [myTurn, state.status, state.fen, commitOptimisticAndSubmit],
   );
 
   /**
@@ -272,10 +315,10 @@ export function GameClient({
       const local = validateMove(state.fen, uci);
       if (!local.ok) return false;
 
-      void submitMove(uci, state.ply);
+      commitOptimisticAndSubmit(uci, local.fenAfter);
       return true;
     },
-    [myTurn, state.status, state.fen, state.ply, submitMove],
+    [myTurn, state.status, state.fen, commitOptimisticAndSubmit],
   );
 
   const isWhitesTurn = turn === "w";
