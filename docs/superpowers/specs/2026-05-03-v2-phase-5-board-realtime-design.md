@@ -366,6 +366,15 @@ These are not design unknowns; they are points the implementer must resolve when
 - **Theming wiring**: pass CSS-var-based custom square styles per `domain/theming.md` so dark mode works.
 - **Subagent dispatch tier**: `GameClient` is the highest-judgment task in phase 5 — it carries react-chessboard 4.x API verification, the race-safe `applyMove` reducer, and the 13-code error map. The phase 5 plan flags it as the only Opus + high-effort task; all other tasks dispatch at Sonnet or Haiku. See the dispatch table in `docs/superpowers/plans/2026-05-03-v2-phase-5-board-realtime.md` §"Subagent dispatch guidance".
 
+## 8a. Post-ship additions (2026-05-03)
+
+Items merged to `dev` after the original spec was written, captured here for an at-a-glance picture of what shipped vs what was originally planned:
+
+- **UX polish** — sidebar redesign with team-colored pills + turn arrow, click-to-move, legal-target circles (dot/ring), hover-confirm border on prospective drop square, drag-restrict to own pieces, optimistic fen update with rollback, king-in-check / checkmate square highlight + player-namecard overlay, status pill calls out check / checkmate. Squashed in `eaf38e0` (PR #9).
+- **Observer mode** — any authenticated user with the URL can watch a game live (read-only). New migration `20260503124751_add_observer_select_policies.sql` widens RLS on `games` and `game_moves` to authenticated SELECT; writes remain participant-only via RPC checks. `<GameClient>` accepts `myColor: "w" | "b" | null`; null = observer, which disables drag/click and renders an "Observing — <side> to move" status. Same squash commit (`eaf38e0`).
+
+Both addressed deferred / discovered concerns from §3 ("Non-goals") and the manual two-browser smoke. Phase 6 picks up resign / abort / terminal-banner / move-list (per the foundation spec Step L).
+
 ## 9. References
 
 - Foundation spec: `docs/superpowers/specs/2026-05-02-v2-foundation-design.md` §6.4 (realtime), §6.5 (repo layout), §7 Step K.
