@@ -667,9 +667,9 @@ export function GameClient({
           />
         )}
         <div className="relative">
-          <p className="text-[10px] uppercase tracking-wide opacity-60">
-            {isBlack ? "Black" : "White"}
-            {isYou ? " (you)" : ""}
+          <p className="text-[10px] uppercase tracking-wide opacity-60 flex items-center justify-between gap-2">
+            <span>{isBlack ? "Black" : "White"}</span>
+            {isYou && <span>(you)</span>}
           </p>
           <p className="font-medium truncate">{name}</p>
         </div>
