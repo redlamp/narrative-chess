@@ -26,15 +26,16 @@ import { TerminalBanner } from "./TerminalBanner";
 import { ObserverCount } from "./ObserverCount";
 import dynamic from "next/dynamic";
 
-// Dev-only smoke button — dynamic import gated on NODE_ENV. Next.js
-// statically replaces process.env.NODE_ENV at build time, so the
-// `import("./SmokeFoolsMate")` call only exists in the dev bundle. In
-// prod, this resolves to `null` and the loader (along with the smoke
-// module's chunk) is dropped from the build output. We verify in
-// `bun run build` that the smoke module's "fool's mate" string and
-// SAN sequence are absent from `.next/`.
+// Dev-only smoke button — dynamic import gated on VERCEL_ENV. We can't
+// gate on NODE_ENV because Vercel sets it to "production" for both
+// production AND preview builds, which would hide dev tools on previews
+// (exactly where we want them visible for smoke testing). VERCEL_ENV is
+// surfaced to the client via next.config.ts -> env.NEXT_PUBLIC_VERCEL_ENV
+// (defaults to "development" off-platform). Next inlines NEXT_PUBLIC_* at
+// build time, so this gate is statically replaceable and the smoke chunk
+// dead-code-eliminates in production builds.
 const SmokeFoolsMate =
-  process.env.NODE_ENV !== "production"
+  process.env.NEXT_PUBLIC_VERCEL_ENV !== "production"
     ? dynamic(() =>
         import("./SmokeFoolsMate").then((m) => ({
           default: m.SmokeFoolsMate,
