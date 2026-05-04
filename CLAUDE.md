@@ -2,7 +2,7 @@
 
 ## Memory Management
 
-Project memory tree at `.claude/memory/`.
+Local project memory tree at `.claude/memory/` (distinct from global `~/.claude/memory/`).
 
 ### Structure
 
@@ -127,7 +127,7 @@ GitHub branch protection on `dev` requires PRs but allows admin bypass
 
 Why: code changes need CI lint+typecheck+e2e gating + PR review surface; docs and
 memory don't ship runtime behavior, routing through PRs adds friction
-without catching anything CI flags.
+without catching anything CI would flag.
 
 ### Commit policy (overrides default "only commit when asked")
 
