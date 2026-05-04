@@ -30,12 +30,7 @@
 - Stable production alias: https://narrative-chess.vercel.app
 - M1 squash on `main`: `e81a3d9` (2026-05-03) — Phases 1–6.
 - M1.5 squash on `main`: `681f809` (2026-05-04) — Phase 7 + banner fix + header nav + Phase 8 landing/3D hero.
-- M1.5 prod deploy: https://narrative-chess-ifumm993n-taylor-8571s-projects.vercel.app
-- Post-M1.5 polish on `dev` (not yet on `main`):
-  - PR #20 — Hero3D WebGL context recovery (`362ccac`)
-  - PR #23 — AuthDialog onSuccess (`47bd772`)
-  - PR #21 — Theme toggle UI (`2f31936`)
-  - PR #22 — Dev-only fool's mate smoke (`f3df4f8`)
-  - All merged with `--no-ff` per the new policy; branch arcs visible in `dev`'s graph.
+- M1.5+ squash on `main`: `67243d5` (2026-05-04) — Hero3D context recovery + AuthDialog onSuccess + Theme toggle + dev-only fool's mate smoke + husky pre-commit shebang chore. Bundled PR #20/#23/#21/#22/#24 from `dev` via PR #25.
+- M1.5+ prod deploy: https://narrative-chess-4a3g8vzog-taylor-8571s-projects.vercel.app
 - Post-ship lessons live as `wiki/notes/lesson-*.md`.
 - Step N — `gh repo edit redlamp/narrative-chess-v1 --visibility private --accept-visibility-change-consequences` — NOT yet run; do after production smoke is satisfying. Always wait for explicit user go.
