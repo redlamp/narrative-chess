@@ -46,7 +46,10 @@ export function HeroScene() {
         {/* Title — two lines, each centered horizontally on its own. Wrapping
             each <Text3D> in its own <Center> avoids the "shorter line aligns
             left of longer line" effect of a single shared <Center>. */}
-        <Center disableY position={[0, 0.7, 0]}>
+        {/* "Chess" baseline sits on PIECE_Y so the text rests on the same
+            ground as the pieces. "Narrative" stacks 1.2 units above (line
+            spacing) so the two-line title reads as one block above ground. */}
+        <Center disableY position={[0, PIECE_Y + 1.2, 0]}>
           <Text3D
             font={FONT_URL}
             size={1}
@@ -60,7 +63,7 @@ export function HeroScene() {
             <meshStandardMaterial color="white" roughness={0.4} metalness={0.1} />
           </Text3D>
         </Center>
-        <Center disableY position={[0, -0.6, 0]}>
+        <Center disableY position={[0, PIECE_Y, 0]}>
           <Text3D
             font={FONT_URL}
             size={1}
