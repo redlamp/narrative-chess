@@ -25,9 +25,11 @@
   - `wiki/` — human knowledge graph: decisions, daily logs, projects, research
   - `docs/` — formal artifacts: specs, plans, ADRs, public docs
 
-## M1 ship facts
+## Ship facts
 
-- Production URL: https://narrative-chess-70w492vd6-taylor-8571s-projects.vercel.app
-- M1 squash commit on `main`: `e81a3d9` (2026-05-03).
-- Post-M1 lessons live as `wiki/notes/lesson-*.md`.
-- Step N — `gh repo edit redlamp/narrative-chess-v1 --visibility private --accept-visibility-change-consequences` — NOT yet run; do after production smoke is satisfying.
+- Stable production alias: https://narrative-chess.vercel.app
+- M1 squash on `main`: `e81a3d9` (2026-05-03) — Phases 1–6.
+- M1.5 squash on `main`: `681f809` (2026-05-04) — Phase 7 + banner fix + header nav + Phase 8 landing/3D hero.
+- M1.5 prod deploy: https://narrative-chess-ifumm993n-taylor-8571s-projects.vercel.app
+- Post-ship lessons live as `wiki/notes/lesson-*.md`.
+- Step N — `gh repo edit redlamp/narrative-chess-v1 --visibility private --accept-visibility-change-consequences` — NOT yet run; do after production smoke is satisfying. Always wait for explicit user go.
