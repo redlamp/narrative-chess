@@ -15,4 +15,5 @@ System design, stack choices, data flow, integration points.
 ### Lessons learned
 
 - [[lesson-realtime-auth-before-subscribe]] — Supabase `postgres_changes` silently denies events when `setAuth` races `channel.subscribe`. Always await session + setAuth before subscribing. (M1 ship — 2026-05-03)
-- [[lesson-dev-main-merge-after-squash]] — Squash-merge culture causes `dev` ↔ `main` SHA divergence even when content matches. Expect add/add conflicts on milestone ship; resolve with `git checkout --ours`. (M1 ship — 2026-05-03)
+- [[lesson-dev-main-merge-after-squash]] — Squash-merge culture causes `dev` ↔ `main` SHA divergence even when content matches. Expect add/add conflicts on milestone ship; resolve with `git checkout --ours`. Confirmed at M1 + M1.5 ships. (M1 ship — 2026-05-03)
+- [[lesson-webgl-strict-mode-context-loss]] — R3F + Next dev double-mount disposes the WebGLRenderer's GL context. Two-layer fix: `reactStrictMode: false` in `next.config.ts` + `webglcontextlost`/`webglcontextrestored` recovery in `<Canvas onCreated>`. Vercel prod unaffected. (M1.5 ship — 2026-05-04)
