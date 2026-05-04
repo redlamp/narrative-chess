@@ -62,3 +62,6 @@ test-results/
 # Claude Code runtime + per-machine settings (do not commit)
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
+
+# Caveman compress backups (local-only safety net)
+*.original.md
