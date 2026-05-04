@@ -4,7 +4,7 @@ Read this file at session start. Load specific topic files only when relevant.
 
 | File | Description | Last updated |
 |------|-------------|--------------|
-| `general.md` | Project conventions, workflow preferences, workspace pointers, M1+M1.5 ship facts | 2026-05-04 |
+| `general.md` | Project conventions, workflow preferences, workspace pointers, M1+M1.5 ship facts + post-M1.5 polish PRs on dev | 2026-05-04 |
 | `domain/theming.md` | shadcn New York + Slate, CSS-var-only theming for multi-theme future | 2026-05-02 |
 | `domain/auth.md` | Auth state — email+password, **email confirmation OFF**, must re-enable before broader release | 2026-05-02 |
 

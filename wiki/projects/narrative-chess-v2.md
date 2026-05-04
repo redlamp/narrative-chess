@@ -79,21 +79,28 @@ What success looks like for M1: two browsers, end-to-end smoke test green, no v1
 
 ## Staged on `dev` (post-M1.5, not yet on `main`)
 
-| What | Commit / PR | Status |
+| What | Merge commit on `dev` | Status |
 |---|---|---|
-| Switch feat → dev merge to `--no-ff` (preserves branch viz) | `0206d50` (docs-only) | direct push to dev |
+| Switch feat → dev merge to `--no-ff` (preserves branch viz) | `0206d50` (docs, direct push) | direct push to dev |
+| Hero3D WebGL context recovery (PR #20) | `362ccac` | merged with `--no-ff` |
+| AuthDialog onSuccess (PR #23) | `47bd772` | merged with `--no-ff` |
+| Theme toggle UI (PR #21) | `2f31936` | merged with `--no-ff` |
+| Dev-only fool's mate smoke button (PR #22) | `f3df4f8` | merged with `--no-ff` |
 
 ## Open threads — post-M1.5
 
+- **Promote `dev` → `main`**: four polish PRs above ready to ship. Use `gh pr merge <N> --squash` per main's linear-history rule. Expect post-squash divergence; reconcile with `git merge origin/main` on dev, take `--ours` (lesson `[[lesson-dev-main-merge-after-squash]]`).
 - **Step N — privatize v1**: `gh repo edit redlamp/narrative-chess-v1 --visibility private --accept-visibility-change-consequences`. Pending until production smoke is satisfying. Always wait for explicit user go.
-- **Decide next milestone**: M1.5+ (clocks + timeout sweep via Vercel Cron + reconnect policy) or M2 (narrative layer prep — cities, characters, story beats).
-- **AuthDialog success path**: server actions throw `NEXT_REDIRECT` before client `onSuccess` callback fires, so the dialog never closes after a real login/signup. Need an action variant that doesn't redirect server-side, or a client-side success-detection mechanism.
-- **Theme toggle UI**: dark mode CSS wired (`dark:bg-zinc-900`, `next-themes` installed) but nothing toggles `<html>.dark`. No UI control yet.
+- **Decide next milestone**: M1.5+ (clocks + timeout sweep via Vercel Cron + reconnect policy) or M2 (narrative layer prep — cities, characters, story beats). Both need brainstorm + spec before code.
+- **Husky pre-commit shebang**: `.husky/pre-commit` has no shebang + CRLF endings; agent worktrees on Windows MINGW can't exec it directly, forcing `--no-verify`. One-line chore PR: add `#!/bin/sh` + LF endings. Worth doing before next subagent dispatch.
+- **Both-sides fool's mate**: user asked, declined service-role server action route (security risk). Decision: stay with current per-side design; smoke is two-browser workflow.
 - **Mobile / touch optimization**: deferred from M1 (desktop-first). Revisit when a real mobile user shows up.
 - **Move list / scrollable history with click-to-rewind**: deferred from phase 6. Nice-to-have polish.
 - **Draw-by-agreement** (offer / accept / decline flow): deferred from phase 6. Real chess UX requires it; pair with clocks in M1.5+.
 - **Email confirmation**: currently OFF for ease of dev. Re-enable before broader release per `.claude/memory/domain/auth.md`.
-- **Dev-only "fool's mate" debug button**: drives both clients through `f3 e5 g4 Qh4#` to reach `black_won` checkmate state in seconds. Quick smoke for terminal banner / status pill / observer-count behavior on game-end. Gate behind `process.env.NODE_ENV !== "production"`.
+- ~~**AuthDialog success path**~~ — **closed by PR #23**.
+- ~~**Theme toggle UI**~~ — **closed by PR #21** (next-themes ThemeProvider + Sun/Moon button in SiteHeader).
+- ~~**Dev-only "fool's mate" debug button**~~ — **closed by PR #22** (per-side, dev/preview only via `VERCEL_ENV` gate).
 - ~~**Game lobby** (`app/games/page.tsx` listing your active games + open challenges)~~ — **closed by Phase 7** (PR #13).
 - ~~**Phase 8 landing page**~~ — **closed by PR #19** (3D hero + auth dialog, shipped in M1.5).
 
