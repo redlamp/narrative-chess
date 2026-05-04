@@ -38,22 +38,28 @@ export default async function GamePage({
   } = await supabase.auth.getUser();
   if (!user) redirect(`/login?next=/games/${gameId}`);
 
-  const { data, error } = await supabase
-    .from("games")
-    .select(`
-      id,
-      white_id,
-      black_id,
-      current_fen,
-      ply,
-      status,
-      current_turn,
-      termination_reason,
-      white_name:white_id ( display_name ),
-      black_name:black_id ( display_name )
-    `)
-    .eq("id", gameId)
-    .single();
+  const [{ data, error }, observerCountResult] = await Promise.all([
+    supabase
+      .from("games")
+      .select(`
+        id,
+        white_id,
+        black_id,
+        current_fen,
+        ply,
+        status,
+        current_turn,
+        termination_reason,
+        white_name:white_id ( display_name ),
+        black_name:black_id ( display_name )
+      `)
+      .eq("id", gameId)
+      .single(),
+    supabase
+      .from("game_observers")
+      .select("*", { count: "exact", head: true })
+      .eq("game_id", gameId),
+  ]);
 
   if (error || !data) notFound();
 
@@ -104,6 +110,8 @@ export default async function GamePage({
       initialPly={row.ply}
       initialStatus={row.status}
       initialTerminationReason={row.termination_reason}
+      initialObserverCount={observerCountResult.count ?? 0}
+      viewerUserId={user.id}
     />
   );
 }

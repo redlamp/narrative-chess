@@ -23,6 +23,7 @@ import {
 import type { GameStatus, TerminationReason } from "@/lib/schemas/game";
 import { GameActions } from "./GameActions";
 import { TerminalBanner } from "./TerminalBanner";
+import { ObserverCount } from "./ObserverCount";
 
 type Props = {
   gameId: string;
@@ -40,6 +41,8 @@ type Props = {
    * How the game ended (when terminal). Null while open / in progress.
    */
   initialTerminationReason: TerminationReason | null;
+  initialObserverCount: number;
+  viewerUserId: string;
 };
 
 type State = {
@@ -105,6 +108,8 @@ export function GameClient({
   initialPly,
   initialStatus,
   initialTerminationReason,
+  initialObserverCount,
+  viewerUserId,
 }: Props) {
   const router = useRouter();
   const isObserver = myColor === null;
@@ -752,6 +757,13 @@ export function GameClient({
 
         {renderPlayerPill(rightSide)}
       </aside>
+
+      <ObserverCount
+        gameId={gameId}
+        myUserId={viewerUserId}
+        isObserver={isObserver}
+        initialTotal={initialObserverCount}
+      />
 
       {/* Game actions — resign + abort buttons. Self-hides for observers
           and for non-active games, so this is safe to mount unconditionally.
