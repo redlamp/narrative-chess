@@ -12,6 +12,11 @@ const COLORS = {
   black: "#18181b",
 };
 
+// Geometry conventions for this component
+// - Ground (where bases rest) is at Y = 0.
+// - Base spans Y = 0..0.1 (center 0.05, height 0.1).
+// - Body bottoms overlap into the base by 0.05 so there's no visible seam.
+
 export function HeroPiece({ kind, color, ...rest }: Props) {
   const mat = (
     <meshStandardMaterial color={COLORS[color]} roughness={0.55} metalness={0.05} />
@@ -27,11 +32,12 @@ export function HeroPiece({ kind, color, ...rest }: Props) {
 
       {kind === "pawn" && (
         <>
-          <mesh position={[0, 0.4, 0]}>
+          {/* body H=0.5 → bottom = 0.30 - 0.25 = 0.05 (overlaps base) */}
+          <mesh position={[0, 0.3, 0]}>
             <cylinderGeometry args={[0.22, 0.3, 0.5, 24]} />
             {mat}
           </mesh>
-          <mesh position={[0, 0.78, 0]}>
+          <mesh position={[0, 0.68, 0]}>
             <sphereGeometry args={[0.22, 24, 24]} />
             {mat}
           </mesh>
@@ -40,11 +46,12 @@ export function HeroPiece({ kind, color, ...rest }: Props) {
 
       {kind === "rook" && (
         <>
-          <mesh position={[0, 0.5, 0]}>
+          {/* body H=0.7 → bottom = 0.40 - 0.35 = 0.05 */}
+          <mesh position={[0, 0.4, 0]}>
             <cylinderGeometry args={[0.32, 0.36, 0.7, 24]} />
             {mat}
           </mesh>
-          <mesh position={[0, 0.95, 0]}>
+          <mesh position={[0, 0.85, 0]}>
             <cylinderGeometry args={[0.36, 0.36, 0.12, 24]} />
             {mat}
           </mesh>
@@ -55,7 +62,7 @@ export function HeroPiece({ kind, color, ...rest }: Props) {
             return (
               <mesh
                 key={i}
-                position={[Math.cos(rad) * r, 1.07, Math.sin(rad) * r]}
+                position={[Math.cos(rad) * r, 0.97, Math.sin(rad) * r]}
               >
                 <boxGeometry args={[0.12, 0.16, 0.12]} />
                 {mat}
@@ -67,15 +74,16 @@ export function HeroPiece({ kind, color, ...rest }: Props) {
 
       {kind === "bishop" && (
         <>
-          <mesh position={[0, 0.5, 0]}>
+          {/* body H=0.6 → bottom = 0.35 - 0.30 = 0.05 */}
+          <mesh position={[0, 0.35, 0]}>
             <cylinderGeometry args={[0.22, 0.32, 0.6, 24]} />
             {mat}
           </mesh>
-          <mesh position={[0, 0.93, 0]}>
+          <mesh position={[0, 0.78, 0]}>
             <sphereGeometry args={[0.27, 24, 24]} />
             {mat}
           </mesh>
-          <mesh position={[0, 1.25, 0]}>
+          <mesh position={[0, 1.1, 0]}>
             <coneGeometry args={[0.14, 0.28, 24]} />
             {mat}
           </mesh>
@@ -84,11 +92,12 @@ export function HeroPiece({ kind, color, ...rest }: Props) {
 
       {kind === "queen" && (
         <>
-          <mesh position={[0, 0.55, 0]}>
+          {/* body H=0.7 → bottom = 0.40 - 0.35 = 0.05 */}
+          <mesh position={[0, 0.4, 0]}>
             <cylinderGeometry args={[0.25, 0.36, 0.7, 24]} />
             {mat}
           </mesh>
-          <mesh position={[0, 1.0, 0]}>
+          <mesh position={[0, 0.85, 0]}>
             <sphereGeometry args={[0.3, 24, 24]} />
             {mat}
           </mesh>
@@ -97,7 +106,7 @@ export function HeroPiece({ kind, color, ...rest }: Props) {
             const r = 0.2;
             const rad = (deg * Math.PI) / 180;
             return (
-              <mesh key={i} position={[Math.cos(rad) * r, 1.32, Math.sin(rad) * r]}>
+              <mesh key={i} position={[Math.cos(rad) * r, 1.17, Math.sin(rad) * r]}>
                 <sphereGeometry args={[0.07, 12, 12]} />
                 {mat}
               </mesh>
@@ -108,20 +117,21 @@ export function HeroPiece({ kind, color, ...rest }: Props) {
 
       {kind === "king" && (
         <>
-          <mesh position={[0, 0.55, 0]}>
+          {/* body H=0.7 → bottom = 0.40 - 0.35 = 0.05 */}
+          <mesh position={[0, 0.4, 0]}>
             <cylinderGeometry args={[0.25, 0.36, 0.7, 24]} />
             {mat}
           </mesh>
-          <mesh position={[0, 1.0, 0]}>
+          <mesh position={[0, 0.85, 0]}>
             <sphereGeometry args={[0.3, 24, 24]} />
             {mat}
           </mesh>
           {/* Cross on top */}
-          <mesh position={[0, 1.4, 0]}>
+          <mesh position={[0, 1.25, 0]}>
             <boxGeometry args={[0.08, 0.32, 0.08]} />
             {mat}
           </mesh>
-          <mesh position={[0, 1.4, 0]}>
+          <mesh position={[0, 1.25, 0]}>
             <boxGeometry args={[0.22, 0.08, 0.08]} />
             {mat}
           </mesh>

@@ -9,7 +9,7 @@ export default async function HomePage() {
   } = await supabase.auth.getUser();
 
   return (
-    <main className="relative min-h-[calc(100vh-3rem)] overflow-hidden bg-amber-100 dark:bg-zinc-900">
+    <main className="relative min-h-[calc(100vh-3rem)] overflow-hidden bg-amber-50 dark:bg-zinc-900">
       <AuthHeader authed={!!user} />
       <Hero3DLoader />
     </main>
