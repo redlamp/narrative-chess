@@ -42,7 +42,9 @@ export function AuthHeader({ authed }: Props) {
           Sign up
         </Button>
       </header>
-      <AuthDialog open={open} onOpenChange={setOpen} initialMode={mode} />
+      {/* key={mode} remounts AuthDialog so useState(initialMode) resets correctly
+          when switching between Sign in and Sign up. */}
+      <AuthDialog key={mode} open={open} onOpenChange={setOpen} initialMode={mode} />
     </>
   );
 }

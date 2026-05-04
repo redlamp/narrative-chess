@@ -15,15 +15,19 @@ import { SignUpForm } from "./(auth)/sign-up/SignUpForm";
 // Note: server actions call redirect("/") and never return on success, so
 // onSuccess fires only on error paths. Dialog-close-on-success is a Phase 8 follow-up.
 
+type Mode = "signin" | "signup";
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  initialMode?: "signin" | "signup";
+  initialMode?: Mode;
 };
 
 export function AuthDialog({ open, onOpenChange, initialMode = "signin" }: Props) {
   const router = useRouter();
-  const [mode, setMode] = useState<"signin" | "signup">(initialMode);
+  // Use `key={initialMode}` on the content so the internal mode state resets
+  // correctly whenever the caller (AuthHeader) switches between Sign in / Sign up.
+  const [mode, setMode] = useState<Mode>(initialMode);
 
   const onSuccess = () => {
     onOpenChange(false);
