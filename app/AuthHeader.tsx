@@ -13,7 +13,7 @@ export function AuthHeader({ authed }: Props) {
 
   if (authed) {
     return (
-      <header className="absolute top-4 right-4 z-10">
+      <header className="absolute top-16 right-4 z-10">
         <Button asChild>
           <Link href="/games">Continue</Link>
         </Button>
@@ -23,7 +23,7 @@ export function AuthHeader({ authed }: Props) {
 
   return (
     <>
-      <header className="absolute top-4 right-4 z-10 flex items-center gap-2">
+      <header className="absolute top-16 right-4 z-10 flex items-center gap-2">
         <Button
           variant="ghost"
           onClick={() => {
