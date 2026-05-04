@@ -24,6 +24,23 @@ import type { GameStatus, TerminationReason } from "@/lib/schemas/game";
 import { GameActions } from "./GameActions";
 import { TerminalBanner } from "./TerminalBanner";
 import { ObserverCount } from "./ObserverCount";
+import dynamic from "next/dynamic";
+
+// Dev-only smoke button — dynamic import gated on NODE_ENV. Next.js
+// statically replaces process.env.NODE_ENV at build time, so the
+// `import("./SmokeFoolsMate")` call only exists in the dev bundle. In
+// prod, this resolves to `null` and the loader (along with the smoke
+// module's chunk) is dropped from the build output. We verify in
+// `bun run build` that the smoke module's "fool's mate" string and
+// SAN sequence are absent from `.next/`.
+const SmokeFoolsMate =
+  process.env.NODE_ENV !== "production"
+    ? dynamic(() =>
+        import("./SmokeFoolsMate").then((m) => ({
+          default: m.SmokeFoolsMate,
+        })),
+      )
+    : null;
 
 type Props = {
   gameId: string;
@@ -777,6 +794,23 @@ export function GameClient({
           isObserver={isObserver}
         />
       </div>
+
+      {/* Dev-only fool's mate smoke button. Hidden for observers and in
+          prod bundles (gated on NODE_ENV at build time via the dynamic
+          import above — `SmokeFoolsMate` resolves to null in prod, so
+          this whole block tree-shakes). Sits alongside the resign /
+          abort controls so it's discoverable but obviously a debug
+          affordance. */}
+      {SmokeFoolsMate && !isObserver && myColor && (
+        <div className="max-w-xl mx-auto w-full flex items-center justify-center">
+          <SmokeFoolsMate
+            gameId={gameId}
+            myColor={myColor}
+            ply={state.ply}
+            status={state.status}
+          />
+        </div>
+      )}
     </main>
   );
 }
