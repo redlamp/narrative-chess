@@ -20,7 +20,13 @@ const PIECE_Y = -1.7;
 // Vertical offset for the entire hero group. Shifts the composition above
 // mid-screen — the camera looks at world origin, so pushing the scene up
 // in Y moves it toward the top of the viewport.
-const SCENE_Y = 1.0;
+const SCENE_Y = 1.5;
+
+// Camera base Y. Lifted so the camera looks down on the scene at a slight
+// angle (lookAt stays at world origin, so a positive Y tilts the camera
+// down by ~atan(CAMERA_Y / 6) ≈ 14° at distance 6). Pointer/tilt parallax
+// damps relative to this base.
+const CAMERA_Y = 1.5;
 
 // How aggressively device tilt drives the parallax. gamma (left-right) and
 // beta (front-back) are in degrees; dividing by 25 gives ~1.0 at 25° tilt
@@ -66,7 +72,7 @@ export function HeroScene() {
     );
     state.camera.position.y = MathUtils.damp(
       state.camera.position.y,
-      targetY * 0.25,
+      CAMERA_Y + targetY * 0.25,
       4,
       1 / 60,
     );

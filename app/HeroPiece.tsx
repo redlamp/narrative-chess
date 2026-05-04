@@ -46,23 +46,26 @@ export function HeroPiece({ kind, color, ...rest }: Props) {
 
       {kind === "rook" && (
         <>
-          {/* body H=0.7 → bottom = 0.40 - 0.35 = 0.05 */}
+          {/* body H=0.7 → bottom = 0.40 - 0.35 = 0.05; top = 0.75 */}
           <mesh position={[0, 0.4, 0]}>
             <cylinderGeometry args={[0.32, 0.36, 0.7, 24]} />
             {mat}
           </mesh>
-          <mesh position={[0, 0.85, 0]}>
+          {/* top cap H=0.12 — center at 0.79 → cap spans 0.73..0.85 so its
+              bottom overlaps the body top by 0.02, sealing the seam. */}
+          <mesh position={[0, 0.79, 0]}>
             <cylinderGeometry args={[0.36, 0.36, 0.12, 24]} />
             {mat}
           </mesh>
-          {/* Battlements: 4 small boxes */}
+          {/* Battlements: 4 small boxes resting on top of the cap (top of
+              cap at 0.85; box H=0.16 → center at 0.93). */}
           {[0, 90, 180, 270].map((deg, i) => {
             const r = 0.27;
             const rad = (deg * Math.PI) / 180;
             return (
               <mesh
                 key={i}
-                position={[Math.cos(rad) * r, 0.97, Math.sin(rad) * r]}
+                position={[Math.cos(rad) * r, 0.93, Math.sin(rad) * r]}
               >
                 <boxGeometry args={[0.12, 0.16, 0.12]} />
                 {mat}
