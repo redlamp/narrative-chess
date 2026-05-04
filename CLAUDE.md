@@ -105,6 +105,10 @@ Copy needed by hand. Never auto-import.
 ### Branch + commit conventions
 
 - `feat/<short-name>` off `dev`. PR back to `dev`.
+- **Merge strategy:** feat → `dev` uses `gh pr merge --merge` (i.e. `--no-ff`)
+  so the branch fan-out + merge-back arc stays visible in `dev`'s git graph.
+  `dev` → `main` uses `gh pr merge --squash` because main's branch protection
+  requires linear history. Never `--rebase` (rewrites SHAs of others' commits).
 - `dev` → `main` via PR with linear history (no merge commits) + CI green.
 - **Never commit directly to `main`.** All work lands via `dev`. On
   `main` with uncommitted changes, switch to `dev` (or feature branch off `dev`)

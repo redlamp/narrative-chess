@@ -2,7 +2,6 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,28 +19,36 @@ function SubmitButton() {
   );
 }
 
+/**
+ * Server-action signature accepted by LoginForm. Page shell uses the default
+ * redirecting `login` action; AuthDialog passes `loginNoRedirect` and an
+ * `onSuccess` callback that closes the dialog + navigates client-side.
+ */
+type LoginAction = (
+  prev: LoginState,
+  formData: FormData,
+) => Promise<LoginState>;
+
 export interface LoginFormProps {
   /**
-   * Called after a successful login when the form is mounted outside the
-   * normal page shell (e.g. inside a dialog). When omitted the server action
-   * performs its own redirect, so no client-side navigation is needed.
+   * Server action to invoke. Defaults to the page-shell `login` action which
+   * redirects to "/" on success and never returns. AuthDialog passes
+   * `loginNoRedirect`, which returns and lets `onSuccess` fire.
+   */
+  action?: LoginAction;
+  /**
+   * Called after a successful login when `action` returns instead of
+   * redirecting. AuthDialog uses this to close the dialog and push /games.
    */
   onSuccess?: () => void;
 }
 
-export function LoginForm({ onSuccess }: LoginFormProps) {
-  const router = useRouter();
+export function LoginForm({ action = login, onSuccess }: LoginFormProps) {
   const [state, formAction] = useActionState(
     async (prev: LoginState, formData: FormData) => {
-      const result = await login(prev, formData);
-      // If the action returned (i.e. no server-side redirect happened) and
-      // there is no error, treat it as success and invoke the callback.
-      if (!result.error) {
-        if (onSuccess) {
-          onSuccess();
-        } else {
-          router.push("/games");
-        }
+      const result = await action(prev, formData);
+      if (!result.error && onSuccess) {
+        onSuccess();
       }
       return result;
     },
