@@ -8,6 +8,10 @@ System design, stack choices, data flow, integration points.
 
 - [[realtime-rls-gate-procedure]] — manual two-browser test that proves Realtime + RLS deliver row data to participants and silence to non-participants
 
+### Deployments
+
+- [[vercel-deployments-index]] — snapshot of every Vercel build with commit, PR, status, and preview URL. Refresh via `bun scripts/build-deploys-page.ts`.
+
 ### Lessons learned
 
 - [[lesson-realtime-auth-before-subscribe]] — Supabase `postgres_changes` silently denies events when `setAuth` races `channel.subscribe`. Always await session + setAuth before subscribing. (M1 ship — 2026-05-03)
