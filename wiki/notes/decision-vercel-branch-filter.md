@@ -3,14 +3,14 @@ tags:
   - domain/vercel
   - domain/ci-cd
   - domain/auth
-  - status/adopted
+  - status/superseded
   - scope/foundation
 ---
 
 # Decision — Vercel Branch Filter (Auto-Deploy main + dev Only)
 
 **Date:** 2026-05-02
-**Status:** Adopted
+**Status:** Superseded 2026-05-03 by [[decision-vercel-default-previews]]
 
 ## Context
 

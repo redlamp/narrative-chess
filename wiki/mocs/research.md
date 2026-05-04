@@ -26,7 +26,7 @@ Filename pattern: `<kebab-slug>.md` (folder makes `research-` prefix redundant).
 
 ## Games & interactive prior art
 
-(Empty)
+- [[chesscom-mobile-daily-game-ui]] — Chess.com Android app, daily-game board view on Pixel 6 Pro (layout, inline rank/file labels, material delta, bottom action bar)
 
 ## Tools & libraries
 

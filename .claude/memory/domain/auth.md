@@ -10,7 +10,8 @@
 - **Redirect URLs allow list:**
   - `http://localhost:3000/**`
   - `https://narrative-chess.vercel.app/**`
-  - `https://narrative-chess-git-dev-taylor-8571s-projects.vercel.app/**`
+  - `https://narrative-chess-git-dev-taylor-8571s-projects.vercel.app/**` (kept; redundant with wildcard but harmless)
+  - `https://narrative-chess-git-*-taylor-8571s-projects.vercel.app/**` (added 2026-05-04 to support feat-branch previews; pairs with Vercel env scope widened to "Preview (all)" for `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Service role key still scoped to Preview-dev only — feat branches don't need it.)
 
 ## Why email confirmation is OFF
 

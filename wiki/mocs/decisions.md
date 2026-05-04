@@ -15,5 +15,5 @@ Significant project decisions and their rationale. Each entry should link to a `
 - [[decision-fresh-supabase-project]] — new v2 Supabase project; v1 narrative content exported to JSON first
 - [[decision-rpc-move-append]] — move append via Postgres RPC with `expected_ply` optimistic concurrency
 - [[decision-supabase-local-dev]] — hosted-first; Docker deferred until trigger condition fires
-- [[decision-vercel-branch-filter]] — auto-deploy only `main` + `dev`
+- [[decision-vercel-default-previews]] — auto-deploy every branch (Vercel default) (2026-05-03, supersedes [[decision-vercel-branch-filter]])
 - [[decision-auth-email-password]] — email + password for M1; OAuth deferred to M2+
