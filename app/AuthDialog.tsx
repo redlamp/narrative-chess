@@ -11,9 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { LoginForm } from "./(auth)/login/LoginForm";
 import { SignUpForm } from "./(auth)/sign-up/SignUpForm";
-
-// Note: server actions call redirect("/") and never return on success, so
-// onSuccess fires only on error paths. Dialog-close-on-success is a Phase 8 follow-up.
+import { loginNoRedirect } from "./(auth)/login/actions";
+import { signUpNoRedirect } from "./(auth)/sign-up/actions";
 
 type Mode = "signin" | "signup";
 
@@ -29,6 +28,8 @@ export function AuthDialog({ open, onOpenChange, initialMode = "signin" }: Props
   // correctly whenever the caller (AuthHeader) switches between Sign in / Sign up.
   const [mode, setMode] = useState<Mode>(initialMode);
 
+  // The forms invoke the no-redirect action variants, so this fires on success
+  // (the redirecting variants throw NEXT_REDIRECT and never return).
   const onSuccess = () => {
     onOpenChange(false);
     router.push("/games");
@@ -47,9 +48,9 @@ export function AuthDialog({ open, onOpenChange, initialMode = "signin" }: Props
           </DialogDescription>
         </DialogHeader>
         {mode === "signin" ? (
-          <LoginForm onSuccess={onSuccess} />
+          <LoginForm action={loginNoRedirect} onSuccess={onSuccess} />
         ) : (
-          <SignUpForm onSuccess={onSuccess} />
+          <SignUpForm action={signUpNoRedirect} onSuccess={onSuccess} />
         )}
         <p className="text-xs text-center text-muted-foreground">
           {mode === "signin" ? "Don't have an account? " : "Already have an account? "}
