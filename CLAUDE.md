@@ -112,6 +112,24 @@ Copy what's needed by hand. Never auto-import.
   before committing.
 - Conventional Commits: `feat:`, `fix:`, `chore:`, `docs:`, `test:`, `refactor:`, `ci:`.
 
+#### When direct push to `dev` is OK (vs feat-branch + PR)
+
+GitHub branch protection on `dev` requires PRs but allows admin bypass
+(`enforce_admins=false`). The convention is path-based, enforced by us, not the rule:
+
+| Path / change type | Route |
+|---|---|
+| `wiki/**` | direct push to `dev` OK |
+| `.claude/memory/**` | direct push to `dev` OK |
+| `docs/**` (specs, plans) | direct push to `dev` OK |
+| `CLAUDE.md`, `AGENTS.md`, `README.md`, `wiki/CLAUDE.md` | direct push to `dev` OK |
+| Anything in `app/`, `components/`, `lib/`, `supabase/migrations/`, `package.json`, config | feat-branch + PR |
+| Mixed change touching both | feat-branch + PR (treat as code) |
+
+Why: code changes need CI lint+typecheck+e2e gating + PR review surface; docs and
+memory don't ship runtime behavior, and routing them through PRs adds friction
+without catching anything CI would flag.
+
 ### Commit policy (overrides default "only commit when asked")
 
 - **Commit proactively** when a coherent unit of work is finished. Don't fragment a
