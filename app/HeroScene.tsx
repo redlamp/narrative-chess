@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Center, Text3D } from "@react-three/drei";
 import { MathUtils } from "three";
@@ -16,21 +17,56 @@ const REFERENCE_WIDTH = 9.5;
 // shifts the whole arc below the title.
 const PIECE_Y = -1.7;
 
+// Vertical offset for the entire hero group. Shifts the composition above
+// mid-screen — the camera looks at world origin, so pushing the scene up
+// in Y moves it toward the top of the viewport.
+const SCENE_Y = 1.0;
+
+// How aggressively device tilt drives the parallax. gamma (left-right) and
+// beta (front-back) are in degrees; dividing by 25 gives ~1.0 at 25° tilt
+// which is comfortable thumb travel on a phone in portrait.
+const TILT_DIVISOR = 25;
+
+type Tilt = { x: number; y: number; active: boolean };
+
 export function HeroScene() {
   const { viewport } = useThree();
   const scale = Math.min(1, viewport.width / REFERENCE_WIDTH);
 
+  // Device-orientation parallax for mobile. Falls back to mouse pointer on
+  // desktops + iOS-without-permission. We don't prompt for permission; iOS
+  // users who want tilt will get a static hero, which is fine.
+  const tilt = useRef<Tilt>({ x: 0, y: 0, active: false });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handler = (e: DeviceOrientationEvent) => {
+      if (e.gamma == null || e.beta == null) return;
+      // Beta has a 45°-ish neutral when phone is held upright; subtract that
+      // so a "looking at it normally" pose maps to ~0.
+      const x = MathUtils.clamp(e.gamma / TILT_DIVISOR, -1, 1);
+      const y = MathUtils.clamp((e.beta - 45) / TILT_DIVISOR, -1, 1);
+      tilt.current.x = x;
+      tilt.current.y = y;
+      tilt.current.active = true;
+    };
+    window.addEventListener("deviceorientation", handler);
+    return () => window.removeEventListener("deviceorientation", handler);
+  }, []);
+
   useFrame((state) => {
-    const target = state.pointer;
+    const t = tilt.current;
+    const targetX = t.active ? t.x : state.pointer.x;
+    const targetY = t.active ? t.y : state.pointer.y;
     state.camera.position.x = MathUtils.damp(
       state.camera.position.x,
-      target.x * 0.4,
+      targetX * 0.4,
       4,
       1 / 60,
     );
     state.camera.position.y = MathUtils.damp(
       state.camera.position.y,
-      target.y * 0.25,
+      targetY * 0.25,
       4,
       1 / 60,
     );
@@ -42,7 +78,7 @@ export function HeroScene() {
       <ambientLight intensity={0.4} />
       <directionalLight position={[5, 10, 5]} intensity={1.2} />
 
-      <group scale={[scale, scale, scale]}>
+      <group scale={[scale, scale, scale]} position={[0, SCENE_Y, 0]}>
         {/* Title — two lines, each centered horizontally on its own. Wrapping
             each <Text3D> in its own <Center> avoids the "shorter line aligns
             left of longer line" effect of a single shared <Center>. */}
