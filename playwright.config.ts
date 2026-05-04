@@ -22,7 +22,11 @@ export default defineConfig({
   },
   webServer: usingLocalServer
     ? {
-        command: "bun run dev",
+        // Use bash -c so we can silently skip startup when port 3000 is already
+        // claimed by an existing dev server (prevents "exit code 1" on the port
+        // conflict that breaks reuseExistingServer detection).
+        command:
+          "bash -c 'curl -sf http://localhost:3000 > /dev/null 2>&1 && echo \"reusing existing server\" || bun run dev'",
         url: BASE_URL,
         reuseExistingServer: !process.env.CI,
         timeout: 60_000,
