@@ -17,8 +17,8 @@ Rewrite of [[narrative-chess-v1]]. Chess-first rebuild with narrative layer, des
 - **M1.5+ shipped: 2026-05-04.** Hero3D WebGL context recovery + AuthDialog onSuccess + theme toggle UI + dev-only fool's mate smoke + husky pre-commit shebang chore. Squash-merged via PR #25 (`67243d5` on `main`).
 - Stable production alias: https://narrative-chess.vercel.app
 - Two real users can sign up, create + join a game via shared URL, play with drag-or-click, see opponent's moves over realtime, end on checkmate / stalemate / resignation / abort. Observers (third+ authenticated viewer with the URL) can watch read-only. Top-level header nav with theme toggle, games directory at `/games`, terminal banner "Back to games" on game-end, marketing landing page with 3D hero + auth dialog.
-- **`dev` content-equal to `main`** post-reconciliation merge `9f6fa08`. No new feat-branches in flight.
-- **Next gate:** decide M2 (narrative layer) vs M1.5++ (clocks + timeout sweep + reconnect) direction.
+- **M1.5++ in flight (2026-05-05).** PR #27 open against `dev` — clocks (live + correspondence), per-side timeout detection (lazy + auto-claim + daily cron), strict-reconnect policy. 5 migrations already applied to hosted Supabase. Spec + plan at `docs/superpowers/specs/2026-05-05-clocks-timeout-reconnect-design.md` and `docs/superpowers/plans/2026-05-05-clocks-timeout-reconnect.md`.
+- **Polish A/B/C** queued post-M1.5++: draw-by-agreement, move-list stepper (review-only), mobile/touch.
 
 ## Stack
 
@@ -32,7 +32,8 @@ See [[decision-stack-nextjs-16]].
 ## Goals
 
 - **M1**: untimed multiplayer chess. Two real users sign up, create + join a game, play with drag-and-drop, see opponent's moves live, end correctly on checkmate / stalemate / resign / abort / draw.
-- **M1.5**: clocks (live + move-deadline), timeout sweep via Vercel Cron, reconnect policy.
+- **M1.5**: games directory + observer count + landing page + 3D hero + auth dialog.
+- **M1.5++**: clocks (live + correspondence) + timeout sweep via Vercel Cron + strict reconnect policy.
 - **M2+**: narrative layers (cities, characters, story beats) on top of a verified-stable chess core.
 
 What success looks like for M1: two browsers, end-to-end smoke test green, no v1-style "Realtime fires but client sees nothing" trap.
@@ -86,17 +87,19 @@ What success looks like for M1: two browsers, end-to-end smoke test green, no v1
 
 ## Staged on `dev` (post-M1.5+, not yet on `main`)
 
-(none — `dev` content-equal to `main` post-reconciliation merge `9f6fa08`)
+- **PR #27** — M1.5++ feat-branch `feat/clocks-schema-rpcs` open against dev. 7 commits: spec, plan, lib + schemas, migrations, UI, cron, e2e. CI pending at start of session.
 
 ## Open threads — post-M1.5+
 
-- **Decide next milestone**: M2 (narrative layer prep — cities, characters, story beats) or M1.5++ (clocks + timeout sweep via Vercel Cron + reconnect policy). Both need brainstorm + spec before code.
+- **M1.5++ ship gate**: PR #27 → CI green → merge to dev with `--no-ff`. Set `CRON_SECRET` in Vercel envs before dev → main promotion. Manual smoke matrix in PR description.
+- **Polish A — draw-by-agreement** (offer / accept / decline flow): queued post-M1.5++ ship.
+- **Polish B — move-list stepper** (review-only, click-to-step + forward/back, no undo): queued post-M1.5++ ship.
+- **Polish C — mobile / touch optimization**: queued last (after polish A + B settle UI).
 - **Step N — privatize v1**: `gh repo edit redlamp/narrative-chess-v1 --visibility private --accept-visibility-change-consequences`. Pending until production smoke is satisfying. Always wait for explicit user go.
 - **Both-sides fool's mate**: user asked, declined service-role server action route (security risk). Decision: stay with current per-side design; smoke is two-browser workflow.
-- **Mobile / touch optimization**: deferred from M1 (desktop-first). Revisit when a real mobile user shows up.
-- **Move list / scrollable history with click-to-rewind**: deferred from phase 6. Nice-to-have polish.
-- **Draw-by-agreement** (offer / accept / decline flow): deferred from phase 6. Real chess UX requires it; pair with clocks in M1.5+.
-- **Email confirmation**: currently OFF for ease of dev. Re-enable before broader release per `.claude/memory/domain/auth.md`.
+- **Email confirmation**: currently OFF for ease of dev. Re-enable before broader release per `.claude/memory/domain/auth.md`. Originally proposed as Polish D this session, dropped — checklist in domain memory is bigger than "tiny" implies (SMTP, templates, callback route, reset flow, e2e). Defer until public-release ramp.
+- **M2 — narrative layer prep** (cities, characters, story beats): post-polish. Will need brainstorm + spec.
+- ~~**M1.5++ direction**~~ — **decided 2026-05-05** (clocks + timeout + reconnect; PR #27 open).
 - ~~**AuthDialog success path**~~ — **closed by PR #23** (shipped to main in M1.5+).
 - ~~**Theme toggle UI**~~ — **closed by PR #21** (next-themes ThemeProvider + Sun/Moon button in SiteHeader; shipped to main in M1.5+).
 - ~~**Dev-only "fool's mate" debug button**~~ — **closed by PR #22** (per-side, dev/preview only via `VERCEL_ENV` gate; shipped to main in M1.5+).
