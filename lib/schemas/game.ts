@@ -12,9 +12,38 @@ export type { GameStatus, TerminationReason };
 export const ColorChoiceSchema = z.enum(["white", "black", "random"]);
 export type ColorChoice = z.infer<typeof ColorChoiceSchema>;
 
-export const CreateGameInputSchema = z.object({
-  myColor: ColorChoiceSchema,
-});
+// M1.5++ — time control. NULL = untimed; live = Fischer (initial+increment);
+// correspondence = per-move deadline.
+export const TimeControlTypeSchema = z.enum(["live", "correspondence"]).nullable();
+export type TimeControlType = z.infer<typeof TimeControlTypeSchema>;
+
+export const CreateGameInputSchema = z
+  .object({
+    myColor: ColorChoiceSchema,
+    timeControlType: TimeControlTypeSchema.optional(),
+    timeInitialSeconds: z.number().int().positive().optional(),
+    timeIncrementSeconds: z.number().int().nonnegative().optional(),
+    timePerMoveSeconds: z.number().int().positive().optional(),
+  })
+  .refine(
+    (v) => {
+      if (!v.timeControlType) return true;
+      if (v.timeControlType === "live") {
+        return (
+          v.timeInitialSeconds !== undefined &&
+          v.timePerMoveSeconds === undefined
+        );
+      }
+      if (v.timeControlType === "correspondence") {
+        return (
+          v.timePerMoveSeconds !== undefined &&
+          v.timeInitialSeconds === undefined
+        );
+      }
+      return true;
+    },
+    { message: "time control shape mismatch" },
+  );
 export type CreateGameInput = z.infer<typeof CreateGameInputSchema>;
 
 export const JoinGameInputSchema = z.object({
