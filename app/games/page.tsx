@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
+import { formatTimeControlLabel } from "@/lib/chess/time-controls";
 
 type GameRow = {
   id: string;
@@ -12,6 +13,10 @@ type GameRow = {
   created_at: string;
   white_name: string | null;
   black_name: string | null;
+  time_control_type: string | null;
+  time_initial_seconds: number | null;
+  time_increment_seconds: number | null;
+  time_per_move_seconds: number | null;
 };
 
 export default async function GamesPage() {
@@ -24,6 +29,7 @@ export default async function GamesPage() {
   const uid = user.id;
   const baseSelect = `
     id, status, ply, white_id, black_id, created_at,
+    time_control_type, time_initial_seconds, time_increment_seconds, time_per_move_seconds,
     white_name:white_id ( display_name ),
     black_name:black_id ( display_name )
   `;
@@ -168,6 +174,7 @@ function GameRowRender({ row, viewer }: { row: GameRow; viewer: string }) {
       ? row.white_name ?? "(open)"
       : `${row.white_name ?? "(open)"} vs ${row.black_name ?? "(open)"}`;
   const youColor = youWhite ? "white" : youBlack ? "black" : null;
+  const tcLabel = formatTimeControlLabel(row);
 
   return (
     <div className="flex items-center justify-between gap-4">
@@ -178,9 +185,14 @@ function GameRowRender({ row, viewer }: { row: GameRow; viewer: string }) {
           {youColor ? ` · you play ${youColor}` : ""}
         </p>
       </div>
-      <span className="text-xs text-muted-foreground shrink-0">
-        {new Date(row.created_at).toLocaleString()}
-      </span>
+      <div className="flex items-center gap-3 shrink-0">
+        <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
+          {tcLabel}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          {new Date(row.created_at).toLocaleString()}
+        </span>
+      </div>
     </div>
   );
 }

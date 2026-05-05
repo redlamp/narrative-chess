@@ -5,7 +5,9 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { createGame } from "./actions";
+import { TimeControlPicker } from "./TimeControlPicker";
 import type { ColorChoice } from "@/lib/schemas/game";
+import type { PresetId } from "@/lib/chess/time-controls";
 
 const CHOICES: { value: ColorChoice; label: string }[] = [
   { value: "white", label: "Play as white" },
@@ -15,12 +17,13 @@ const CHOICES: { value: ColorChoice; label: string }[] = [
 
 export function NewGameForm() {
   const [choice, setChoice] = useState<ColorChoice>("random");
+  const [preset, setPreset] = useState<PresetId>("10min");
   const [pending, startTransition] = useTransition();
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     startTransition(async () => {
-      const result = await createGame({ myColor: choice });
+      const result = await createGame({ myColor: choice, presetId: preset });
       // createGame redirects on success, so we only land here on error.
       if (result && !result.ok) {
         toast.error(result.message);
@@ -47,6 +50,8 @@ export function NewGameForm() {
           </div>
         ))}
       </fieldset>
+
+      <TimeControlPicker value={preset} onChange={setPreset} disabled={pending} />
 
       <Button type="submit" disabled={pending} size="lg">
         {pending ? "Creating…" : "Create game"}

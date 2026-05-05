@@ -257,6 +257,49 @@ export async function abortGame(input: unknown): Promise<AbortOutcome> {
   return { ok: true };
 }
 
+export type ClaimTimeoutErrorCode =
+  | "validation"
+  | "unauthenticated"
+  | "game_not_found"
+  | "not_yet_expired"
+  | "untimed_game"
+  | "not_active"
+  | "unknown";
+
+export type ClaimTimeoutOutcome =
+  | { ok: true }
+  | { ok: false; code: ClaimTimeoutErrorCode; message: string };
+
+function mapClaimTimeoutPgError(msg: string): ClaimTimeoutErrorCode {
+  if (msg.includes("not_yet_expired")) return "not_yet_expired";
+  if (msg.includes("untimed_game")) return "untimed_game";
+  if (msg.includes("not_active")) return "not_active";
+  if (msg.includes("game_not_found")) return "game_not_found";
+  if (msg.includes("unauthenticated")) return "unauthenticated";
+  return "unknown";
+}
+
+export async function claimTimeout(input: { gameId: string }): Promise<ClaimTimeoutOutcome> {
+  if (typeof input?.gameId !== "string" || input.gameId.length === 0) {
+    return { ok: false, code: "validation", message: "gameId required" };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, code: "unauthenticated", message: "not signed in" };
+  }
+
+  const { error } = await supabase.rpc("claim_timeout", { p_game_id: input.gameId });
+  if (error) {
+    return { ok: false, code: mapClaimTimeoutPgError(error.message), message: error.message };
+  }
+
+  return { ok: true };
+}
+
 export type RegisterObserverErrorCode =
   | "validation"
   | "unauthenticated"
