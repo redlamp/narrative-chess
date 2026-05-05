@@ -17,7 +17,7 @@ Rewrite of [[narrative-chess-v1]]. Chess-first rebuild with narrative layer, des
 - **M1.5+ shipped: 2026-05-04.** Hero3D WebGL context recovery + AuthDialog onSuccess + theme toggle UI + dev-only fool's mate smoke + husky pre-commit shebang chore. Squash-merged via PR #25 (`67243d5` on `main`).
 - Stable production alias: https://narrative-chess.vercel.app
 - Two real users can sign up, create + join a game via shared URL, play with drag-or-click, see opponent's moves over realtime, end on checkmate / stalemate / resignation / abort. Observers (third+ authenticated viewer with the URL) can watch read-only. Top-level header nav with theme toggle, games directory at `/games`, terminal banner "Back to games" on game-end, marketing landing page with 3D hero + auth dialog.
-- **M1.5++ in flight (2026-05-05).** PR #27 open against `dev` — clocks (live + correspondence), per-side timeout detection (lazy + auto-claim + daily cron), strict-reconnect policy. 5 migrations already applied to hosted Supabase. Spec + plan at `docs/superpowers/specs/2026-05-05-clocks-timeout-reconnect-design.md` and `docs/superpowers/plans/2026-05-05-clocks-timeout-reconnect.md`.
+- **M1.5++ merged into `dev` (2026-05-05).** PR #27 merge commit `684256c` (`--no-ff` per policy). Clocks (live + correspondence), per-side timeout detection (lazy + auto-claim + daily cron), strict-reconnect policy. 5 migrations live on hosted Supabase. CRON_SECRET set in Vercel envs. Awaiting `dev` → `main` squash for production ship. Spec + plan at `docs/superpowers/specs/2026-05-05-clocks-timeout-reconnect-design.md` and `docs/superpowers/plans/2026-05-05-clocks-timeout-reconnect.md`.
 - **Polish A/B/C** queued post-M1.5++: draw-by-agreement, move-list stepper (review-only), mobile/touch.
 
 ## Stack
@@ -87,11 +87,12 @@ What success looks like for M1: two browsers, end-to-end smoke test green, no v1
 
 ## Staged on `dev` (post-M1.5+, not yet on `main`)
 
-- **PR #27** — M1.5++ feat-branch `feat/clocks-schema-rpcs` open against dev. 7 commits: spec, plan, lib + schemas, migrations, UI, cron, e2e. CI pending at start of session.
+- **M1.5++ delta** — merged from `feat/clocks-schema-rpcs` via PR #27 at merge commit `684256c` (2026-05-05). 7 feat-branch commits + organize-pass docs commit. Branch deleted local + remote post-merge. CRON_SECRET set in Vercel envs (Production + Preview/dev).
 
 ## Open threads — post-M1.5+
 
-- **M1.5++ ship gate**: PR #27 → CI green → merge to dev with `--no-ff`. Set `CRON_SECRET` in Vercel envs before dev → main promotion. Manual smoke matrix in PR description.
+- **M1.5++ ship gate**: smoke `dev` preview → squash `dev` → `main`. Reconciliation per [[lesson-dev-main-merge-after-squash]] expected.
+- **CI workflow bug**: `compgen -G "e2e/**/*.spec.ts"` misses top-level specs without `shopt -s globstar`. All 14 e2e specs currently no-op in CI. One-line chore PR.
 - **Polish A — draw-by-agreement** (offer / accept / decline flow): queued post-M1.5++ ship.
 - **Polish B — move-list stepper** (review-only, click-to-step + forward/back, no undo): queued post-M1.5++ ship.
 - **Polish C — mobile / touch optimization**: queued last (after polish A + B settle UI).

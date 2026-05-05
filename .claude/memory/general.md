@@ -32,6 +32,6 @@
 - M1.5 squash on `main`: `681f809` (2026-05-04) — Phase 7 + banner fix + header nav + Phase 8 landing/3D hero.
 - M1.5+ squash on `main`: `67243d5` (2026-05-04) — Hero3D context recovery + AuthDialog onSuccess + Theme toggle + dev-only fool's mate smoke + husky pre-commit shebang chore. Bundled PR #20/#23/#21/#22/#24 from `dev` via PR #25.
 - M1.5+ prod deploy: https://narrative-chess-4a3g8vzog-taylor-8571s-projects.vercel.app
-- M1.5++ in flight: PR #27 against `dev` (2026-05-05) — clocks (live + correspondence), per-side timeout detection (lazy + auto-claim + daily cron sweep), strict-reconnect policy. 5 migrations live on hosted Supabase. Spec at `docs/superpowers/specs/2026-05-05-clocks-timeout-reconnect-design.md`.
+- M1.5++ on `dev`: merge commit `684256c` via PR #27 (2026-05-05) — clocks (live + correspondence), per-side timeout detection (lazy + auto-claim + daily cron sweep), strict-reconnect policy. 5 migrations live on hosted Supabase. CRON_SECRET set in Vercel (Production + Preview/dev). Awaiting `dev` → `main` squash. Spec at `docs/superpowers/specs/2026-05-05-clocks-timeout-reconnect-design.md`.
 - Post-ship lessons live as `wiki/notes/lesson-*.md`.
 - Step N — `gh repo edit redlamp/narrative-chess-v1 --visibility private --accept-visibility-change-consequences` — NOT yet run; do after production smoke is satisfying. Always wait for explicit user go.
