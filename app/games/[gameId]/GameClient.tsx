@@ -24,6 +24,9 @@ import type { GameStatus, TerminationReason } from "@/lib/schemas/game";
 import { GameActions } from "./GameActions";
 import { TerminalBanner } from "./TerminalBanner";
 import { ObserverCount } from "./ObserverCount";
+import { Clock } from "./Clock";
+import { useAutoClaim } from "./useAutoClaim";
+import { computeRemaining, type ClockMode } from "@/lib/chess/clock";
 import dynamic from "next/dynamic";
 
 // Dev-only smoke button — dynamic import gated on VERCEL_ENV. We can't
@@ -61,6 +64,11 @@ type Props = {
   initialTerminationReason: TerminationReason | null;
   initialObserverCount: number;
   viewerUserId: string;
+  /** M1.5++ time-control fields. NULL type = untimed game (no clocks render). */
+  timeControlType: "live" | "correspondence" | null;
+  initialWhiteRemainingMs: number | null;
+  initialBlackRemainingMs: number | null;
+  initialTurnStartedAt: string | null;
 };
 
 type State = {
@@ -69,6 +77,9 @@ type State = {
   status: GameStatus;
   terminationReason: TerminationReason | null;
   pending: boolean;
+  whiteRemainingMs: number | null;
+  blackRemainingMs: number | null;
+  turnStartedAt: string | null;
 };
 
 const TERMINAL: GameStatus[] = ["white_won", "black_won", "draw", "aborted"];
@@ -128,6 +139,10 @@ export function GameClient({
   initialTerminationReason,
   initialObserverCount,
   viewerUserId,
+  timeControlType,
+  initialWhiteRemainingMs,
+  initialBlackRemainingMs,
+  initialTurnStartedAt,
 }: Props) {
   const router = useRouter();
   const isObserver = myColor === null;
@@ -137,7 +152,12 @@ export function GameClient({
     status: initialStatus,
     terminationReason: initialTerminationReason,
     pending: false,
+    whiteRemainingMs: initialWhiteRemainingMs,
+    blackRemainingMs: initialBlackRemainingMs,
+    turnStartedAt: initialTurnStartedAt,
   });
+
+  const mode: ClockMode = timeControlType ?? "untimed";
 
   // Click-to-move: square the user has tapped/clicked to start a move
   // (null when nothing is selected). Also clears whenever the position
@@ -183,7 +203,15 @@ export function GameClient({
   );
 
   const applyStatusLocal = useCallback(
-    (status: GameStatus, terminationReason?: TerminationReason | null) => {
+    (
+      status: GameStatus,
+      terminationReason?: TerminationReason | null,
+      clock?: {
+        whiteRemainingMs?: number | null;
+        blackRemainingMs?: number | null;
+        turnStartedAt?: string | null;
+      },
+    ) => {
       setState((prev) => ({
         ...prev,
         status,
@@ -191,6 +219,18 @@ export function GameClient({
           terminationReason !== undefined
             ? terminationReason
             : prev.terminationReason,
+        whiteRemainingMs:
+          clock?.whiteRemainingMs !== undefined
+            ? clock.whiteRemainingMs
+            : prev.whiteRemainingMs,
+        blackRemainingMs:
+          clock?.blackRemainingMs !== undefined
+            ? clock.blackRemainingMs
+            : prev.blackRemainingMs,
+        turnStartedAt:
+          clock?.turnStartedAt !== undefined
+            ? clock.turnStartedAt
+            : prev.turnStartedAt,
       }));
     },
     [],
@@ -238,7 +278,11 @@ export function GameClient({
     let sub: { unsubscribe: () => void } | null = null;
     let cancelled = false;
     void subscribeToGameStatus(gameId, (u) =>
-      applyStatusLocal(u.status, u.termination_reason ?? null),
+      applyStatusLocal(u.status, u.termination_reason ?? null, {
+        whiteRemainingMs: u.white_remaining_ms ?? null,
+        blackRemainingMs: u.black_remaining_ms ?? null,
+        turnStartedAt: u.turn_started_at ?? null,
+      }),
     ).then((s) => {
       if (cancelled) s.unsubscribe();
       else sub = s;
@@ -280,8 +324,77 @@ export function GameClient({
   // Memoize the chess.js parse — fen.turn() is consulted twice per render
   // (myTurn + isWhitesTurn), and parsing the FEN is the expensive bit.
   const turn = useMemo(() => fenTurn(state.fen), [state.fen]);
+
+  // Local clock-tick state — used by the own-clock guard below. Ticks at
+  // 500ms when the game is timed + active; otherwise the interval doesn't
+  // start. Stays out of render-time Date.now() to satisfy
+  // react-hooks/purity.
+  const [tickNow, setTickNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    if (mode === "untimed") return;
+    if (state.status !== "in_progress") return;
+    const id = window.setInterval(() => setTickNow(Date.now()), 500);
+    return () => window.clearInterval(id);
+  }, [mode, state.status]);
+
+  // Own-clock guard: when timed and our interpolated remaining hits 0, lock
+  // the move UI client-side. Server enforces this anyway, but a stale frame
+  // shouldn't even let us try.
+  const myClockExpired = useMemo(() => {
+    if (mode === "untimed") return false;
+    if (myColor === null) return false;
+    const myRemainingMs =
+      myColor === "w" ? state.whiteRemainingMs : state.blackRemainingMs;
+    if (myRemainingMs === null) return false;
+    const myIsActive = state.status === "in_progress" && turn === myColor;
+    const turnStartedAtMs = state.turnStartedAt
+      ? new Date(state.turnStartedAt).getTime()
+      : null;
+    const displayed = computeRemaining({
+      remainingMs: myRemainingMs,
+      turnStartedAtMs,
+      nowMs: tickNow,
+      isActive: myIsActive,
+    });
+    return myIsActive && displayed <= 0;
+  }, [
+    mode,
+    myColor,
+    state.whiteRemainingMs,
+    state.blackRemainingMs,
+    state.status,
+    state.turnStartedAt,
+    turn,
+    tickNow,
+  ]);
+
   const myTurn =
-    state.status === "in_progress" && !state.pending && turn === myColor;
+    state.status === "in_progress" &&
+    !state.pending &&
+    turn === myColor &&
+    !myClockExpired;
+
+  // Auto-claim opponent timeout (1s debounce; server validates).
+  const opponentSide: "w" | "b" | null =
+    myColor === "w" ? "b" : myColor === "b" ? "w" : null;
+  const opponentRemainingMs =
+    opponentSide === "w"
+      ? state.whiteRemainingMs
+      : opponentSide === "b"
+        ? state.blackRemainingMs
+        : null;
+  const opponentIsActive =
+    state.status === "in_progress" &&
+    opponentSide !== null &&
+    turn === opponentSide;
+  useAutoClaim({
+    gameId,
+    mode,
+    status: state.status,
+    opponentRemainingMs,
+    turnStartedAt: state.turnStartedAt,
+    opponentIsActive,
+  });
 
   // Side currently in check (or null) and whether it's mate. Used by both
   // the board (king-square highlight) and the sidebar (player-card overlay
@@ -672,6 +785,8 @@ export function GameClient({
     const isYou = myColor === side;
     const isActive = activeSide === side;
     const overlay = checkOverlay(side);
+    const remainingMs =
+      side === "w" ? state.whiteRemainingMs : state.blackRemainingMs;
     return (
       <div
         className={cn(
@@ -689,12 +804,21 @@ export function GameClient({
             style={{ backgroundColor: overlay }}
           />
         )}
-        <div className="relative">
+        <div className="relative space-y-1">
           <p className="text-[10px] uppercase tracking-wide opacity-60 flex items-center justify-between gap-2">
             <span>{isBlack ? "Black" : "White"}</span>
             {isYou && <span>(you)</span>}
           </p>
           <p className="font-medium truncate">{name}</p>
+          {mode !== "untimed" && (
+            <Clock
+              side={side === "w" ? "white" : "black"}
+              mode={mode}
+              remainingMs={remainingMs}
+              turnStartedAt={state.turnStartedAt}
+              isActive={Boolean(isActive)}
+            />
+          )}
         </div>
       </div>
     );

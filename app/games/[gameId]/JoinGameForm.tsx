@@ -9,9 +9,10 @@ import { joinGame } from "./actions";
 type Props = {
   gameId: string;
   emptySide: "white" | "black";
+  timeControlLabel: string;
 };
 
-export function JoinGameForm({ gameId, emptySide }: Props) {
+export function JoinGameForm({ gameId, emptySide, timeControlLabel }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -53,6 +54,10 @@ export function JoinGameForm({ gameId, emptySide }: Props) {
       <h1 className="text-2xl font-heading font-semibold">Join this game?</h1>
       <p className="text-sm text-muted-foreground">
         The {emptySide === "white" ? "white" : "black"} side is open.
+      </p>
+      <p className="text-sm">
+        Time control:{" "}
+        <span className="font-medium">{timeControlLabel}</span>
       </p>
       <Button size="lg" onClick={onClick} disabled={pending}>
         {pending ? "Joining…" : `Join as ${emptySide}`}

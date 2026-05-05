@@ -89,6 +89,13 @@ export const GameStatusUpdateEventSchema = z.object({
   white_id: z.guid().nullable(),
   black_id: z.guid().nullable(),
   termination_reason: TerminationReasonSchema.nullable().optional(),
+  // M1.5++ clock state — optional so old payloads still parse
+  time_control_type: TimeControlTypeSchema.optional(),
+  white_remaining_ms: z.number().int().nullable().optional(),
+  black_remaining_ms: z.number().int().nullable().optional(),
+  turn_started_at: z.string().nullable().optional(),
+  current_turn: z.enum(["w", "b"]).optional(),
+  ply: z.number().int().nonnegative().optional(),
 });
 export type GameStatusUpdateEvent = z.infer<typeof GameStatusUpdateEventSchema>;
 
