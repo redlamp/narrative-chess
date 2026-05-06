@@ -59,11 +59,9 @@ test("site header navigation across routes", async ({ browser, baseURL }) => {
     "/",
   );
 
-  // On /, "Home" link is active (aria-current=page).
-  await expect(header.getByRole("link", { name: "Home" })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
+  // The wordmark on the left is the Home affordance; there's no separate
+  // "Home" link in the nav. Games is not active on /.
+  await expect(header.getByRole("link", { name: "Home" })).toHaveCount(0);
   await expect(header.getByRole("link", { name: "Games" })).not.toHaveAttribute(
     "aria-current",
     "page",

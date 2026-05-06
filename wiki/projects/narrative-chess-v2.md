@@ -14,10 +14,11 @@ Rewrite of [[narrative-chess-v1]]. Chess-first rebuild with narrative layer, des
 - Started: 2026-05-02
 - **M1 shipped: 2026-05-03.** Phases 1–6 all in production. Squash-merged via PR #12 (`e81a3d9` on `main`).
 - **M1.5 shipped: 2026-05-04.** Phase 7 + terminal banner fix + header nav + Phase 8 landing/3D hero. Squash-merged via PR #18 (`681f809` on `main`).
+- **M1.5+ shipped: 2026-05-04.** Hero3D WebGL context recovery + AuthDialog onSuccess + theme toggle UI + dev-only fool's mate smoke + husky pre-commit shebang chore. Squash-merged via PR #25 (`67243d5` on `main`).
 - Stable production alias: https://narrative-chess.vercel.app
-- Two real users can sign up, create + join a game via shared URL, play with drag-or-click, see opponent's moves over realtime, end on checkmate / stalemate / resignation / abort. Observers (third+ authenticated viewer with the URL) can watch read-only. New: top-level header nav, games directory at `/games`, terminal banner "Back to games" button on game-end, marketing landing page with 3D hero + auth dialog.
-- **`dev` content-equal to `main`** post-reconciliation merge `b14e2d6` + one docs-only commit `0206d50` (switch feat → dev merges to `--no-ff`).
-- **Next gate:** decide M1.5+ vs M2 direction. No code currently staged for the next milestone.
+- Two real users can sign up, create + join a game via shared URL, play with drag-or-click, see opponent's moves over realtime, end on checkmate / stalemate / resignation / abort. Observers (third+ authenticated viewer with the URL) can watch read-only. Top-level header nav with theme toggle, games directory at `/games`, terminal banner "Back to games" on game-end, marketing landing page with 3D hero + auth dialog.
+- **M1.5++ merged into `dev` (2026-05-05).** PR #27 merge commit `684256c` (`--no-ff` per policy). Clocks (live + correspondence), per-side timeout detection (lazy + auto-claim + daily cron), strict-reconnect policy. 5 migrations live on hosted Supabase. CRON_SECRET set in Vercel envs. Awaiting `dev` → `main` squash for production ship. Spec + plan at `docs/superpowers/specs/2026-05-05-clocks-timeout-reconnect-design.md` and `docs/superpowers/plans/2026-05-05-clocks-timeout-reconnect.md`.
+- **Polish A/B/C** queued post-M1.5++: draw-by-agreement, move-list stepper (review-only), mobile/touch.
 
 ## Stack
 
@@ -31,7 +32,8 @@ See [[decision-stack-nextjs-16]].
 ## Goals
 
 - **M1**: untimed multiplayer chess. Two real users sign up, create + join a game, play with drag-and-drop, see opponent's moves live, end correctly on checkmate / stalemate / resign / abort / draw.
-- **M1.5**: clocks (live + move-deadline), timeout sweep via Vercel Cron, reconnect policy.
+- **M1.5**: games directory + observer count + landing page + 3D hero + auth dialog.
+- **M1.5++**: clocks (live + correspondence) + timeout sweep via Vercel Cron + strict reconnect policy.
 - **M2+**: narrative layers (cities, characters, story beats) on top of a verified-stable chess core.
 
 What success looks like for M1: two browsers, end-to-end smoke test green, no v1-style "Realtime fires but client sees nothing" trap.
@@ -76,31 +78,54 @@ What success looks like for M1: two browsers, end-to-end smoke test green, no v1
 | header | — | (in M1.5 squash) | Site-wide header nav (PR #16) |
 | 8 | — | (in M1.5 squash) | Landing page + 3D hero + auth dialog (PR #19) |
 | M1.5 | (ship) | `681f809` | Production deploy via PR #18 |
+| polish | — | (in M1.5+ squash) | Hero3D WebGL context recovery (PR #20) |
+| polish | — | (in M1.5+ squash) | AuthDialog onSuccess (PR #23) |
+| polish | — | (in M1.5+ squash) | Theme toggle UI (PR #21) |
+| polish | — | (in M1.5+ squash) | Dev-only fool's mate smoke (PR #22) |
+| chore | — | (in M1.5+ squash) | Husky pre-commit shebang + LF gitattributes (PR #24) |
+| M1.5+ | (ship) | `67243d5` | Production deploy via PR #25 |
 
-## Staged on `dev` (post-M1.5, not yet on `main`)
+## Staged on `dev` (post-M1.5+, not yet on `main`)
 
-| What | Merge commit on `dev` | Status |
-|---|---|---|
-| Switch feat → dev merge to `--no-ff` (preserves branch viz) | `0206d50` (docs, direct push) | direct push to dev |
-| Hero3D WebGL context recovery (PR #20) | `362ccac` | merged with `--no-ff` |
-| AuthDialog onSuccess (PR #23) | `47bd772` | merged with `--no-ff` |
-| Theme toggle UI (PR #21) | `2f31936` | merged with `--no-ff` |
-| Dev-only fool's mate smoke button (PR #22) | `f3df4f8` | merged with `--no-ff` |
+- **M1.5++ delta** — merged from `feat/clocks-schema-rpcs` via PR #27 at merge commit `684256c` (2026-05-05). 7 feat-branch commits + organize-pass docs commit. Branch deleted local + remote post-merge. CRON_SECRET set in Vercel envs (Production + Preview/dev).
+- **Hydration fix** — merged from `fix/clocks-hydration-mismatch` via PR #28 at merge commit `99d4890` (2026-05-06). Clock + GameClient `tickNow` state init flipped from `() => Date.now()` to `null`, with mount effect seeding the wall-clock value post-hydrate. Captured as cross-project pattern in `~/.claude/memory/tools/react-19-lint-patterns.md`.
+- **Open challenges fix** — merged from `fix/open-challenges-null-side` via PR #29 at merge commit `91591d9` (2026-05-06). Other players' open challenges now visible (NULL-side filter).
+- **Home polish** — PR #32 (remove redundant Home link, `3d4dd90`) + PR #33 (3 stat panels + vertical layout, `8d2897c`) merged.
 
-## Open threads — post-M1.5
+## M1.5++ ship details
 
-- **Promote `dev` → `main`**: four polish PRs above ready to ship. Use `gh pr merge <N> --squash` per main's linear-history rule. Expect post-squash divergence; reconcile with `git merge origin/main` on dev, take `--ours` (lesson `[[lesson-dev-main-merge-after-squash]]`).
+- **Locked decisions:** configurable per-game time control, live + correspondence, chess.com 200ms lag credit, strict reconnect, 5 presets (Untimed / 5+0 / 10+0 / 15+10 / 1d-per-move), daily sweep + lazy detection primary, first-move timeout = abort, creator picks at create.
+- **Migrations live on hosted Supabase** (`pgxqlyiyaehppkfeceuc`, eu-west-1) — applied via MCP `apply_migration` in 5 sequential calls. Existing M1+M1.5+ untimed games unaffected (NULL `time_control_type` skips clock math everywhere).
+- **Supabase advisors clean** modulo intentional 0029 authenticated-callable SECURITY DEFINER on `make_move` (by design) + project-level leaked-password-protection.
+- **CI status:** lint + typecheck green; Playwright skipped due to pre-existing CI workflow bug (`compgen "e2e/**/*.spec.ts"` glob misses top-level specs without `globstar`).
+
+## Test accounts
+
+- `taylor@redlamp.org` (`14e5b50b-3757-4ae7-8bcb-00aecdc57580`) — primary
+- `alt+2@redlamp.org` (`ea16d37c-af00-4f2b-ad8c-bc0aa9019059`) — secondary
+- Original `alt@redlamp.org` password lost; do not attempt to use.
+
+## Branch state
+
+- `main` — production (latest squash: M1.5+ `67243d5`)
+- `dev` — at `91591d9` (M1.5++ + hydration fix + null-side fix + home polish merges); ahead of `main` by full M1.5++ delta + post-merge fixes/polish
+
+## Open threads — post-M1.5+
+
+- **M1.5++ ship gate**: smoke `dev` preview → squash `dev` → `main`. Reconciliation per [[lesson-dev-main-merge-after-squash]] expected.
+- **CI workflow bug**: `compgen -G "e2e/**/*.spec.ts"` misses top-level specs without `shopt -s globstar`. All 14 e2e specs currently no-op in CI. One-line chore PR.
+- **Polish A — draw-by-agreement** (offer / accept / decline flow): queued post-M1.5++ ship.
+- **Polish B — move-list stepper** (review-only, click-to-step + forward/back, no undo): queued post-M1.5++ ship.
+- **Polish C — mobile / touch optimization**: queued last (after polish A + B settle UI).
 - **Step N — privatize v1**: `gh repo edit redlamp/narrative-chess-v1 --visibility private --accept-visibility-change-consequences`. Pending until production smoke is satisfying. Always wait for explicit user go.
-- **Decide next milestone**: M1.5+ (clocks + timeout sweep via Vercel Cron + reconnect policy) or M2 (narrative layer prep — cities, characters, story beats). Both need brainstorm + spec before code.
-- **Husky pre-commit shebang**: `.husky/pre-commit` has no shebang + CRLF endings; agent worktrees on Windows MINGW can't exec it directly, forcing `--no-verify`. One-line chore PR: add `#!/bin/sh` + LF endings. Worth doing before next subagent dispatch.
 - **Both-sides fool's mate**: user asked, declined service-role server action route (security risk). Decision: stay with current per-side design; smoke is two-browser workflow.
-- **Mobile / touch optimization**: deferred from M1 (desktop-first). Revisit when a real mobile user shows up.
-- **Move list / scrollable history with click-to-rewind**: deferred from phase 6. Nice-to-have polish.
-- **Draw-by-agreement** (offer / accept / decline flow): deferred from phase 6. Real chess UX requires it; pair with clocks in M1.5+.
-- **Email confirmation**: currently OFF for ease of dev. Re-enable before broader release per `.claude/memory/domain/auth.md`.
-- ~~**AuthDialog success path**~~ — **closed by PR #23**.
-- ~~**Theme toggle UI**~~ — **closed by PR #21** (next-themes ThemeProvider + Sun/Moon button in SiteHeader).
-- ~~**Dev-only "fool's mate" debug button**~~ — **closed by PR #22** (per-side, dev/preview only via `VERCEL_ENV` gate).
+- **Email confirmation**: currently OFF for ease of dev. Re-enable before broader release per `.claude/memory/domain/auth.md`. Originally proposed as Polish D this session, dropped — checklist in domain memory is bigger than "tiny" implies (SMTP, templates, callback route, reset flow, e2e). Defer until public-release ramp.
+- **M2 — narrative layer prep** (cities, characters, story beats): post-polish. Will need brainstorm + spec.
+- ~~**M1.5++ direction**~~ — **decided 2026-05-05** (clocks + timeout + reconnect; PR #27 open).
+- ~~**AuthDialog success path**~~ — **closed by PR #23** (shipped to main in M1.5+).
+- ~~**Theme toggle UI**~~ — **closed by PR #21** (next-themes ThemeProvider + Sun/Moon button in SiteHeader; shipped to main in M1.5+).
+- ~~**Dev-only "fool's mate" debug button**~~ — **closed by PR #22** (per-side, dev/preview only via `VERCEL_ENV` gate; shipped to main in M1.5+).
+- ~~**Husky pre-commit shebang**~~ — **closed by PR #24** (added `#!/bin/sh` + LF eol + `.gitattributes` pin; shipped to main in M1.5+).
 - ~~**Game lobby** (`app/games/page.tsx` listing your active games + open challenges)~~ — **closed by Phase 7** (PR #13).
 - ~~**Phase 8 landing page**~~ — **closed by PR #19** (3D hero + auth dialog, shipped in M1.5).
 

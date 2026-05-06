@@ -120,3 +120,59 @@ export async function subscribeToGameStatus(
     },
   };
 }
+
+/**
+ * Subscribe to UPDATE events on every games row visible to the caller.
+ * RLS gates delivery — participants get all their games' updates,
+ * non-participants only see open-status games. Used by the games
+ * directory page to keep the lobby live without polling.
+ */
+export async function subscribeToAllGameStatus(
+  onUpdate: (u: GameStatusUpdateEvent) => void,
+): Promise<{ unsubscribe: () => void }> {
+  const supabase = createClient();
+
+  const authed = await authRealtime(supabase);
+  if (DEV) console.log("[realtime] all-games channel auth", { authed });
+
+  const channel: RealtimeChannel = supabase
+    .channel("games:all")
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "games",
+      },
+      (payload) => {
+        if (DEV) console.log("[realtime] all-games UPDATE payload", payload);
+        const u = parseGameStatusUpdate(payload.new);
+        if (u) onUpdate(u);
+        else if (DEV) {
+          console.error("[realtime] dropped malformed all-games payload", payload.new);
+        }
+      },
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "games",
+      },
+      (payload) => {
+        if (DEV) console.log("[realtime] all-games INSERT payload", payload);
+        const u = parseGameStatusUpdate(payload.new);
+        if (u) onUpdate(u);
+      },
+    )
+    .subscribe((status, err) => {
+      if (DEV) console.log("[realtime] all-games channel status", status, err ?? "");
+    });
+
+  return {
+    unsubscribe: () => {
+      void supabase.removeChannel(channel);
+    },
+  };
+}

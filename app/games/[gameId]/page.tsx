@@ -5,7 +5,12 @@ import { createClient } from "@/lib/supabase/server";
 import { GameClient } from "./GameClient";
 import { JoinGameForm } from "./JoinGameForm";
 import { WaitingForOpponent } from "./WaitingForOpponent";
-import { GameStatusSchema, TerminationReasonSchema } from "@/lib/schemas/game";
+import {
+  GameStatusSchema,
+  TerminationReasonSchema,
+  TimeControlTypeSchema,
+} from "@/lib/schemas/game";
+import { formatTimeControlLabel } from "@/lib/chess/time-controls";
 
 const ParamsSchema = z.object({ gameId: z.string().uuid() });
 
@@ -20,6 +25,13 @@ const RowSchema = z.object({
   termination_reason: TerminationReasonSchema.nullable(),
   white_name: z.string().nullable(),
   black_name: z.string().nullable(),
+  time_control_type: TimeControlTypeSchema,
+  time_initial_seconds: z.number().int().nullable(),
+  time_increment_seconds: z.number().int().nullable(),
+  time_per_move_seconds: z.number().int().nullable(),
+  white_remaining_ms: z.number().int().nullable(),
+  black_remaining_ms: z.number().int().nullable(),
+  turn_started_at: z.string().nullable(),
 });
 
 export default async function GamePage({
@@ -50,6 +62,13 @@ export default async function GamePage({
         status,
         current_turn,
         termination_reason,
+        time_control_type,
+        time_initial_seconds,
+        time_increment_seconds,
+        time_per_move_seconds,
+        white_remaining_ms,
+        black_remaining_ms,
+        turn_started_at,
         white_name:white_id ( display_name ),
         black_name:black_id ( display_name )
       `)
@@ -94,7 +113,18 @@ export default async function GamePage({
     return <WaitingForOpponent gameId={gameId} shareUrl={shareUrl} />;
   }
   if (row.status === "open" && !viewerIsParticipant && emptySide) {
-    return <JoinGameForm gameId={gameId} emptySide={emptySide} />;
+    return (
+      <JoinGameForm
+        gameId={gameId}
+        emptySide={emptySide}
+        timeControlLabel={formatTimeControlLabel({
+          time_control_type: row.time_control_type,
+          time_initial_seconds: row.time_initial_seconds,
+          time_increment_seconds: row.time_increment_seconds,
+          time_per_move_seconds: row.time_per_move_seconds,
+        })}
+      />
+    );
   }
 
   // Participants OR observers (any other authenticated user with the URL)
@@ -112,6 +142,10 @@ export default async function GamePage({
       initialTerminationReason={row.termination_reason}
       initialObserverCount={observerCountResult.count ?? 0}
       viewerUserId={user.id}
+      timeControlType={row.time_control_type ?? null}
+      initialWhiteRemainingMs={row.white_remaining_ms}
+      initialBlackRemainingMs={row.black_remaining_ms}
+      initialTurnStartedAt={row.turn_started_at}
     />
   );
 }

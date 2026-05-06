@@ -2,10 +2,11 @@
 
 This `wiki/` folder is an Obsidian vault — a human-readable knowledge graph of project info, decisions, research, design notes, contacts, and daily logs. It is *separate* from:
 
-- `.claude/memory/` — machine-curated memory (auto-injected into AI context)
+- Claude built-in project memory at `~/.claude/projects/<mapped>/memory/` — atomic feedback rules + identity, auto-injected by harness
+- `~/.claude/memory/` — global cross-project tool gotchas, auto-injected once per session by SessionStart hook
 - `docs/` — formal project docs, PRDs, specifications, public-facing artefacts
 
-If you (Claude) are unsure which of the three belongs, prefer `wiki/` for: half-formed thoughts, decisions and their rationale, things-to-remember, links between concepts, daily progress notes.
+If you (Claude) are unsure where info belongs, prefer `wiki/` for: project state, decisions and rationale, lessons learned, half-formed thoughts, links between concepts, daily progress notes. Cross-cutting feedback rules → built-in. Cross-project tool gotchas → global memory. Formal/public artefacts → `docs/`. See [[decision-collapse-memory-to-wiki]] for the layer split rationale.
 
 ## Folder layout
 
@@ -104,7 +105,8 @@ Inline `#tag` in body also works — Obsidian indexes both. Always use the names
 
 ## When NOT to use the wiki
 
-- AI-context facts (user role, conventions, tool configs) → `.claude/memory/`
+- Cross-cutting feedback rules I need every turn → Claude built-in project memory (`~/.claude/projects/<mapped>/memory/feedback_*.md`)
+- Cross-project tool/language gotchas → global memory (`~/.claude/memory/tools/` or `domain/`)
 - Formal specs, PRDs, public docs → `docs/`
 - Code or code comments → in the code
 

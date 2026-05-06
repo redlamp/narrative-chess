@@ -12,9 +12,38 @@ export type { GameStatus, TerminationReason };
 export const ColorChoiceSchema = z.enum(["white", "black", "random"]);
 export type ColorChoice = z.infer<typeof ColorChoiceSchema>;
 
-export const CreateGameInputSchema = z.object({
-  myColor: ColorChoiceSchema,
-});
+// M1.5++ — time control. NULL = untimed; live = Fischer (initial+increment);
+// correspondence = per-move deadline.
+export const TimeControlTypeSchema = z.enum(["live", "correspondence"]).nullable();
+export type TimeControlType = z.infer<typeof TimeControlTypeSchema>;
+
+export const CreateGameInputSchema = z
+  .object({
+    myColor: ColorChoiceSchema,
+    timeControlType: TimeControlTypeSchema.optional(),
+    timeInitialSeconds: z.number().int().positive().optional(),
+    timeIncrementSeconds: z.number().int().nonnegative().optional(),
+    timePerMoveSeconds: z.number().int().positive().optional(),
+  })
+  .refine(
+    (v) => {
+      if (!v.timeControlType) return true;
+      if (v.timeControlType === "live") {
+        return (
+          v.timeInitialSeconds !== undefined &&
+          v.timePerMoveSeconds === undefined
+        );
+      }
+      if (v.timeControlType === "correspondence") {
+        return (
+          v.timePerMoveSeconds !== undefined &&
+          v.timeInitialSeconds === undefined
+        );
+      }
+      return true;
+    },
+    { message: "time control shape mismatch" },
+  );
 export type CreateGameInput = z.infer<typeof CreateGameInputSchema>;
 
 export const JoinGameInputSchema = z.object({
@@ -60,6 +89,13 @@ export const GameStatusUpdateEventSchema = z.object({
   white_id: z.guid().nullable(),
   black_id: z.guid().nullable(),
   termination_reason: TerminationReasonSchema.nullable().optional(),
+  // M1.5++ clock state — optional so old payloads still parse
+  time_control_type: TimeControlTypeSchema.optional(),
+  white_remaining_ms: z.number().int().nullable().optional(),
+  black_remaining_ms: z.number().int().nullable().optional(),
+  turn_started_at: z.string().nullable().optional(),
+  current_turn: z.enum(["w", "b"]).optional(),
+  ply: z.number().int().nonnegative().optional(),
 });
 export type GameStatusUpdateEvent = z.infer<typeof GameStatusUpdateEventSchema>;
 

@@ -6,6 +6,7 @@ import {
   MoveEventSchema,
   GameStatusUpdateEventSchema,
   TerminationReasonSchema,
+  TimeControlTypeSchema,
   ResignInputSchema,
   AbortInputSchema,
   RegisterObserverInputSchema,
@@ -108,16 +109,84 @@ describe("GameStatusUpdateEventSchema", () => {
 });
 
 describe("TerminationReasonSchema", () => {
-  test("accepts the seven valid reasons", () => {
+  test("accepts the eight valid reasons (incl. timeout)", () => {
     for (const r of [
       "checkmate", "stalemate", "threefold",
-      "fifty_move", "insufficient", "resignation", "abort",
+      "fifty_move", "insufficient", "resignation", "abort", "timeout",
     ] as const) {
       expect(TerminationReasonSchema.safeParse(r).success).toBe(true);
     }
   });
   test("rejects unknown reasons", () => {
     expect(TerminationReasonSchema.safeParse("forfeit").success).toBe(false);
+  });
+});
+
+describe("TimeControlTypeSchema", () => {
+  test("accepts live, correspondence, null", () => {
+    expect(TimeControlTypeSchema.safeParse("live").success).toBe(true);
+    expect(TimeControlTypeSchema.safeParse("correspondence").success).toBe(true);
+    expect(TimeControlTypeSchema.safeParse(null).success).toBe(true);
+  });
+  test("rejects unknown values", () => {
+    expect(TimeControlTypeSchema.safeParse("classical").success).toBe(false);
+    expect(TimeControlTypeSchema.safeParse("blitz").success).toBe(false);
+  });
+});
+
+describe("CreateGameInputSchema with time control", () => {
+  test("accepts untimed (no time control fields)", () => {
+    const r = CreateGameInputSchema.safeParse({ myColor: "white" });
+    expect(r.success).toBe(true);
+  });
+  test("accepts live preset shape (initial + increment)", () => {
+    const r = CreateGameInputSchema.safeParse({
+      myColor: "random",
+      timeControlType: "live",
+      timeInitialSeconds: 300,
+      timeIncrementSeconds: 0,
+    });
+    expect(r.success).toBe(true);
+  });
+  test("accepts correspondence preset shape", () => {
+    const r = CreateGameInputSchema.safeParse({
+      myColor: "black",
+      timeControlType: "correspondence",
+      timePerMoveSeconds: 86400,
+    });
+    expect(r.success).toBe(true);
+  });
+  test("rejects live shape with per-move set", () => {
+    const r = CreateGameInputSchema.safeParse({
+      myColor: "white",
+      timeControlType: "live",
+      timeInitialSeconds: 300,
+      timePerMoveSeconds: 60,
+    });
+    expect(r.success).toBe(false);
+  });
+  test("rejects correspondence shape with initial set", () => {
+    const r = CreateGameInputSchema.safeParse({
+      myColor: "white",
+      timeControlType: "correspondence",
+      timeInitialSeconds: 300,
+      timePerMoveSeconds: 60,
+    });
+    expect(r.success).toBe(false);
+  });
+  test("rejects live without initial", () => {
+    const r = CreateGameInputSchema.safeParse({
+      myColor: "white",
+      timeControlType: "live",
+    });
+    expect(r.success).toBe(false);
+  });
+  test("rejects correspondence without per-move", () => {
+    const r = CreateGameInputSchema.safeParse({
+      myColor: "white",
+      timeControlType: "correspondence",
+    });
+    expect(r.success).toBe(false);
   });
 });
 
