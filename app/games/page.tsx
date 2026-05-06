@@ -54,12 +54,17 @@ export default async function GamesPage() {
       .or(`white_id.eq.${uid},black_id.eq.${uid}`)
       .order("created_at", { ascending: false })
       .limit(20),
+    // Open games where the viewer is NOT a participant. PostgREST's
+    // `.not("col", "eq", uid)` returns false on NULL (NOT (NULL = uid) = NULL),
+    // which would silently exclude rows where one side is unfilled — exactly
+    // the rows we want here. Use OR with `.is.null` so NULL counts as
+    // "not the viewer" on both sides.
     supabase
       .from("games")
       .select(baseSelect)
       .eq("status", "open")
-      .not("white_id", "eq", uid)
-      .not("black_id", "eq", uid)
+      .or(`white_id.is.null,white_id.neq.${uid}`)
+      .or(`black_id.is.null,black_id.neq.${uid}`)
       .order("created_at", { ascending: false })
       .limit(20),
     supabase
