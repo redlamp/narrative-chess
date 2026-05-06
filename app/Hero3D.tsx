@@ -17,7 +17,7 @@ function attachContextRecovery({ gl, invalidate }: RootState) {
 
 export default function Hero3D() {
   return (
-    <div className="absolute inset-0 z-0">
+    <div className="relative w-full h-[60vh] min-h-[420px] z-0">
       <Canvas
         camera={{ position: [0, 1.5, 6], fov: 45 }}
         dpr={[1, 2]}
