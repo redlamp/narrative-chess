@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { formatTimeControlLabel } from "@/lib/chess/time-controls";
+import { GamesRealtime } from "./GamesRealtime";
 
 type GameRow = {
   id: string;
@@ -99,6 +100,7 @@ export default async function GamesPage() {
 
   return (
     <main className="container mx-auto max-w-4xl py-12 px-6 space-y-10">
+      <GamesRealtime viewerUserId={uid} />
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-heading font-semibold">Games</h1>
         <Button asChild>
