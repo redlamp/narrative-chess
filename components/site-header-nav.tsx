@@ -15,8 +15,9 @@ export function SiteHeaderNav({ displayName }: Props) {
   const gameMatch = pathname.match(/^\/games\/([0-9a-f-]{36})$/i);
   const currentGameId = gameMatch?.[1] ?? null;
 
+  // "Narrative Chess" wordmark on the left already links to /, so no
+  // separate Home entry here.
   const links: Array<{ href: string; label: string }> = [
-    { href: "/", label: "Home" },
     { href: "/games", label: "Games" },
   ];
   if (currentGameId) {
