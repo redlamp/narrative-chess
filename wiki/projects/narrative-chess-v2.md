@@ -88,6 +88,7 @@ What success looks like for M1: two browsers, end-to-end smoke test green, no v1
 ## Staged on `dev` (post-M1.5+, not yet on `main`)
 
 - **M1.5++ delta** — merged from `feat/clocks-schema-rpcs` via PR #27 at merge commit `684256c` (2026-05-05). 7 feat-branch commits + organize-pass docs commit. Branch deleted local + remote post-merge. CRON_SECRET set in Vercel envs (Production + Preview/dev).
+- **Hydration fix** — merged from `fix/clocks-hydration-mismatch` via PR #28 at merge commit `99d4890` (2026-05-06). Clock + GameClient `tickNow` state init flipped from `() => Date.now()` to `null`, with mount effect seeding the wall-clock value post-hydrate. Captured as cross-project pattern in `~/.claude/memory/tools/react-19-lint-patterns.md`.
 
 ## Open threads — post-M1.5+
 

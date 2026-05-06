@@ -11,7 +11,7 @@ Top-level Map of Content. Add MOCs and active projects below as they are created
 
 ## Active Projects
 
-- [[narrative-chess-v2]] — M1.5+ shipped 2026-05-04; M1.5++ in flight (PR #27); production at https://narrative-chess.vercel.app
+- [[narrative-chess-v2]] — M1.5+ on `main` (2026-05-04); M1.5++ on `dev` awaiting squash; production at https://narrative-chess.vercel.app
 
 ## People
 
@@ -19,6 +19,7 @@ Top-level Map of Content. Add MOCs and active projects below as they are created
 
 ## Recent Daily Notes
 
+- [[daily/2026-05-06]] — Hydration mismatch fix on Clock + tickNow (PR #28)
 - [[daily/2026-05-05]] — M1.5++ brainstorm + spec + plan + PR #27 (clocks/timeout/reconnect)
 - [[daily/2026-05-04]] — M1.5 ship + 3D hero polish + WebGL context-loss fix + `--no-ff` switch
 - [[daily/2026-05-03]] — M1 ship + Phase 7 + banner fix + Phase 8 spec
