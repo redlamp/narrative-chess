@@ -45,7 +45,7 @@ export default async function AccountPage() {
 
       <section className="flex items-center gap-3">
         <Button asChild variant="outline">
-          <Link href="/games">Back to games</Link>
+          <Link href="/games">Back</Link>
         </Button>
         <form action="/auth/logout" method="post">
           <Button type="submit" variant="destructive">
