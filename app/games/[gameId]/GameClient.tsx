@@ -325,17 +325,20 @@ export function GameClient({
   // (myTurn + isWhitesTurn), and parsing the FEN is the expensive bit.
   const turn = useMemo(() => fenTurn(state.fen), [state.fen]);
 
-  // Local clock-tick state — used by the own-clock guard below. Ticks at
-  // 500ms when the game is timed + active; otherwise the interval doesn't
-  // start. Stays out of render-time Date.now() to satisfy
-  // react-hooks/purity.
-  const [tickNow, setTickNow] = useState<number>(() => Date.now());
+  // Local clock-tick state — used by the own-clock guard below. Stays null
+  // on SSR + first client render so hydration matches; mount effect seeds it
+  // to Date.now() post-hydrate, and the interval keeps it fresh while the
+  // game is active.
+  const [tickNow, setTickNow] = useState<number | null>(null);
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (mode === "untimed") return;
+    setTickNow(Date.now());
     if (state.status !== "in_progress") return;
     const id = window.setInterval(() => setTickNow(Date.now()), 500);
     return () => window.clearInterval(id);
   }, [mode, state.status]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Own-clock guard: when timed and our interpolated remaining hits 0, lock
   // the move UI client-side. Server enforces this anyway, but a stale frame
@@ -343,6 +346,7 @@ export function GameClient({
   const myClockExpired = useMemo(() => {
     if (mode === "untimed") return false;
     if (myColor === null) return false;
+    if (tickNow === null) return false; // pre-hydration: don't lock UI yet
     const myRemainingMs =
       myColor === "w" ? state.whiteRemainingMs : state.blackRemainingMs;
     if (myRemainingMs === null) return false;
