@@ -52,8 +52,38 @@ Cost is not the gate — Supabase free tier supports OAuth at no charge. Setup c
 - Password reset flow: same email constraint applies.
 - Forgot-password UX: deferred to M1.5 or M2.
 
+## Current settings (live)
+
+- **Provider:** Email + password (no OAuth, no magic link, no passkey for MVP)
+- **Email confirmation:** **DISABLED** in Supabase Auth → Email provider → Confirm email = OFF
+- **Site URL:** `https://narrative-chess.vercel.app`
+- **Redirect URLs allow list:**
+  - `http://localhost:3000/**`
+  - `https://narrative-chess.vercel.app/**`
+  - `https://narrative-chess-git-dev-taylor-8571s-projects.vercel.app/**` (kept; redundant with wildcard but harmless)
+  - `https://narrative-chess-git-*-taylor-8571s-projects.vercel.app/**` (added 2026-05-04 for feat-branch previews; pairs with Vercel env scope widened to "Preview (all)" for `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Service role key still scoped to Preview-dev only.)
+
+## TODO — Re-enable email confirmation before broader release
+
+Why OFF today: MVP simplicity. Sign-up flow finishes in one round-trip without forcing the user to check email + click a link. Acceptable risk for M1 (closed beta, trusted testers) but **must be re-enabled before broader release**.
+
+Checklist when transitioning from M1/M2 testing to public-ish access:
+
+1. Supabase dashboard → Auth → Email provider → **Confirm email = ON**
+2. Verify SMTP is configured (Supabase free tier ships limited built-in SMTP — check rate caps; consider Resend or SendGrid for production volume)
+3. Customize email templates: confirmation, password reset, magic link (Supabase dashboard → Auth → Email Templates)
+4. Update sign-up flow to show "Check your email" message after submit instead of redirecting straight to `/`
+5. Add `/auth/confirm` callback route to handle the confirmation link
+6. Add `/auth/reset-password` flow (currently absent — will need it once confirmations are real)
+7. End-to-end test: real email account → sign up → click confirmation link → verify session activates
+
+Routine check-in `trig_015ySpmnFNMvnesR4WRoir9k` fires 2026-05-09 09:00 UTC as a reminder.
+
 ## See also
 
 - [[mocs/decisions]]
 - [[mocs/architecture]]
 - `docs/superpowers/specs/2026-05-02-v2-foundation-design.md` §4
+- Server actions: `app/(auth)/sign-up/actions.ts`, `app/(auth)/login/actions.ts`
+- Logout route: `app/auth/logout/route.ts`
+- Auth-aware landing: `app/page.tsx`

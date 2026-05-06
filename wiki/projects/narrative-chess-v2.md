@@ -89,6 +89,26 @@ What success looks like for M1: two browsers, end-to-end smoke test green, no v1
 
 - **M1.5++ delta** — merged from `feat/clocks-schema-rpcs` via PR #27 at merge commit `684256c` (2026-05-05). 7 feat-branch commits + organize-pass docs commit. Branch deleted local + remote post-merge. CRON_SECRET set in Vercel envs (Production + Preview/dev).
 - **Hydration fix** — merged from `fix/clocks-hydration-mismatch` via PR #28 at merge commit `99d4890` (2026-05-06). Clock + GameClient `tickNow` state init flipped from `() => Date.now()` to `null`, with mount effect seeding the wall-clock value post-hydrate. Captured as cross-project pattern in `~/.claude/memory/tools/react-19-lint-patterns.md`.
+- **Open challenges fix** — merged from `fix/open-challenges-null-side` via PR #29 at merge commit `91591d9` (2026-05-06). Other players' open challenges now visible (NULL-side filter).
+- **Home polish** — PR #32 (remove redundant Home link, `3d4dd90`) + PR #33 (3 stat panels + vertical layout, `8d2897c`) merged.
+
+## M1.5++ ship details
+
+- **Locked decisions:** configurable per-game time control, live + correspondence, chess.com 200ms lag credit, strict reconnect, 5 presets (Untimed / 5+0 / 10+0 / 15+10 / 1d-per-move), daily sweep + lazy detection primary, first-move timeout = abort, creator picks at create.
+- **Migrations live on hosted Supabase** (`pgxqlyiyaehppkfeceuc`, eu-west-1) — applied via MCP `apply_migration` in 5 sequential calls. Existing M1+M1.5+ untimed games unaffected (NULL `time_control_type` skips clock math everywhere).
+- **Supabase advisors clean** modulo intentional 0029 authenticated-callable SECURITY DEFINER on `make_move` (by design) + project-level leaked-password-protection.
+- **CI status:** lint + typecheck green; Playwright skipped due to pre-existing CI workflow bug (`compgen "e2e/**/*.spec.ts"` glob misses top-level specs without `globstar`).
+
+## Test accounts
+
+- `taylor@redlamp.org` (`14e5b50b-3757-4ae7-8bcb-00aecdc57580`) — primary
+- `alt+2@redlamp.org` (`ea16d37c-af00-4f2b-ad8c-bc0aa9019059`) — secondary
+- Original `alt@redlamp.org` password lost; do not attempt to use.
+
+## Branch state
+
+- `main` — production (latest squash: M1.5+ `67243d5`)
+- `dev` — at `91591d9` (M1.5++ + hydration fix + null-side fix + home polish merges); ahead of `main` by full M1.5++ delta + post-merge fixes/polish
 
 ## Open threads — post-M1.5+
 

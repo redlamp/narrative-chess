@@ -1,69 +1,48 @@
 # Narrative Chess V2
 
-## Memory Management
+## Memory Layers (post 2026-05-06 collapse)
 
-Local project memory tree at `.claude/memory/` (distinct from global `~/.claude/memory/`).
+Three layers, each with a clear job:
 
-### Structure
+1. **Built-in project memory** — `~/.claude/projects/<mapped-path>/memory/`. Auto-injected by harness in the system prompt. Holds atomic feedback rules + identity only (4 `feedback_*.md` files). Don't grow this layer beyond cross-cutting rules I need every turn.
+2. **Global memory** — `~/.claude/memory/`. Auto-injected once per session by SessionStart hook (`~/.claude/hooks/session-start-memory.{py,sh}`). Holds cross-project tool gotchas (Supabase CLI, react-19 lint, etc.). See `~/.claude/CLAUDE.md`.
+3. **Wiki** — `wiki/` (Obsidian vault). Read on demand. Holds project state, decisions, daily logs, research, projects. See `wiki/CLAUDE.md`.
 
-- `memory.md` — index of all project memory files, updated whenever you create or modify one
-- `general.md` — project conventions, preferences, environment setup
-- `domain/{topic}.md` — domain-specific knowledge (one file per topic)
-- `tools/{tool}.md` — tool configs, CLI patterns, workarounds
+There is **no project `.claude/memory/` layer** — deleted 2026-05-06, content migrated to wiki + built-in. Decision: [[decision-collapse-memory-to-wiki]].
 
-### Rules
+### Where new info goes
 
-1. Learn something worth remembering, write to right file immediately
-2. Keep `memory.md` as current index with one-line descriptions
-3. Entries: date, what, why — nothing more
-4. Read `.claude/memory/memory.md` at session start. Load other files only when relevant
-5. File missing, create it
-6. Before removing or modifying existing memory entry, use `AskUserQuestion` to confirm
-   with user — show current content + proposed change
+| Info type | Destination |
+|---|---|
+| Cross-cutting feedback rule (every turn) | Built-in `~/.claude/projects/.../memory/feedback_*.md` |
+| Cross-project tool/lang gotcha | Global `~/.claude/memory/tools/` or `domain/` |
+| Project decision + rationale | `wiki/notes/decision-*.md` |
+| Project lesson learned | `wiki/notes/lesson-*.md` |
+| Daily progress / half-formed | `wiki/daily/YYYY-MM-DD.md` |
+| Formal spec / PRD | `docs/superpowers/specs/` |
 
-### Maintenance
+### Maintenance — "organize memories"
 
-User says "reorganize memory":
-1. Read all memory files
-2. Remove duplicates + outdated entries
-3. Merge entries belong together
-4. Split files cover too many topics
-5. Re-sort entries by date within each file
-6. Update `memory.md` index
-7. Show summary of changes
+When the user says "organize memories":
+1. Read built-in `MEMORY.md` + 4 feedback files
+2. Read global `~/.claude/memory/memory.md` + topic files
+3. Skim wiki for stale entries (daily logs older than relevance horizon, decisions still `status/draft`)
+4. Promote cross-project gotchas from wiki → global memory
+5. Merge / re-sort / dedupe within each layer
+6. Show summary of changes
 
-## Global Memory
+Not a substitute for session-start awareness — that's the SessionStart hook (global) + harness (built-in) + project `CLAUDE.md` pointers (wiki).
 
-Cross-project memory at `~/.claude/memory/` (see `~/.claude/CLAUDE.md`).
+## Wiki entry points for project state
 
-Session start, read **both** in order:
-1. `~/.claude/memory/memory.md` — cross-project index
-2. `.claude/memory/memory.md` — this project's index
+When working on M1.5++ or beyond, start with:
 
-Project memory wins on conflict; promote reusable to global.
+- `wiki/projects/narrative-chess-v2.md` — current ship status, branch state, open threads
+- `wiki/mocs/decisions.md` — decision index
+- `wiki/notes/lesson-*.md` — gotchas captured from prior sessions
+- Latest dated file in `docs/superpowers/plans/` — current phase
 
-## Domain Knowledge Lifecycle
-
-1. Staging — knowledge accumulates in `.claude/memory/domain/{name}/`
-2. Promotion — enough knowledge to package as plugin/skill
-3. Pointer — after promotion, memory file becomes pointer to plugin;
-   content lives in plugin
-
-Update needed for promoted domain, note in memory file so issue
-can be filed on plugin repo.
-
-## Wiki
-
-Project knowledge graph in `wiki/` (Obsidian vault). See `wiki/CLAUDE.md` for
-folder layout, naming, linking, write-policy.
-
-Three-way split:
-- `.claude/memory/` — machine-curated, AI auto-context (preferences, conventions, identity)
-- `wiki/` — human-readable knowledge graph (decisions, research, people, projects, daily logs)
-- `docs/` — formal artefacts (PRDs, specs, public docs)
-
-Unsure where info belongs: half-formed thoughts → `wiki/`; AI-context facts
-→ `.claude/memory/`; formal/public docs → `docs/`.
+Auth state, theming, realtime+RLS gate procedure all live as `wiki/notes/*.md`.
 
 ## AI rails for v2 implementation
 

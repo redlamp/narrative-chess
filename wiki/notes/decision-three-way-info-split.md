@@ -1,14 +1,16 @@
 ---
 tags:
   - domain/memory
-  - status/adopted
+  - status/superseded
   - scope/foundation
 ---
 
 # Decision — Three-Way Info Split
 
 **Date:** 2026-05-02
-**Status:** Adopted
+**Status:** Superseded by [[decision-collapse-memory-to-wiki]] (2026-05-06)
+
+> **Superseded for the project layer:** the `.claude/memory/` row was deleted on 2026-05-06; project state now lives in wiki, cross-cutting feedback rules in Claude built-in memory. Global `~/.claude/memory/` stays as a third tier for cross-project tool gotchas. See [[decision-collapse-memory-to-wiki]].
 
 ## Context
 

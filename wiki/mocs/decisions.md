@@ -6,8 +6,10 @@ Significant project decisions and their rationale. Each entry should link to a `
 
 ### Infrastructure / repo
 
-- [[decision-three-way-info-split]] — `.claude/memory/` vs `wiki/` vs `docs/` (2026-05-02)
-- [[decision-memory-injection-via-hook]] — auto-load memory via PreToolUse hook (2026-05-02)
+- [[decision-collapse-memory-to-wiki]] — collapse project `.claude/memory/` into wiki + built-in; PreToolUse → SessionStart hook (2026-05-06)
+- [[decision-three-way-info-split]] — `.claude/memory/` vs `wiki/` vs `docs/` (2026-05-02, partially superseded 2026-05-06)
+- [[decision-memory-injection-via-hook]] — auto-load memory via PreToolUse hook (2026-05-02, superseded 2026-05-06)
+- [[decision-theming]] — shadcn New York + Slate, CSS-var-only (2026-05-02)
 
 ### v2 foundation (from 2026-05-02 design audit)
 

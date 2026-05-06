@@ -1,14 +1,16 @@
 ---
 tags:
   - domain/memory
-  - status/adopted
+  - status/superseded
   - scope/foundation
 ---
 
 # Decision — Memory Injection via PreToolUse Hook
 
 **Date:** 2026-05-02
-**Status:** Adopted
+**Status:** Superseded by [[decision-collapse-memory-to-wiki]] (2026-05-06)
+
+> **Superseded:** PreToolUse hook replaced with SessionStart hook on 2026-05-06. Project memory layer deleted; hook now injects only `~/.claude/memory/memory.md`. See [[decision-collapse-memory-to-wiki]] for rationale.
 
 ## Context
 
