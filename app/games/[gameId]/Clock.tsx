@@ -20,10 +20,12 @@ type Props = {
 
 export function Clock({ side, mode, remainingMs, turnStartedAt, isActive }: Props) {
   const turnStartedAtMs = turnStartedAt ? new Date(turnStartedAt).getTime() : null;
-  const [now, setNow] = useState<number>(() => Date.now());
+  // `now` stays null on SSR + first client render so the initial paint matches
+  // the server (no interpolation yet). The mount effect below sets `now` to
+  // Date.now() post-hydration, after which the tick interval keeps it fresh.
+  const [now, setNow] = useState<number | null>(null);
 
-  // Re-snap "now" when server pushes a new row (props change). Without
-  // this, the displayed value lags by up to one tick after a move lands.
+  // Re-snap "now" on hydrate AND whenever server pushes new clock state.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setNow(Date.now());
@@ -32,6 +34,7 @@ export function Clock({ side, mode, remainingMs, turnStartedAt, isActive }: Prop
 
   useEffect(() => {
     if (mode === "untimed" || remainingMs === null) return;
+    if (now === null) return;
     const displayed = computeRemaining({
       remainingMs,
       turnStartedAtMs,
@@ -46,12 +49,20 @@ export function Clock({ side, mode, remainingMs, turnStartedAt, isActive }: Prop
 
   if (mode === "untimed" || remainingMs === null) return null;
 
-  const displayed = computeRemaining({
-    remainingMs,
-    turnStartedAtMs,
-    nowMs: now,
-    isActive,
-  });
+  // Pre-hydration (now === null): render the stored remainingMs verbatim.
+  // Server and client both compute this from the same prop, so the initial
+  // HTML matches the post-hydrate first frame and React doesn't flag a
+  // mismatch. Once `now` is set in the mount effect, subsequent renders use
+  // the interpolated value.
+  const displayed =
+    now === null
+      ? remainingMs
+      : computeRemaining({
+          remainingMs,
+          turnStartedAtMs,
+          nowMs: now,
+          isActive,
+        });
 
   const text =
     mode === "correspondence" ? formatCorrespondence(displayed) : formatLive(displayed);
