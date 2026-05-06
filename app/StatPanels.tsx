@@ -35,12 +35,12 @@ export async function StatPanels() {
   ];
 
   return (
-    <section className="relative z-10 mx-auto max-w-5xl px-4 pb-16">
+    <section className="relative z-10 mx-auto max-w-5xl px-4 pt-4 pb-16">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {panels.map((p) => (
           <div
             key={p.label}
-            className="rounded-lg border bg-background/80 backdrop-blur px-6 py-8 text-center shadow-sm"
+            className="rounded-lg border bg-background/80 backdrop-blur px-6 py-8 text-center shadow-sm transition-shadow hover:shadow-md"
           >
             <p className="font-heading text-4xl font-semibold tabular-nums tracking-tight">
               {p.value.toLocaleString()}
