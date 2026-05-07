@@ -26,7 +26,7 @@ export function SiteHeaderNav({ displayName }: Props) {
   return (
     <header className="border-b border-rule bg-background">
       <nav className="max-w-5xl mx-auto px-4 h-12 flex items-center justify-between gap-4">
-        <Link href="/" aria-label="Narrative Chess — home" className="text-foreground">
+        <Link href="/" aria-label="Narrative Chess" className="text-foreground">
           <Wordmark size="sm" />
         </Link>
         <div className="flex items-center gap-1">
