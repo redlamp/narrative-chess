@@ -5,11 +5,29 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* Surfaces */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-heading);
+
+  /* Type families */
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+  --font-sans: var(--font-body);
+  --font-heading: var(--font-display);
+
+  /* Editorial palette tokens (additive) */
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-rule: var(--rule);
+  --color-rule-soft: var(--rule-soft);
+  --color-bg-soft: var(--bg-soft);
+  --color-bg-deep: var(--bg-deep);
+  --color-oxblood: var(--oxblood);
+  --color-signal: var(--signal);
+
+  /* shadcn token mappings */
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -39,6 +57,7 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -48,83 +67,130 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ============================================
+   LIGHT — editorial cream + ink + oxblood
+   ============================================ */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.52 0.105 223.128);
-  --primary-foreground: oklch(0.984 0.019 200.873);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.705 0.015 286.067);
-  --chart-1: oklch(0.855 0.138 181.071);
-  --chart-2: oklch(0.704 0.14 182.503);
-  --chart-3: oklch(0.6 0.118 184.704);
-  --chart-4: oklch(0.511 0.096 186.391);
-  --chart-5: oklch(0.437 0.078 188.216);
+  /* Editorial */
+  --ink: oklch(0.18 0.01 60);
+  --ink-soft: oklch(0.42 0.01 60);
+  --ink-faint: oklch(0.62 0.01 60);
+  --rule: oklch(0.21 0.01 60);
+  --rule-soft: oklch(0.85 0.02 75);
+  --background: oklch(0.94 0.02 75);
+  --foreground: oklch(0.18 0.01 60);
+  --bg-soft: oklch(0.91 0.025 75);
+  --bg-deep: oklch(0.86 0.035 75);
+  --oxblood: oklch(0.40 0.13 25);
+  --signal: oklch(0.60 0.16 35);
+
+  /* shadcn — primary swapped from teal to ink */
+  --card: oklch(0.94 0.02 75);
+  --card-foreground: oklch(0.18 0.01 60);
+  --popover: oklch(0.94 0.02 75);
+  --popover-foreground: oklch(0.18 0.01 60);
+  --primary: oklch(0.18 0.01 60);
+  --primary-foreground: oklch(0.94 0.02 75);
+  --secondary: oklch(0.91 0.025 75);
+  --secondary-foreground: oklch(0.18 0.01 60);
+  --muted: oklch(0.91 0.025 75);
+  --muted-foreground: oklch(0.42 0.01 60);
+  --accent: oklch(0.40 0.13 25);
+  --accent-foreground: oklch(0.94 0.02 75);
+  --destructive: oklch(0.60 0.16 35);
+  --border: oklch(0.85 0.02 75);
+  --input: oklch(0.85 0.02 75);
+  --ring: oklch(0.40 0.13 25);
+
+  --chart-1: oklch(0.40 0.13 25);
+  --chart-2: oklch(0.55 0.10 35);
+  --chart-3: oklch(0.42 0.05 60);
+  --chart-4: oklch(0.30 0.04 60);
+  --chart-5: oklch(0.55 0.06 80);
+
   --radius: 0.45rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.609 0.126 221.723);
-  --sidebar-primary-foreground: oklch(0.984 0.019 200.873);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.705 0.015 286.067);
+
+  --sidebar: oklch(0.94 0.02 75);
+  --sidebar-foreground: oklch(0.18 0.01 60);
+  --sidebar-primary: oklch(0.40 0.13 25);
+  --sidebar-primary-foreground: oklch(0.94 0.02 75);
+  --sidebar-accent: oklch(0.91 0.025 75);
+  --sidebar-accent-foreground: oklch(0.18 0.01 60);
+  --sidebar-border: oklch(0.85 0.02 75);
+  --sidebar-ring: oklch(0.40 0.13 25);
+
+  /* 3D scene tokens */
+  --scene-bg-top: oklch(0.94 0.02 75);
+  --scene-bg-bot: oklch(0.83 0.04 80);
+  --scene-floor: oklch(0.84 0.05 85);
+  --scene-fog: oklch(0.91 0.025 80);
+  --plinth-color: oklch(0.32 0.04 50);
+  --piece-light: oklch(0.92 0.04 80);
+  --piece-dark: oklch(0.20 0.03 45);
 }
 
+/* ============================================
+   DARK — warm walnut, not zinc
+   ============================================ */
 .dark {
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.45 0.085 224.283);
-  --primary-foreground: oklch(0.984 0.019 200.873);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.552 0.016 285.938);
-  --chart-1: oklch(0.855 0.138 181.071);
-  --chart-2: oklch(0.704 0.14 182.503);
-  --chart-3: oklch(0.6 0.118 184.704);
-  --chart-4: oklch(0.511 0.096 186.391);
-  --chart-5: oklch(0.437 0.078 188.216);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.715 0.143 215.221);
-  --sidebar-primary-foreground: oklch(0.302 0.056 229.695);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.552 0.016 285.938);
+  --ink: oklch(0.92 0.02 80);
+  --ink-soft: oklch(0.68 0.02 75);
+  --ink-faint: oklch(0.45 0.015 65);
+  --rule: oklch(0.30 0.02 60);
+  --rule-soft: oklch(0.20 0.015 60);
+  --background: oklch(0.16 0.01 60);
+  --foreground: oklch(0.92 0.02 80);
+  --bg-soft: oklch(0.20 0.015 60);
+  --bg-deep: oklch(0.24 0.02 65);
+  --oxblood: oklch(0.62 0.13 22);
+  --signal: oklch(0.68 0.15 35);
+
+  --card: oklch(0.20 0.015 60);
+  --card-foreground: oklch(0.92 0.02 80);
+  --popover: oklch(0.20 0.015 60);
+  --popover-foreground: oklch(0.92 0.02 80);
+  --primary: oklch(0.92 0.02 80);
+  --primary-foreground: oklch(0.16 0.01 60);
+  --secondary: oklch(0.24 0.02 65);
+  --secondary-foreground: oklch(0.92 0.02 80);
+  --muted: oklch(0.24 0.02 65);
+  --muted-foreground: oklch(0.68 0.02 75);
+  --accent: oklch(0.62 0.13 22);
+  --accent-foreground: oklch(0.92 0.02 80);
+  --destructive: oklch(0.68 0.15 35);
+  --border: oklch(0.30 0.02 60);
+  --input: oklch(0.30 0.02 60);
+  --ring: oklch(0.62 0.13 22);
+
+  --chart-1: oklch(0.62 0.13 22);
+  --chart-2: oklch(0.68 0.10 35);
+  --chart-3: oklch(0.55 0.05 70);
+  --chart-4: oklch(0.42 0.04 65);
+  --chart-5: oklch(0.70 0.06 85);
+
+  --sidebar: oklch(0.20 0.015 60);
+  --sidebar-foreground: oklch(0.92 0.02 80);
+  --sidebar-primary: oklch(0.62 0.13 22);
+  --sidebar-primary-foreground: oklch(0.92 0.02 80);
+  --sidebar-accent: oklch(0.24 0.02 65);
+  --sidebar-accent-foreground: oklch(0.92 0.02 80);
+  --sidebar-border: oklch(0.30 0.02 60);
+  --sidebar-ring: oklch(0.62 0.13 22);
+
+  --scene-bg-top: oklch(0.16 0.01 60);
+  --scene-bg-bot: oklch(0.22 0.025 50);
+  --scene-floor: oklch(0.27 0.03 60);
+  --scene-fog: oklch(0.18 0.015 55);
+  --plinth-color: oklch(0.22 0.03 55);
+  --piece-light: oklch(0.84 0.05 85);
+  --piece-dark: oklch(0.16 0.025 50);
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
+  * { @apply border-border outline-ring/50; }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "ss01", "kern";
   }
-  html {
-    @apply font-sans;
-  }
+  html { font-family: var(--font-body); }
 }
