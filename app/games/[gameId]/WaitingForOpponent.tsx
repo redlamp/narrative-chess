@@ -41,12 +41,21 @@ export function WaitingForOpponent({ gameId, shareUrl }: Props) {
 
   return (
     <main className="container mx-auto max-w-xl py-16 px-6 space-y-6 text-center">
-      <h1 className="text-2xl font-heading font-semibold">Waiting for opponent…</h1>
-      <p className="text-sm text-muted-foreground">
+      <h1 className="font-display text-3xl tracking-tight text-foreground">
+        Waiting for{" "}
+        <em
+          className="font-display italic"
+          style={{ color: "var(--oxblood)" }}
+        >
+          opponent
+        </em>
+        …
+      </h1>
+      <p className="font-body italic text-sm text-ink-soft">
         Share this URL. The game starts as soon as someone joins.
       </p>
       <div className="flex items-center gap-2">
-        <code className="flex-1 rounded border px-3 py-2 text-xs break-all bg-muted/40">
+        <code className="flex-1 rounded border border-rule-soft px-3 py-2 font-mono text-xs break-all bg-bg-soft">
           {shareUrl}
         </code>
         <Button type="button" onClick={onCopy} variant="outline">

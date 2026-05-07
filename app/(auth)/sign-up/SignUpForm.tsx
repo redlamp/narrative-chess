@@ -57,7 +57,15 @@ export function SignUpForm({ action = signUp, onSuccess }: SignUpFormProps) {
 
   return (
     <form action={formAction} className="space-y-4">
-      <h1 className="text-2xl font-semibold text-foreground">Sign up</h1>
+      <h1 className="font-display text-3xl tracking-tight text-foreground">
+        Sign{" "}
+        <em
+          className="font-display italic"
+          style={{ color: "var(--oxblood)" }}
+        >
+          up
+        </em>
+      </h1>
       <div className="space-y-2">
         <Label htmlFor="displayName">Display name</Label>
         <Input
