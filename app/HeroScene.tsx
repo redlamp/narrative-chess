@@ -1,161 +1,165 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { useFrame, useThree } from "@react-three/fiber";
-import { Center, Text3D } from "@react-three/drei";
+import { useEffect, useRef, useState } from "react";
+import { useFrame } from "@react-three/fiber";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
 import { MathUtils } from "three";
+import * as THREE from "three";
 import { HeroPiece } from "./HeroPiece";
 
-const FONT_URL = "/fonts/helvetiker_bold.typeface.json";
+// Plinth dimensions and world position. PLINTH.x is the horizontal anchor
+// for the cluster — pulled into the right third of the visible stage by
+// camera frustum geometry (camera looks straight forward at origin, so a
+// positive PLINTH.x naturally lands on the right side of the frame).
+const PLINTH = { x: 1.24, y: 0.5, z: 0, w: 3.0, h: 1.0, d: 1.6 };
+const PLINTH_TOP = PLINTH.y + PLINTH.h / 2;
 
-// Reference scene width in world units. Below this, the whole hero scales
-// down so the title + pieces stay inside the visible viewport on narrow
-// windows.
-const REFERENCE_WIDTH = 9.5;
+// 5-piece cluster — back row taller (bishop / king / queen), front row
+// shorter (pawn / rook). Centres ≥ 1.0 apart so bases don't intersect.
+const LAYOUT = [
+  { kind: "bishop", color: "white", x: -1.10, z: -0.45, ry: 0.30 },
+  { kind: "king",   color: "white", x:  0.00, z: -0.45, ry: 0.00 },
+  { kind: "queen",  color: "black", x:  1.10, z: -0.45, ry: -0.20 },
+  { kind: "pawn",   color: "white", x: -0.55, z:  0.55, ry: 0.20 },
+  { kind: "rook",   color: "black", x:  0.55, z:  0.55, ry: -0.40 },
+] as const;
 
-// Common ground baseline Y for all pieces. Bases sit at Y=0; this offset
-// shifts the whole arc below the title.
-const PIECE_Y = -1.7;
-
-// Vertical offset for the entire hero group. Shifts the composition above
-// mid-screen — the camera looks at world origin, so pushing the scene up
-// in Y moves it toward the top of the viewport.
-const SCENE_Y = 1.5;
-
-// Camera base Y. Lifted so the camera looks down on the scene at a slight
-// angle (lookAt stays at world origin, so a positive Y tilts the camera
-// down by ~atan(CAMERA_Y / 6) ≈ 14° at distance 6). Pointer/tilt parallax
-// damps relative to this base.
-const CAMERA_Y = 1.5;
-
-// How aggressively device tilt drives the parallax. gamma (left-right) and
-// beta (front-back) are in degrees; dividing by 25 gives ~1.0 at 25° tilt
-// which is comfortable thumb travel on a phone in portrait.
 const TILT_DIVISOR = 25;
 
 type Tilt = { x: number; y: number; active: boolean };
 
+function useSceneTokens() {
+  const [tokens, setTokens] = useState({
+    floor: "#ddcca0",
+    plinth: "#5a4128",
+    fog: "#e8dcc4",
+  });
+  useEffect(() => {
+    const read = () => {
+      const cs = getComputedStyle(document.documentElement);
+      setTokens({
+        floor: cs.getPropertyValue("--scene-floor").trim() || "#ddcca0",
+        plinth: cs.getPropertyValue("--plinth-color").trim() || "#5a4128",
+        fog: cs.getPropertyValue("--scene-fog").trim() || "#e8dcc4",
+      });
+    };
+    read();
+    const obs = new MutationObserver(read);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+  return tokens;
+}
+
 export function HeroScene() {
-  const { viewport } = useThree();
-  const scale = Math.min(1, viewport.width / REFERENCE_WIDTH);
-
-  // Device-orientation parallax for mobile. Falls back to mouse pointer on
-  // desktops + iOS-without-permission. We don't prompt for permission; iOS
-  // users who want tilt will get a static hero, which is fine.
+  const tokens = useSceneTokens();
   const tilt = useRef<Tilt>({ x: 0, y: 0, active: false });
+  const groupRef = useRef<THREE.Group>(null);
+  const pieceRefs = useRef<(THREE.Group | null)[]>([]);
 
+  // Device-orientation parallax for mobile.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const handler = (e: DeviceOrientationEvent) => {
       if (e.gamma == null || e.beta == null) return;
-      // Beta has a 45°-ish neutral when phone is held upright; subtract that
-      // so a "looking at it normally" pose maps to ~0.
-      const x = MathUtils.clamp(e.gamma / TILT_DIVISOR, -1, 1);
-      const y = MathUtils.clamp((e.beta - 45) / TILT_DIVISOR, -1, 1);
-      tilt.current.x = x;
-      tilt.current.y = y;
+      tilt.current.x = MathUtils.clamp(e.gamma / TILT_DIVISOR, -1, 1);
+      tilt.current.y = MathUtils.clamp((e.beta - 45) / TILT_DIVISOR, -1, 1);
       tilt.current.active = true;
     };
     window.addEventListener("deviceorientation", handler);
     return () => window.removeEventListener("deviceorientation", handler);
   }, []);
 
-  useFrame((state) => {
+  // Camera looks straight forward (lookAt y-axis through origin). The
+  // cluster sits to the right because PLINTH.x is positive — not because
+  // the camera is panned to follow it. This is what keeps the left side
+  // of the stage clear for the editorial overlay text.
+  useFrame((state, dt) => {
     const t = tilt.current;
-    const targetX = t.active ? t.x : state.pointer.x;
-    const targetY = t.active ? t.y : state.pointer.y;
-    state.camera.position.x = MathUtils.damp(
-      state.camera.position.x,
-      targetX * 0.4,
-      4,
-      1 / 60,
-    );
-    state.camera.position.y = MathUtils.damp(
-      state.camera.position.y,
-      CAMERA_Y + targetY * 0.25,
-      4,
-      1 / 60,
-    );
-    state.camera.lookAt(0, 0, 0);
+    const px = t.active ? t.x : state.pointer.x;
+    const py = t.active ? t.y : state.pointer.y;
+    state.camera.position.x = MathUtils.damp(state.camera.position.x, px * 0.4, 4, dt);
+    state.camera.position.y = MathUtils.damp(state.camera.position.y, 1.7 + py * 0.25, 4, dt);
+    state.camera.lookAt(0, 1.0, 0);
   });
+
+  // Entrance — pieces drop onto the plinth, staggered.
+  useGSAP(
+    () => {
+      const tl = gsap.timeline({ delay: 0.15 });
+      pieceRefs.current.forEach((p, i) => {
+        if (!p) return;
+        const finalY = p.position.y;
+        p.position.y = finalY + 4.0;
+        p.scale.set(0.85, 0.85, 0.85);
+        const finalRy = p.rotation.y;
+        p.rotation.y = finalRy - 0.4;
+        tl.to(p.position, { y: finalY, duration: 0.9, ease: "power3.out" }, 0.3 + i * 0.1);
+        tl.to(p.scale, { x: 1, y: 1, z: 1, duration: 0.85, ease: "back.out(1.4)" }, 0.3 + i * 0.1);
+        tl.to(p.rotation, { y: finalRy, duration: 1.0, ease: "power2.out" }, 0.3 + i * 0.1);
+      });
+    },
+    { scope: groupRef },
+  );
 
   return (
     <>
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[5, 10, 5]} intensity={1.2} />
+      <fog attach="fog" args={[tokens.fog, 9, 24]} />
+      <hemisphereLight args={["#fbf3df", "#6a5a3a", 0.55]} />
+      <directionalLight
+        position={[5, 7, 4]}
+        intensity={1.6}
+        color="#ffe8c2"
+        castShadow
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
+        shadow-camera-near={1}
+        shadow-camera-far={22}
+        shadow-camera-left={-2}
+        shadow-camera-right={9}
+        shadow-camera-top={5}
+        shadow-camera-bottom={-2}
+        shadow-bias={-0.0008}
+        shadow-radius={4}
+      />
+      <directionalLight position={[-4, 3, -3]} intensity={0.4} color="#c6d8e0" />
 
-      <group scale={[scale, scale, scale]} position={[0, SCENE_Y, 0]}>
-        {/* Title — two lines, each centered horizontally on its own. Wrapping
-            each <Text3D> in its own <Center> avoids the "shorter line aligns
-            left of longer line" effect of a single shared <Center>. */}
-        {/* "Chess" baseline sits on PIECE_Y so the text rests on the same
-            ground as the pieces. "Narrative" stacks 1.2 units above (line
-            spacing) so the two-line title reads as one block above ground. */}
-        <Center disableY position={[0, PIECE_Y + 1.2, 0]}>
-          <Text3D
-            font={FONT_URL}
-            size={1}
-            height={0.18}
-            bevelEnabled
-            bevelSize={0.025}
-            bevelThickness={0.04}
-            bevelSegments={4}
+      {/* Floor — wide plane, receives plinth shadow */}
+      <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[40, 16]} />
+        <meshStandardMaterial color={tokens.floor} roughness={0.95} transparent opacity={0.85} />
+      </mesh>
+
+      {/* Plinth — walnut block the cluster sits on */}
+      <mesh
+        position={[PLINTH.x, PLINTH.y, PLINTH.z]}
+        castShadow
+        receiveShadow
+      >
+        <boxGeometry args={[PLINTH.w, PLINTH.h, PLINTH.d]} />
+        <meshPhysicalMaterial
+          color={tokens.plinth}
+          roughness={0.55}
+          clearcoat={0.25}
+          clearcoatRoughness={0.5}
+        />
+      </mesh>
+
+      {/* Cluster — 5 pieces on plinth top */}
+      <group ref={groupRef} position={[PLINTH.x, PLINTH_TOP, 0]}>
+        {LAYOUT.map((p, i) => (
+          <group
+            key={`${p.kind}-${p.color}-${i}`}
+            ref={(el) => {
+              pieceRefs.current[i] = el;
+            }}
+            position={[p.x, 0, p.z]}
+            rotation={[0, p.ry, 0]}
           >
-            Narrative
-            <meshStandardMaterial color="white" roughness={0.4} metalness={0.1} />
-          </Text3D>
-        </Center>
-        <Center disableY position={[0, PIECE_Y, 0]}>
-          <Text3D
-            font={FONT_URL}
-            size={1}
-            height={0.18}
-            bevelEnabled
-            bevelSize={0.025}
-            bevelThickness={0.04}
-            bevelSegments={4}
-          >
-            Chess
-            <meshStandardMaterial color="white" roughness={0.4} metalness={0.1} />
-          </Text3D>
-        </Center>
-
-        {/* Left: white pieces — arc around the left edge of the title.
-            All pieces share PIECE_Y (resting on the same ground); the X-Z
-            offsets create the arc curving outward and slightly forward of
-            the text plane. */}
-        <HeroPiece
-          kind="pawn"
-          color="white"
-          position={[-2.4, PIECE_Y, 0.5]}
-          rotation={[0, 0.25, 0]}
-        />
-        <HeroPiece
-          kind="bishop"
-          color="white"
-          position={[-3.4, PIECE_Y, 0.0]}
-          rotation={[0, -0.15, 0]}
-        />
-        <HeroPiece
-          kind="rook"
-          color="white"
-          position={[-4.2, PIECE_Y, -0.5]}
-          rotation={[0, 0.4, 0]}
-        />
-
-        {/* Right: black pieces — arc around the right edge of the title. */}
-        <HeroPiece
-          kind="king"
-          color="black"
-          position={[2.4, PIECE_Y, 0.5]}
-          rotation={[0, -0.25, 0]}
-        />
-        <HeroPiece
-          kind="queen"
-          color="black"
-          position={[3.7, PIECE_Y, -0.2]}
-          rotation={[0, 0.2, 0]}
-        />
+            <HeroPiece kind={p.kind} color={p.color} />
+          </group>
+        ))}
       </group>
     </>
   );

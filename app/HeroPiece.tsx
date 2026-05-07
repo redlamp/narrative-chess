@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { ThreeElements } from "@react-three/fiber";
 
 type Props = ThreeElements["group"] & {
@@ -7,37 +8,60 @@ type Props = ThreeElements["group"] & {
   color: "white" | "black";
 };
 
-const COLORS = {
-  white: "#f4f4f5",
-  black: "#18181b",
-};
+// Reads --piece-light / --piece-dark from globals.css and re-reads
+// when the html.dark class flips (next-themes toggles it).
+function useThemePieceColor(color: "white" | "black") {
+  const [hex, setHex] = useState(color === "white" ? "#f3e8cf" : "#2a1c12");
 
-// Geometry conventions for this component
+  useEffect(() => {
+    const tok = color === "white" ? "--piece-light" : "--piece-dark";
+    const read = () => {
+      const v = getComputedStyle(document.documentElement).getPropertyValue(tok).trim();
+      if (v) setHex(v);
+    };
+    read();
+    const obs = new MutationObserver(read);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, [color]);
+
+  return hex;
+}
+
+// Geometry conventions
 // - Ground (where bases rest) is at Y = 0.
 // - Base spans Y = 0..0.1 (center 0.05, height 0.1).
 // - Body bottoms overlap into the base by 0.05 so there's no visible seam.
 
 export function HeroPiece({ kind, color, ...rest }: Props) {
+  const pieceColor = useThemePieceColor(color);
   const mat = (
-    <meshStandardMaterial color={COLORS[color]} roughness={0.55} metalness={0.05} />
+    <meshPhysicalMaterial
+      color={pieceColor}
+      roughness={0.42}
+      metalness={0.08}
+      clearcoat={0.18}
+      clearcoatRoughness={0.4}
+      sheen={0.3}
+      sheenColor="#ffffff"
+    />
   );
 
   return (
     <group {...rest}>
-      {/* Base — every piece has one */}
-      <mesh position={[0, 0.05, 0]}>
+      {/* Base */}
+      <mesh position={[0, 0.05, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[0.45, 0.5, 0.1, 24]} />
         {mat}
       </mesh>
 
       {kind === "pawn" && (
         <>
-          {/* body H=0.5 → bottom = 0.30 - 0.25 = 0.05 (overlaps base) */}
-          <mesh position={[0, 0.3, 0]}>
+          <mesh position={[0, 0.3, 0]} castShadow receiveShadow>
             <cylinderGeometry args={[0.22, 0.3, 0.5, 24]} />
             {mat}
           </mesh>
-          <mesh position={[0, 0.68, 0]}>
+          <mesh position={[0, 0.68, 0]} castShadow receiveShadow>
             <sphereGeometry args={[0.22, 24, 24]} />
             {mat}
           </mesh>
@@ -46,19 +70,14 @@ export function HeroPiece({ kind, color, ...rest }: Props) {
 
       {kind === "rook" && (
         <>
-          {/* body H=0.7 → bottom = 0.40 - 0.35 = 0.05; top = 0.75 */}
-          <mesh position={[0, 0.4, 0]}>
+          <mesh position={[0, 0.4, 0]} castShadow receiveShadow>
             <cylinderGeometry args={[0.32, 0.36, 0.7, 24]} />
             {mat}
           </mesh>
-          {/* top cap H=0.12 — center at 0.79 → cap spans 0.73..0.85 so its
-              bottom overlaps the body top by 0.02, sealing the seam. */}
-          <mesh position={[0, 0.79, 0]}>
+          <mesh position={[0, 0.79, 0]} castShadow receiveShadow>
             <cylinderGeometry args={[0.36, 0.36, 0.12, 24]} />
             {mat}
           </mesh>
-          {/* Battlements: 4 small boxes resting on top of the cap (top of
-              cap at 0.85; box H=0.16 → center at 0.93). */}
           {[0, 90, 180, 270].map((deg, i) => {
             const r = 0.27;
             const rad = (deg * Math.PI) / 180;
@@ -66,6 +85,8 @@ export function HeroPiece({ kind, color, ...rest }: Props) {
               <mesh
                 key={i}
                 position={[Math.cos(rad) * r, 0.93, Math.sin(rad) * r]}
+                castShadow
+                receiveShadow
               >
                 <boxGeometry args={[0.12, 0.16, 0.12]} />
                 {mat}
@@ -77,16 +98,15 @@ export function HeroPiece({ kind, color, ...rest }: Props) {
 
       {kind === "bishop" && (
         <>
-          {/* body H=0.6 → bottom = 0.35 - 0.30 = 0.05 */}
-          <mesh position={[0, 0.35, 0]}>
+          <mesh position={[0, 0.35, 0]} castShadow receiveShadow>
             <cylinderGeometry args={[0.22, 0.32, 0.6, 24]} />
             {mat}
           </mesh>
-          <mesh position={[0, 0.78, 0]}>
+          <mesh position={[0, 0.78, 0]} castShadow receiveShadow>
             <sphereGeometry args={[0.27, 24, 24]} />
             {mat}
           </mesh>
-          <mesh position={[0, 1.1, 0]}>
+          <mesh position={[0, 1.1, 0]} castShadow receiveShadow>
             <coneGeometry args={[0.14, 0.28, 24]} />
             {mat}
           </mesh>
@@ -95,21 +115,24 @@ export function HeroPiece({ kind, color, ...rest }: Props) {
 
       {kind === "queen" && (
         <>
-          {/* body H=0.7 → bottom = 0.40 - 0.35 = 0.05 */}
-          <mesh position={[0, 0.4, 0]}>
+          <mesh position={[0, 0.4, 0]} castShadow receiveShadow>
             <cylinderGeometry args={[0.25, 0.36, 0.7, 24]} />
             {mat}
           </mesh>
-          <mesh position={[0, 0.85, 0]}>
+          <mesh position={[0, 0.85, 0]} castShadow receiveShadow>
             <sphereGeometry args={[0.3, 24, 24]} />
             {mat}
           </mesh>
-          {/* Crown spheres */}
           {[0, 60, 120, 180, 240, 300].map((deg, i) => {
             const r = 0.2;
             const rad = (deg * Math.PI) / 180;
             return (
-              <mesh key={i} position={[Math.cos(rad) * r, 1.17, Math.sin(rad) * r]}>
+              <mesh
+                key={i}
+                position={[Math.cos(rad) * r, 1.17, Math.sin(rad) * r]}
+                castShadow
+                receiveShadow
+              >
                 <sphereGeometry args={[0.07, 12, 12]} />
                 {mat}
               </mesh>
@@ -120,21 +143,19 @@ export function HeroPiece({ kind, color, ...rest }: Props) {
 
       {kind === "king" && (
         <>
-          {/* body H=0.7 → bottom = 0.40 - 0.35 = 0.05 */}
-          <mesh position={[0, 0.4, 0]}>
+          <mesh position={[0, 0.4, 0]} castShadow receiveShadow>
             <cylinderGeometry args={[0.25, 0.36, 0.7, 24]} />
             {mat}
           </mesh>
-          <mesh position={[0, 0.85, 0]}>
+          <mesh position={[0, 0.85, 0]} castShadow receiveShadow>
             <sphereGeometry args={[0.3, 24, 24]} />
             {mat}
           </mesh>
-          {/* Cross on top */}
-          <mesh position={[0, 1.25, 0]}>
+          <mesh position={[0, 1.25, 0]} castShadow receiveShadow>
             <boxGeometry args={[0.08, 0.32, 0.08]} />
             {mat}
           </mesh>
-          <mesh position={[0, 1.25, 0]}>
+          <mesh position={[0, 1.25, 0]} castShadow receiveShadow>
             <boxGeometry args={[0.22, 0.08, 0.08]} />
             {mat}
           </mesh>
