@@ -92,10 +92,11 @@ What success looks like for M1: two browsers, end-to-end smoke test green, no v1
 | polish | (in M1.5++ squash) | — | Drop redundant Home nav link (PR #32) |
 | polish | (in M1.5++ squash) | — | Home stat panels + vertical-stack layout + public_stats RPC (PR #33) |
 | M1.5++ | (ship) | `5706e2b` | Production deploy via PR #34 |
+| frontend-pass-1 | (PR pending) | — | Editorial-hybrid theme: Fraunces+Newsreader+JetBrains Mono fonts; ink+oxblood+cream palette (replaces shadcn-default teal); 3D hero rebuilt with walnut plinth, 5-piece cluster, GSAP entrance, theme-aware materials; new StageOverlay + StageCtas + LiveGameCard components; typography pass on game/auth/account/games-directory pages. Reference mockup at design/variants/06-hybrid-3d.html. |
 
 ## Staged on `dev` (post-M1.5++, not yet on `main`)
 
-(none — `dev` content-equal to `main` post-reconciliation merge `589403d`)
+- **frontend-pass-1** — PR open against `dev` (`feat/frontend-pass-1`). Six-phase editorial-hybrid theme + 3D hero rebuild + landing rewrite. Two pre-existing e2e bugs fixed in Phase 6 (wordmark aria-label, clocks-display selector). Plan: `docs/superpowers/plans/2026-05-07-frontend-pass-1.md`.
 
 ## M1.5++ ship details
 
