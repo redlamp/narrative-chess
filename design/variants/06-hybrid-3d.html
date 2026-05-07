@@ -1,0 +1,905 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Narrative CHESS — Hybrid + 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..900,0..100,0..1;1,9..144,300..900,0..100,0..1&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet" />
+<style>
+  /* ========================================
+     THEME TOKENS
+     ======================================== */
+  :root {
+    --ink: #1a1815;
+    --ink-soft: #5a554c;
+    --ink-faint: #8a8478;
+    --rule: #2a2725;
+    --rule-soft: #d6cdb9;
+    --bg: #f3ece1;
+    --bg-soft: #ebe2d2;
+    --bg-deep: #e0d4be;
+    --oxblood: #7a1f25;
+    --signal: #c84a2a;
+
+    --scene-bg-top: #f3ece1;
+    --scene-bg-bot: #d8c9a8;
+    --scene-floor: #ddcca0;
+    --scene-fog: #e8dcc4;
+    --plinth-color: #5a4128;
+    --piece-light: #f3e8cf;
+    --piece-dark: #2a1c12;
+
+    --max: 1180px;
+    --serif-display: "Fraunces", "Times New Roman", serif;
+    --serif-body: "Newsreader", Georgia, serif;
+    --mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
+  }
+
+  :root[data-theme="dark"] {
+    --ink: #ece4d2;
+    --ink-soft: #a89f8a;
+    --ink-faint: #6a6457;
+    --rule: #3a342c;
+    --rule-soft: #2a251f;
+    --bg: #181612;
+    --bg-soft: #221e18;
+    --bg-deep: #2a261f;
+    --oxblood: #c8585e;
+    --signal: #e26a45;
+
+    --scene-bg-top: #181612;
+    --scene-bg-bot: #2a1f15;
+    --scene-floor: #322619;
+    --scene-fog: #1a1410;
+    --plinth-color: #2a1c12;
+    --piece-light: #d8c9a8;
+    --piece-dark: #1a0f08;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); transition: background 280ms ease, color 280ms ease; }
+  body {
+    font-family: var(--serif-body);
+    font-optical-sizing: auto;
+    font-weight: 380;
+    font-size: 17px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* ========================================
+     THEME TOGGLE — icon-only
+     ======================================== */
+  .theme-toggle {
+    position: fixed;
+    top: 20px; right: 20px;
+    z-index: 100;
+    background: rgba(243, 236, 225, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    width: 36px; height: 36px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 160ms ease, color 160ms ease;
+  }
+  :root[data-theme="dark"] .theme-toggle { background: rgba(34, 30, 24, 0.85); }
+  .theme-toggle:hover { background: var(--ink); color: var(--bg); }
+  .theme-toggle svg { width: 16px; height: 16px; display: block; }
+  /* Show sun in dark mode (click to go light); moon in light mode (click to go dark) */
+  .theme-toggle .icon-moon { display: block; }
+  .theme-toggle .icon-sun  { display: none; }
+  :root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+  :root[data-theme="dark"] .theme-toggle .icon-sun  { display: block; }
+
+  /* ========================================
+     3D STAGE — 60vh hero
+     ======================================== */
+  .stage {
+    position: relative;
+    width: 100%;
+    height: 60vh;
+    min-height: 460px;
+    overflow: hidden;
+    background: linear-gradient(180deg, var(--scene-bg-top) 0%, var(--scene-bg-bot) 100%);
+    transition: background 280ms ease;
+  }
+  #scene {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    pointer-events: none;
+  }
+  .stage::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.18) 100%),
+      repeating-linear-gradient(45deg, rgba(0,0,0,0.012) 0 1px, transparent 1px 3px);
+    mix-blend-mode: multiply;
+  }
+  :root[data-theme="dark"] .stage::after {
+    background:
+      radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.5) 100%),
+      repeating-linear-gradient(45deg, rgba(255,255,255,0.012) 0 1px, transparent 1px 3px);
+    mix-blend-mode: normal;
+  }
+
+  /* ========================================
+     STAGE OVERLAY
+     ======================================== */
+  .stage-overlay {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 28px 56px 44px;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    pointer-events: none;
+  }
+  .stage-overlay > * { pointer-events: auto; }
+
+  .stage-masthead {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .stage-masthead .left {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    display: flex; align-items: center;
+  }
+  .stage-masthead .right {
+    text-align: right;
+    font-family: var(--serif-body);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+
+  .live-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--signal);
+    margin-right: 8px;
+    border-radius: 50%;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 0.45; transform: scale(0.85); } 50% { opacity: 1; transform: scale(1.15); } }
+
+  .wordmark { display: inline-flex; align-items: baseline; gap: 0; }
+  .wordmark .narr {
+    font-family: var(--serif-display);
+    font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+    font-style: italic;
+    font-weight: 380;
+    font-size: 28px;
+    letter-spacing: -0.012em;
+    color: var(--ink);
+  }
+  .wordmark .chess {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink);
+    margin-left: 10px;
+    border: 1.5px solid var(--ink);
+    padding: 4px 7px 3px;
+    line-height: 1;
+    align-self: center;
+  }
+
+  .stage-hero {
+    align-self: end;
+    max-width: 36ch;
+  }
+  .stage-hero h1 {
+    font-family: var(--serif-display);
+    font-variation-settings: "opsz" 144, "SOFT" 50, "WONK" 0;
+    font-weight: 360;
+    font-size: clamp(40px, 5.4vw, 76px);
+    line-height: 0.96;
+    letter-spacing: -0.022em;
+    color: var(--ink);
+  }
+  .stage-hero h1 em {
+    font-style: italic;
+    font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+    font-weight: 320;
+    color: var(--oxblood);
+  }
+  .stage-hero .deck {
+    margin-top: 14px;
+    font-family: var(--serif-body);
+    font-style: italic;
+    font-weight: 320;
+    font-size: 17px;
+    line-height: 1.45;
+    color: var(--ink-soft);
+  }
+  .stage-hero .ctas {
+    margin-top: 22px;
+    display: flex;
+    gap: 12px;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    transition: background 200ms ease, color 200ms ease;
+  }
+  .btn--primary {
+    padding: 12px 22px;
+    background: var(--ink);
+    color: var(--bg);
+    font-family: var(--serif-display);
+    font-variation-settings: "opsz" 96, "SOFT" 50;
+    font-style: italic;
+    font-weight: 380;
+    font-size: 16px;
+    border: 1px solid var(--ink);
+  }
+  .btn--primary:hover { background: var(--oxblood); border-color: var(--oxblood); }
+  .btn--primary .arrow { font-family: var(--mono); font-style: normal; font-weight: 500; font-size: 12px; margin-left: 12px; opacity: 0.7; }
+  .btn--mono {
+    padding: 12px 16px;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .btn--mono:hover { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+  /* ========================================
+     PAGE BODY
+     ======================================== */
+  .frame { max-width: var(--max); margin: 0 auto; padding: 64px 56px 96px; }
+
+  .live-preview {
+    border: 1px solid var(--rule);
+    background: var(--bg-soft);
+    color: var(--ink);
+    overflow: hidden;
+    margin-bottom: 84px;
+  }
+  .live-preview .lp-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--rule-soft);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .live-preview .lp-head .id { color: var(--ink); font-weight: 500; }
+  .live-preview .lp-head .id::before {
+    content: ""; display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--signal); border-radius: 50%;
+    margin-right: 8px; vertical-align: 1px;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  .live-preview .lp-meta { padding: 22px 22px 16px; }
+  .live-preview .players {
+    display: grid; grid-template-columns: 1fr auto 1fr;
+    gap: 16px; align-items: center;
+  }
+  .live-preview .player .name {
+    font-family: var(--serif-display);
+    font-variation-settings: "opsz" 144, "SOFT" 50;
+    font-weight: 420;
+    font-size: 22px; line-height: 1.1;
+    color: var(--ink);
+  }
+  .live-preview .player .meta {
+    font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.1em;
+    color: var(--ink-faint);
+    margin-top: 4px; text-transform: uppercase;
+  }
+  .live-preview .player.right { text-align: right; }
+  .live-preview .vs { font-family: var(--serif-body); font-style: italic; font-size: 14px; color: var(--ink-faint); }
+  .live-preview .clocks {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 0; margin-top: 18px;
+    border-top: 1px solid var(--rule-soft);
+  }
+  .live-preview .clock-cell { padding: 12px 0 10px; text-align: center; }
+  .live-preview .clock-cell.right { border-left: 1px solid var(--rule-soft); }
+  .live-preview .clock {
+    font-family: var(--mono);
+    font-size: 28px; font-weight: 500;
+    color: var(--ink);
+    font-feature-settings: "tnum" 1;
+  }
+  .live-preview .clock.active { color: var(--signal); }
+  .live-preview .clock-label {
+    font-family: var(--mono); font-size: 9px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ink-faint); margin-top: 2px;
+  }
+
+  .stats {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 32px; padding: 48px 0;
+    border-top: 2px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  .stat { display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: baseline; }
+  .stat .num {
+    font-family: var(--mono);
+    font-feature-settings: "tnum" 1, "lnum" 1;
+    font-weight: 600; font-size: 56px;
+    line-height: 0.9;
+    color: var(--oxblood);
+    letter-spacing: -0.02em;
+  }
+  .stat .label { font-family: var(--serif-body); font-style: italic; font-size: 15px; color: var(--ink-soft); line-height: 1.4; }
+  .stat .label strong {
+    display: block;
+    font-family: var(--mono); font-style: normal;
+    font-size: 9px; font-weight: 500;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--ink); margin-bottom: 6px;
+  }
+
+  .games-now { margin-top: 84px; }
+  .games-now .section-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding-bottom: 14px; border-bottom: 1px solid var(--rule);
+  }
+  .games-now .section-head h2 {
+    font-family: var(--serif-display);
+    font-variation-settings: "opsz" 96, "SOFT" 50;
+    font-weight: 380; font-size: 32px;
+    letter-spacing: -0.015em;
+  }
+  .games-now .section-head h2 em {
+    font-style: italic;
+    font-variation-settings: "opsz" 96, "SOFT" 100, "WONK" 1;
+    color: var(--oxblood); font-weight: 320;
+  }
+  .games-now .section-head .meta {
+    font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--ink-soft);
+    display: flex; align-items: center;
+  }
+  .game-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto 60px;
+    gap: 24px; align-items: center;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--rule-soft);
+    transition: background 120ms linear;
+  }
+  .game-row:hover { background: var(--bg-soft); }
+  .game-row .matchup .names {
+    font-family: var(--serif-display);
+    font-variation-settings: "opsz" 144, "SOFT" 50;
+    font-weight: 420; font-size: 22px;
+    letter-spacing: -0.01em; color: var(--ink);
+  }
+  .game-row .matchup .names em {
+    font-style: italic;
+    font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+    font-weight: 380; color: var(--ink-faint);
+    margin: 0 0.4em;
+  }
+  .game-row .matchup .opening {
+    margin-top: 4px; font-family: var(--serif-body);
+    font-style: italic; font-size: 13px; color: var(--ink-soft);
+  }
+  .game-row .clock-pair {
+    font-family: var(--mono); font-size: 14px;
+    font-feature-settings: "tnum" 1;
+    color: var(--ink-soft); text-align: right;
+  }
+  .game-row .clock-pair .active { color: var(--signal); font-weight: 600; }
+  .game-row .move-count { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); }
+  .game-row .watch {
+    font-family: var(--serif-body); font-style: italic;
+    font-size: 14px; color: var(--oxblood);
+    text-align: right; text-decoration: none;
+  }
+  .game-row .watch::after { content: " →"; }
+
+  .colophon {
+    margin-top: 96px; padding-top: 24px;
+    border-top: 4px double var(--rule);
+    display: flex; justify-content: space-between;
+    align-items: baseline; flex-wrap: wrap; gap: 16px;
+    font-family: var(--serif-body); font-style: italic;
+    font-size: 13px; color: var(--ink-soft);
+  }
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+  <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+  </svg>
+  <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+  </svg>
+</button>
+
+<section class="stage">
+  <canvas id="scene"></canvas>
+
+  <div class="stage-overlay">
+    <div class="stage-masthead">
+      <div class="left"><span class="live-dot"></span>3 LIVE NOW</div>
+      <div class="wordmark">
+        <span class="narr">Narrative</span>
+        <span class="chess">CHESS</span>
+      </div>
+      <div class="right">May 7, 2026</div>
+    </div>
+
+    <div></div>
+
+    <div class="stage-hero">
+      <h1>Games<br/><em>that tell</em><br/>stories.</h1>
+      <p class="deck">Two players sit. A board opens. Somewhere between move 1 and the resignation, a story arrives — and the engine quietly records it.</p>
+      <div class="ctas">
+        <a href="#" class="btn btn--primary">Begin a game<span class="arrow">→</span></a>
+        <a href="#" class="btn btn--mono">Sign in</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="frame">
+
+  <aside class="live-preview">
+    <div class="lp-head">
+      <span class="id">Live · Game a8f3</span>
+      <span>5+0 Blitz</span>
+    </div>
+    <div class="lp-meta">
+      <div class="players">
+        <div class="player left">
+          <div class="name">taylor</div>
+          <div class="meta">White · 1842</div>
+        </div>
+        <div class="vs">vs</div>
+        <div class="player right">
+          <div class="name">alt+2</div>
+          <div class="meta">Black · 1798</div>
+        </div>
+      </div>
+      <div class="clocks">
+        <div class="clock-cell">
+          <div class="clock">02:14</div>
+          <div class="clock-label">white</div>
+        </div>
+        <div class="clock-cell right">
+          <div class="clock active">01:47</div>
+          <div class="clock-label">black</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <section class="stats">
+    <div class="stat"><div class="num">12</div>
+      <div class="label"><strong>Now playing</strong>Live games on the boards at this hour.</div></div>
+    <div class="stat"><div class="num">47</div>
+      <div class="label"><strong>Today</strong>Games begun since this morning.</div></div>
+    <div class="stat"><div class="num">1,243</div>
+      <div class="label"><strong>This week</strong>Moves submitted to the record.</div></div>
+  </section>
+
+  <section class="games-now">
+    <div class="section-head">
+      <h2>Now <em>playing</em>.</h2>
+      <div class="meta"><span class="live-dot"></span>12 live</div>
+    </div>
+    <div class="game-row">
+      <div class="matchup">
+        <div class="names">taylor <em>vs</em> alt+2</div>
+        <div class="opening">Najdorf Sicilian, English Attack</div>
+      </div>
+      <div class="clock-pair">02:14 · <span class="active">01:47</span></div>
+      <div class="move-count">26</div>
+      <a href="#" class="watch">Watch</a>
+    </div>
+    <div class="game-row">
+      <div class="matchup">
+        <div class="names">marcus_b <em>vs</em> rina.k</div>
+        <div class="opening">Queen's Gambit Accepted</div>
+      </div>
+      <div class="clock-pair"><span class="active">04:32</span> · 04:01</div>
+      <div class="move-count">11</div>
+      <a href="#" class="watch">Watch</a>
+    </div>
+    <div class="game-row">
+      <div class="matchup">
+        <div class="names">eli.m <em>vs</em> jovan_p</div>
+        <div class="opening">King's Indian Defence</div>
+      </div>
+      <div class="clock-pair">12:08 · <span class="active">11:54</span></div>
+      <div class="move-count">38</div>
+      <a href="#" class="watch">Watch</a>
+    </div>
+  </section>
+
+  <footer class="colophon">
+    <div>Set in <em>Fraunces</em>, <em>Newsreader</em> &amp; <em>JetBrains Mono</em>.</div>
+    <div>Narrative <em>Chess</em> · Volume I</div>
+  </footer>
+
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://esm.sh/three@0.160.0",
+    "gsap": "https://esm.sh/gsap@3.12.5"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from "three";
+import { gsap } from "gsap";
+
+const canvas = document.getElementById("scene");
+const stage = canvas.parentElement;
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+
+const scene = new THREE.Scene();
+
+function readSceneTokens() {
+  const cs = getComputedStyle(document.documentElement);
+  return {
+    floor:  cs.getPropertyValue("--scene-floor").trim(),
+    fog:    cs.getPropertyValue("--scene-fog").trim(),
+    plinth: cs.getPropertyValue("--plinth-color").trim(),
+    light:  cs.getPropertyValue("--piece-light").trim(),
+    dark:   cs.getPropertyValue("--piece-dark").trim(),
+  };
+}
+let tokens = readSceneTokens();
+scene.fog = new THREE.Fog(tokens.fog, 9, 24);
+
+// ============================================
+// CAMERA — looks at right-of-center cluster
+// ============================================
+// Camera looks straight forward (no horizontal pan). Cluster sits far to the
+// right in world space; that's what pushes it into the right side of frame.
+// Looking AT the cluster would re-center it visually — exactly the bug we
+// were hitting. Aspect-driven horizontal FOV gives us ~±6.2m of visible space
+// at z=0, so a plinth at x=3.8 lands at ~80% screen-x.
+const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
+const cameraBase = new THREE.Vector3(0, 1.7, 7.5);
+const lookTarget = new THREE.Vector3(0, 1.0, 0);
+camera.position.copy(cameraBase);
+camera.lookAt(lookTarget);
+
+// ============================================
+// LIGHTS
+// ============================================
+const hemi = new THREE.HemisphereLight(0xfbf3df, 0x6a5a3a, 0.55);
+scene.add(hemi);
+
+const key = new THREE.DirectionalLight(0xffe8c2, 1.6);
+key.position.set(5, 7, 4);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+key.shadow.camera.near = 1;
+key.shadow.camera.far = 22;
+key.shadow.camera.left = -2;
+key.shadow.camera.right = 9;
+key.shadow.camera.top = 5;
+key.shadow.camera.bottom = -2;
+key.shadow.bias = -0.0008;
+key.shadow.radius = 4;
+scene.add(key);
+
+const rim = new THREE.DirectionalLight(0xc6d8e0, 0.4);
+rim.position.set(-4, 3, -3);
+scene.add(rim);
+
+// ============================================
+// PLINTH + FLOOR
+// ============================================
+const PLINTH = { x: 1.24, y: 0.5, z: 0, w: 3.0, h: 1.0, d: 1.6 };
+
+const plinthMat = new THREE.MeshPhysicalMaterial({
+  color: tokens.plinth,
+  roughness: 0.55,
+  metalness: 0.0,
+  clearcoat: 0.25,
+  clearcoatRoughness: 0.5,
+});
+const plinth = new THREE.Mesh(
+  new THREE.BoxGeometry(PLINTH.w, PLINTH.h, PLINTH.d),
+  plinthMat,
+);
+plinth.position.set(PLINTH.x, PLINTH.y, PLINTH.z);
+plinth.castShadow = true;
+plinth.receiveShadow = true;
+scene.add(plinth);
+
+const PLINTH_TOP = PLINTH.y + PLINTH.h / 2;
+
+const floorMat = new THREE.MeshStandardMaterial({
+  color: tokens.floor,
+  roughness: 0.95,
+  metalness: 0.0,
+  transparent: true,
+  opacity: 0.85,
+});
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 16), floorMat);
+floor.rotation.x = -Math.PI / 2;
+floor.position.y = 0;
+floor.receiveShadow = true;
+scene.add(floor);
+
+// ============================================
+// PIECE FACTORY — ported from app/HeroPiece.tsx
+// Same primitive geometry the app currently ships.
+// ============================================
+function makeMaterial(colorHex) {
+  return new THREE.MeshPhysicalMaterial({
+    color: colorHex,
+    roughness: 0.42,
+    metalness: 0.08,
+    clearcoat: 0.18,
+    clearcoatRoughness: 0.4,
+    sheen: 0.3,
+    sheenColor: new THREE.Color(0xffffff),
+  });
+}
+
+function makePiece(kind, color) {
+  const group = new THREE.Group();
+  const matColor = color === "white" ? tokens.light : tokens.dark;
+  const mat = makeMaterial(matColor);
+
+  function add(geom, y) {
+    const m = new THREE.Mesh(geom, mat);
+    m.position.y = y;
+    m.castShadow = true;
+    m.receiveShadow = true;
+    group.add(m);
+    return m;
+  }
+
+  add(new THREE.CylinderGeometry(0.45, 0.5, 0.1, 32), 0.05);
+
+  if (kind === "pawn") {
+    add(new THREE.CylinderGeometry(0.22, 0.3, 0.5, 32), 0.30);
+    add(new THREE.SphereGeometry(0.22, 32, 32), 0.68);
+  } else if (kind === "rook") {
+    add(new THREE.CylinderGeometry(0.32, 0.36, 0.7, 32), 0.40);
+    add(new THREE.CylinderGeometry(0.36, 0.36, 0.12, 32), 0.79);
+    [0, 90, 180, 270].forEach(deg => {
+      const r = 0.27;
+      const rad = (deg * Math.PI) / 180;
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 0.12), mat);
+      m.position.set(Math.cos(rad) * r, 0.93, Math.sin(rad) * r);
+      m.castShadow = true; m.receiveShadow = true;
+      group.add(m);
+    });
+  } else if (kind === "bishop") {
+    add(new THREE.CylinderGeometry(0.22, 0.32, 0.6, 32), 0.35);
+    add(new THREE.SphereGeometry(0.27, 32, 32), 0.78);
+    add(new THREE.ConeGeometry(0.14, 0.28, 32), 1.10);
+  } else if (kind === "queen") {
+    add(new THREE.CylinderGeometry(0.25, 0.36, 0.7, 32), 0.40);
+    add(new THREE.SphereGeometry(0.30, 32, 32), 0.85);
+    [0, 60, 120, 180, 240, 300].forEach(deg => {
+      const r = 0.2;
+      const rad = (deg * Math.PI) / 180;
+      const m = new THREE.Mesh(new THREE.SphereGeometry(0.07, 16, 16), mat);
+      m.position.set(Math.cos(rad) * r, 1.17, Math.sin(rad) * r);
+      m.castShadow = true; m.receiveShadow = true;
+      group.add(m);
+    });
+  } else if (kind === "king") {
+    add(new THREE.CylinderGeometry(0.25, 0.36, 0.7, 32), 0.40);
+    add(new THREE.SphereGeometry(0.30, 32, 32), 0.85);
+    const v = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.32, 0.08), mat);
+    v.position.y = 1.25; v.castShadow = true; v.receiveShadow = true;
+    group.add(v);
+    const h = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.08, 0.08), mat);
+    h.position.y = 1.25; h.castShadow = true; h.receiveShadow = true;
+    group.add(h);
+  }
+
+  group.userData.mat = mat;
+  group.userData.color = color;
+  return group;
+}
+
+// ============================================
+// CLUSTER — 5 pieces in two rows on the plinth top.
+// Piece base radius is 0.5, so any two centers must be at least ~1.0 apart
+// or the bases overlap. Layout below keeps every pair >1.0 distant.
+// Footprint ~2.2m × 1.0m, fits inside plinth top (3.0 × 1.6) with margin.
+// ============================================
+const layout = [
+  // Back row — taller pieces
+  { kind: "bishop", color: "white", x: -1.10, z: -0.45, ry:  0.30 },
+  { kind: "king",   color: "white", x:  0.00, z: -0.45, ry:  0.00 },
+  { kind: "queen",  color: "black", x:  1.10, z: -0.45, ry: -0.20 },
+  // Front row — shorter pieces, pulled forward + offset between back-row gaps
+  { kind: "pawn",   color: "white", x: -0.55, z:  0.55, ry:  0.20 },
+  { kind: "rook",   color: "black", x:  0.55, z:  0.55, ry: -0.40 },
+];
+
+const pieceGroup = new THREE.Group();
+const pieceMeshes = [];
+layout.forEach(item => {
+  const g = makePiece(item.kind, item.color);
+  g.position.set(item.x, 0, item.z);
+  g.rotation.y = item.ry;
+  pieceGroup.add(g);
+  pieceMeshes.push(g);
+});
+pieceGroup.position.set(PLINTH.x, PLINTH_TOP, 0);
+scene.add(pieceGroup);
+
+// ============================================
+// THEME SWAP
+// ============================================
+function applyTheme() {
+  tokens = readSceneTokens();
+  scene.fog.color.set(tokens.fog);
+  floorMat.color.set(tokens.floor);
+  plinthMat.color.set(tokens.plinth);
+  pieceMeshes.forEach(g => {
+    const c = g.userData.color === "white" ? tokens.light : tokens.dark;
+    g.userData.mat.color.set(c);
+  });
+}
+
+// ============================================
+// ENTRANCE — pieces drop onto the plinth, staggered
+// ============================================
+const tl = gsap.timeline({ delay: 0.15 });
+
+camera.position.set(0.4, 2.5, 11);
+tl.to(camera.position, {
+  x: cameraBase.x, y: cameraBase.y, z: cameraBase.z,
+  duration: 1.5, ease: "power3.out",
+  onUpdate: () => camera.lookAt(lookTarget),
+}, 0);
+
+pieceMeshes.forEach((g, i) => {
+  const finalY = g.position.y;
+  g.position.y = finalY + 4.0;
+  g.scale.set(0.85, 0.85, 0.85);
+  g.rotation.y -= 0.4;
+  tl.to(g.position, {
+    y: finalY,
+    duration: 0.9, ease: "power3.out",
+  }, 0.3 + i * 0.1);
+  tl.to(g.scale, {
+    x: 1, y: 1, z: 1,
+    duration: 0.85, ease: "back.out(1.4)",
+  }, 0.3 + i * 0.1);
+  tl.to(g.rotation, {
+    y: g.rotation.y + 0.4,
+    duration: 1.0, ease: "power2.out",
+  }, 0.3 + i * 0.1);
+});
+
+document.querySelectorAll(".stage-hero h1, .stage-hero .deck, .stage-hero .ctas, .stage-masthead").forEach((el, i) => {
+  gsap.set(el, { opacity: 0, y: 24 });
+  gsap.to(el, {
+    opacity: 1, y: 0,
+    duration: 0.9, delay: 0.55 + i * 0.10,
+    ease: "power2.out",
+  });
+});
+
+// ============================================
+// POINTER PARALLAX
+// ============================================
+const pointer = { x: 0, y: 0 };
+window.addEventListener("pointermove", (e) => {
+  const rect = stage.getBoundingClientRect();
+  if (e.clientY < rect.top || e.clientY > rect.bottom) return;
+  pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = ((e.clientY - rect.top) / rect.height) * 2 - 1;
+});
+
+const tilt = { x: 0, y: 0, active: false };
+window.addEventListener("deviceorientation", (e) => {
+  if (e.gamma == null || e.beta == null) return;
+  tilt.x = Math.max(-1, Math.min(1, e.gamma / 25));
+  tilt.y = Math.max(-1, Math.min(1, (e.beta - 45) / 25));
+  tilt.active = true;
+});
+
+// ============================================
+// RENDER LOOP
+// ============================================
+const clock = new THREE.Clock();
+function damp(c, t, l, dt) { return c + (t - c) * (1 - Math.exp(-l * dt)); }
+
+function tick() {
+  const dt = clock.getDelta();
+  const px = tilt.active ? tilt.x : pointer.x;
+  const py = tilt.active ? tilt.y : pointer.y;
+  camera.position.x = damp(camera.position.x, cameraBase.x + px * 0.4, 4, dt);
+  camera.position.y = damp(camera.position.y, cameraBase.y + py * 0.25, 4, dt);
+  camera.lookAt(lookTarget);
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+// ============================================
+// RESIZE
+// ============================================
+function resize() {
+  const w = stage.clientWidth;
+  const h = stage.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+resize();
+window.addEventListener("resize", resize);
+
+// ============================================
+// THEME TOGGLE
+// ============================================
+const t = document.getElementById("theme-toggle");
+const root = document.documentElement;
+if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+  root.setAttribute("data-theme", "dark");
+  applyTheme();
+}
+t.addEventListener("click", () => {
+  const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+  root.setAttribute("data-theme", next);
+  applyTheme();
+});
+
+// ============================================
+// CONTEXT-LOSS RECOVERY
+// ============================================
+canvas.addEventListener("webglcontextlost", (e) => e.preventDefault());
+canvas.addEventListener("webglcontextrestored", () => resize());
+</script>
+</body>
+</html>

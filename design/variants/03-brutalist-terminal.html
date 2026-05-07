@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NARRATIVE CHESS — TERMINAL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #f0eadc;
+    --ink: #0a0907;
+    --ink-soft: #45413a;
+    --rule: #0a0907;
+    --accent: #e44d26;       /* terminal-warning red-orange */
+    --green:  #2d5a2d;       /* phosphor green for "ok" */
+    --hairline: 1px solid var(--rule);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); }
+  body {
+    font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+    font-weight: 400;
+    font-size: 13px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    /* CRT-ish scanline overlay (very subtle) */
+    background-image:
+      repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0,0,0,0.012) 2px 3px);
+  }
+
+  .frame {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  /* ===== Top status bar — ANSI-style ===== */
+  .statusbar {
+    border: var(--hairline);
+    padding: 8px 14px;
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+  .statusbar .pill { display: inline-flex; gap: 6px; align-items: center; }
+  .statusbar .pill::before {
+    content: "■";
+    color: var(--accent);
+  }
+  .statusbar .ok::before { color: var(--green); }
+  .statusbar .right { margin-left: auto; }
+
+  /* ===== ASCII frame ===== */
+  .ascii-box {
+    margin-top: 16px;
+    border: var(--hairline);
+    border-width: 2px;
+    position: relative;
+  }
+  .ascii-box::before {
+    content: " NARRATIVE_CHESS // v0.4.7 ";
+    position: absolute;
+    top: -10px; left: 24px;
+    background: var(--bg);
+    padding: 0 8px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .ascii-box::after {
+    content: " [3 LIVE] ";
+    position: absolute;
+    top: -10px; right: 24px;
+    background: var(--bg);
+    padding: 0 8px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+  }
+
+  /* ===== Hero ===== */
+  .hero {
+    padding: 56px 40px 40px;
+    border-bottom: var(--hairline);
+  }
+  .prompt {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+    margin-bottom: 18px;
+  }
+  .prompt .caret {
+    color: var(--accent);
+    margin-right: 8px;
+  }
+  .prompt .typed::after {
+    content: "▌";
+    color: var(--accent);
+    animation: blink 1s steps(1) infinite;
+    margin-left: 2px;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  h1.title {
+    font-family: "JetBrains Mono", monospace;
+    font-weight: 700;
+    font-size: clamp(48px, 7.5vw, 96px);
+    line-height: 0.94;
+    letter-spacing: -0.04em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  h1.title .strike {
+    background: var(--ink);
+    color: var(--bg);
+    padding: 0 8px;
+    font-weight: 800;
+  }
+  h1.title .ghost {
+    color: var(--ink-soft);
+    font-weight: 300;
+  }
+
+  .deck {
+    margin-top: 28px;
+    max-width: 64ch;
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--ink-soft);
+  }
+  .deck .accent { color: var(--accent); }
+  .deck .strong { color: var(--ink); font-weight: 600; }
+
+  /* ===== ASCII rule ===== */
+  .ascii-rule {
+    font-family: "JetBrains Mono", monospace;
+    color: var(--ink);
+    overflow: hidden;
+    white-space: nowrap;
+    line-height: 1;
+    font-size: 13px;
+    margin: 32px 0 0;
+    user-select: none;
+  }
+
+  /* ===== Command-strip CTAs ===== */
+  .commands {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0;
+    margin-top: 24px;
+    border: var(--hairline);
+  }
+  .command {
+    padding: 18px 22px;
+    border-right: var(--hairline);
+    text-decoration: none;
+    color: var(--ink);
+    display: block;
+    transition: background 120ms linear, color 120ms linear;
+  }
+  .command:last-child { border-right: none; }
+  .command .key {
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .command .label {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+  }
+  .command .label::after {
+    content: " ▸";
+    color: var(--accent);
+    margin-left: 6px;
+    transition: transform 120ms linear;
+    display: inline-block;
+  }
+  .command:hover {
+    background: var(--ink);
+    color: var(--bg);
+  }
+  .command:hover .key { color: var(--bg); opacity: 0.6; }
+  .command:hover .label::after { color: var(--bg); }
+
+  /* ===== Telemetry table ===== */
+  .telemetry {
+    margin-top: 40px;
+    border: var(--hairline);
+  }
+  .telemetry .head {
+    display: grid;
+    grid-template-columns: 110px 1fr 110px 90px;
+    background: var(--ink);
+    color: var(--bg);
+    padding: 6px 14px;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .telemetry .row {
+    display: grid;
+    grid-template-columns: 110px 1fr 110px 90px;
+    padding: 12px 14px;
+    border-bottom: var(--hairline);
+    align-items: baseline;
+  }
+  .telemetry .row:last-child { border-bottom: none; }
+  .telemetry .row .num {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--accent);
+  }
+  .telemetry .row .label { font-weight: 500; text-transform: uppercase; font-size: 12px; letter-spacing: 0.06em; }
+  .telemetry .row .desc { color: var(--ink-soft); font-size: 12px; }
+  .telemetry .row .ts { color: var(--ink-soft); font-size: 11px; text-align: right; }
+
+  /* ===== Move-log preview (chess content, real) ===== */
+  .movelog {
+    margin-top: 40px;
+    border: var(--hairline);
+    padding: 18px 22px;
+    background: var(--ink);
+    color: var(--bg);
+  }
+  .movelog .header {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    color: var(--bg);
+    opacity: 0.55;
+    display: flex;
+    justify-content: space-between;
+  }
+  .movelog .header .accent { color: var(--accent); opacity: 1; }
+  .movelog pre {
+    font-size: 12px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .movelog .move-num { color: #888; }
+  .movelog .check { color: var(--accent); }
+
+  /* ===== Footer ===== */
+  .footer {
+    margin-top: 24px;
+    padding: 12px 14px;
+    border: var(--hairline);
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .footer .accent { color: var(--accent); }
+
+  /* On-load reveal — proxy for GSAP timeline */
+  @keyframes typeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .prompt, h1.title, .deck, .commands, .telemetry, .movelog {
+    opacity: 0;
+    animation: typeIn 500ms steps(8) forwards;
+  }
+  .prompt    { animation-delay: 80ms; }
+  h1.title   { animation-delay: 200ms; }
+  .deck      { animation-delay: 360ms; }
+  .commands  { animation-delay: 520ms; }
+  .telemetry { animation-delay: 680ms; }
+  .movelog   { animation-delay: 840ms; }
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <div class="statusbar">
+    <span class="pill ok">SYSTEM ONLINE</span>
+    <span class="pill">3 LIVE GAMES</span>
+    <span class="pill">REGION: EU-WEST-1</span>
+    <span class="pill ok">REALTIME OK</span>
+    <span class="right">build 5706e2b · 2026-05-07 14:32:08 UTC</span>
+  </div>
+
+  <div class="ascii-box">
+    <section class="hero">
+      <div class="prompt"><span class="caret">$</span><span class="typed">narrative-chess --start</span></div>
+      <h1 class="title">
+        Two players<br/>
+        <span class="strike">enter</span> the board.<br/>
+        <span class="ghost">// a story exits.</span>
+      </h1>
+      <p class="deck">A <span class="strong">terminal-grade chess platform</span> built around the move log.<br/>
+      Every game is a <span class="accent">PGN sentence</span> waiting to be read.</p>
+
+      <div class="ascii-rule">────────────────────────────────────────────────────────────────────────────────────</div>
+
+      <div class="commands">
+        <a href="#" class="command">
+          <div class="key">ENTER ↵</div>
+          <div class="label">Start a game</div>
+        </a>
+        <a href="#" class="command">
+          <div class="key">CTRL + L</div>
+          <div class="label">Sign in</div>
+        </a>
+      </div>
+    </section>
+  </div>
+
+  <div class="telemetry">
+    <div class="head">
+      <div>METRIC</div>
+      <div>DESCRIPTION</div>
+      <div style="text-align:right">VALUE</div>
+      <div style="text-align:right">UPDATED</div>
+    </div>
+    <div class="row">
+      <div class="label">live</div>
+      <div class="desc">Games in progress, observable to authenticated viewers.</div>
+      <div class="num" style="text-align:right">12</div>
+      <div class="ts">14:32:08</div>
+    </div>
+    <div class="row">
+      <div class="label">today</div>
+      <div class="desc">Games initiated since 00:00 UTC.</div>
+      <div class="num" style="text-align:right">47</div>
+      <div class="ts">14:32:08</div>
+    </div>
+    <div class="row">
+      <div class="label">moves/wk</div>
+      <div class="desc">Successful make_move RPC calls in trailing 7 days.</div>
+      <div class="num" style="text-align:right">1,243</div>
+      <div class="ts">14:32:08</div>
+    </div>
+  </div>
+
+  <div class="movelog">
+    <div class="header">
+      <span>last_game.pgn // taylor vs alt+2 // <span class="accent">in_progress</span></span>
+      <span>turn 24 / white to move</span>
+    </div>
+<pre><span class="move-num">1.</span> e4 c5    <span class="move-num">2.</span> Nf3 d6   <span class="move-num">3.</span> d4 cxd4   <span class="move-num">4.</span> Nxd4 Nf6
+<span class="move-num">5.</span> Nc3 a6   <span class="move-num">6.</span> Be3 e5   <span class="move-num">7.</span> Nb3 Be6   <span class="move-num">8.</span> f3 Be7
+<span class="move-num">9.</span> Qd2 O-O  <span class="move-num">10.</span> O-O-O Nbd7  <span class="move-num">11.</span> g4 b5   <span class="move-num">12.</span> g5 b4
+<span class="move-num">13.</span> Ne2 Ne8  <span class="move-num">14.</span> f4 a5    <span class="move-num">15.</span> f5 a4   <span class="move-num">16.</span> Nbd4 exd4
+<span class="move-num">17.</span> Nxd4 b3  <span class="move-num">18.</span> Kb1 bxa2+<span class="check">!</span>  <span class="move-num">19.</span> Nxa2 Qa5  <span class="move-num">20.</span> Bd3 Rb8
+<span class="move-num">21.</span> b3 axb3  <span class="move-num">22.</span> cxb3 Nb6 <span class="move-num">23.</span> Bxb6 Rxb6 <span class="move-num">24.</span> ▌</pre>
+  </div>
+
+  <div class="footer">
+    <span>© NARRATIVE_CHESS // <span class="accent">UPTIME 99.94%</span></span>
+    <span>Type <span class="accent">help</span> for shortcuts</span>
+  </div>
+
+</div>
+</body>
+</html>

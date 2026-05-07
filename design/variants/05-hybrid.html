@@ -1,0 +1,794 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Narrative CHESS — Hybrid v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..900,0..100,0..1;1,9..144,300..900,0..100,0..1&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet" />
+<style>
+  /* ========================================
+     Theme tokens — light (default) and dark
+     ======================================== */
+  :root {
+    --ink: #1a1815;
+    --ink-soft: #5a554c;
+    --ink-faint: #8a8478;
+    --rule: #2a2725;
+    --rule-soft: #d6cdb9;
+    --bg: #f3ece1;
+    --bg-soft: #ebe2d2;       /* lower-contrast inset surface */
+    --bg-deep: #e0d4be;
+    --oxblood: #7a1f25;
+    --signal: #c84a2a;        /* live indicator — softened */
+    --max: 1180px;
+
+    --serif-display: "Fraunces", "Times New Roman", serif;
+    --serif-body: "Newsreader", Georgia, serif;
+    --mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
+  }
+
+  :root[data-theme="dark"] {
+    --ink: #ece4d2;
+    --ink-soft: #a89f8a;
+    --ink-faint: #6a6457;
+    --rule: #3a342c;
+    --rule-soft: #2a251f;
+    --bg: #181612;
+    --bg-soft: #221e18;
+    --bg-deep: #2a261f;
+    --oxblood: #c8585e;        /* lifted for dark contrast */
+    --signal: #e26a45;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); transition: background 280ms ease, color 280ms ease; }
+  body {
+    font-family: var(--serif-body);
+    font-optical-sizing: auto;
+    font-weight: 380;
+    font-size: 17px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .frame { max-width: var(--max); margin: 0 auto; padding: 28px 56px 96px; }
+
+  /* ========================================
+     Theme toggle — dev convenience
+     ======================================== */
+  .theme-toggle {
+    position: fixed;
+    top: 20px; right: 20px;
+    z-index: 100;
+    background: var(--bg-soft);
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    padding: 8px 14px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 160ms ease, color 160ms ease;
+  }
+  .theme-toggle:hover { background: var(--ink); color: var(--bg); }
+
+  /* ========================================
+     Type-system utilities
+     ======================================== */
+  .humanist {
+    font-family: var(--serif-display);
+    font-variation-settings: "opsz" 144, "SOFT" 50, "WONK" 0;
+  }
+  .humanist--italic {
+    font-style: italic;
+    font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+  }
+  .body-serif { font-family: var(--serif-body); }
+
+  .mono { font-family: var(--mono); letter-spacing: 0; }
+  .tech-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .tech-num {
+    font-family: var(--mono);
+    font-feature-settings: "tnum" 1, "lnum" 1;
+    font-weight: 500;
+  }
+  .live-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--signal);
+    margin-right: 8px;
+    animation: pulse 1.6s ease-in-out infinite;
+    vertical-align: 1px;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 0.45; transform: scale(0.85); } 50% { opacity: 1; transform: scale(1.15); } }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ========================================
+     MASTHEAD — slim, two voices in the wordmark
+     ======================================== */
+  .masthead {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: end;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .masthead .left .tech-label { display: inline-flex; align-items: center; }
+  .masthead .right { text-align: right; font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; color: var(--ink-faint); }
+
+  .wordmark { display: inline-flex; align-items: baseline; gap: 0; }
+  .wordmark .narr {
+    font-family: var(--serif-display);
+    font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+    font-style: italic;
+    font-weight: 380;
+    font-size: 32px;
+    letter-spacing: -0.012em;
+    color: var(--ink);
+  }
+  .wordmark .chess {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 24px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink);
+    margin-left: 10px;
+    border-bottom: 2px solid var(--ink);
+    padding: 0 4px;
+    line-height: 1;
+    align-self: center;
+  }
+
+  /* ========================================
+     HERO
+     ======================================== */
+  .hero {
+    display: grid;
+    grid-template-columns: 7fr 5fr;
+    gap: 56px;
+    align-items: start;
+    margin-top: 64px;
+    margin-bottom: 84px;
+  }
+
+  .hero .dateline {
+    padding-bottom: 12px;
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--serif-body);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+
+  h1.hero-title {
+    font-family: var(--serif-display);
+    font-variation-settings: "opsz" 144, "SOFT" 50, "WONK" 0;
+    font-weight: 360;
+    font-size: clamp(56px, 8vw, 116px);
+    line-height: 0.94;
+    letter-spacing: -0.022em;
+    color: var(--ink);
+  }
+  h1.hero-title em {
+    font-style: italic;
+    font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+    font-weight: 320;
+    color: var(--oxblood);
+  }
+
+  .deck {
+    margin-top: 28px;
+    font-family: var(--serif-body);
+    font-style: italic;
+    font-weight: 320;
+    font-size: 22px;
+    line-height: 1.45;
+    color: var(--ink-soft);
+    max-width: 32ch;
+    border-left: 1px solid var(--rule);
+    padding-left: 18px;
+  }
+
+  /* ========================================
+     LIVE GAME CARD — softened, on-paper, hairline border
+     Was inverted black; now sits on a slightly deeper cream
+     with ink text. Single signal accent on the active clock.
+     ======================================== */
+  .live-preview {
+    border: 1px solid var(--rule);
+    background: var(--bg-soft);
+    color: var(--ink);
+    overflow: hidden;
+  }
+  .live-preview .lp-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--rule-soft);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .live-preview .lp-head .id {
+    color: var(--ink);
+    font-weight: 500;
+  }
+  .live-preview .lp-head .id::before {
+    content: "";
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--signal);
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: 1px;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+
+  .live-preview .lp-meta { padding: 22px 22px 16px; }
+  .live-preview .players {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 16px;
+    align-items: center;
+  }
+  .live-preview .player .name {
+    font-family: var(--serif-display);
+    font-variation-settings: "opsz" 144, "SOFT" 50;
+    font-weight: 420;
+    font-size: 22px;
+    line-height: 1.1;
+    color: var(--ink);
+  }
+  .live-preview .player .meta {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--ink-faint);
+    margin-top: 4px;
+    text-transform: uppercase;
+  }
+  .live-preview .player.right { text-align: right; }
+  .live-preview .vs {
+    font-family: var(--serif-body);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-faint);
+  }
+
+  .live-preview .clocks {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    margin-top: 18px;
+    border-top: 1px solid var(--rule-soft);
+  }
+  .live-preview .clock-cell { padding: 12px 0 10px; text-align: center; }
+  .live-preview .clock-cell.right { border-left: 1px solid var(--rule-soft); }
+  .live-preview .clock {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 500;
+    color: var(--ink);
+    font-feature-settings: "tnum" 1;
+  }
+  .live-preview .clock.active { color: var(--signal); }
+  .live-preview .clock-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-top: 2px;
+  }
+
+  .live-preview .moves {
+    padding: 16px 22px 18px;
+    border-top: 1px solid var(--rule-soft);
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--ink-soft);
+  }
+  .live-preview .moves .num { color: var(--ink-faint); }
+  .live-preview .moves .check { color: var(--signal); }
+  .live-preview .moves .cursor::after { content: "▌"; color: var(--signal); animation: blink 1s steps(1) infinite; margin-left: 2px; }
+
+  /* ========================================
+     CTA STRIP — primary humanist, secondary mono.
+     Removed kbd icon. Subtle arrow only on primary.
+     ======================================== */
+  .cta-strip {
+    display: flex;
+    gap: 14px;
+    align-items: stretch;
+    margin-top: 32px;
+    padding-top: 22px;
+    border-top: 1px solid var(--rule);
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    transition: background 200ms ease, color 200ms ease, transform 120ms ease;
+  }
+  .btn--primary {
+    padding: 16px 28px;
+    background: var(--ink);
+    color: var(--bg);
+    font-family: var(--serif-display);
+    font-variation-settings: "opsz" 96, "SOFT" 50;
+    font-style: italic;
+    font-weight: 380;
+    font-size: 18px;
+    border: 1px solid var(--ink);
+  }
+  .btn--primary:hover { background: var(--oxblood); border-color: var(--oxblood); }
+  .btn--primary .arrow { font-family: var(--mono); font-style: normal; font-weight: 500; font-size: 14px; margin-left: 14px; opacity: 0.7; }
+
+  .btn--mono {
+    padding: 16px 22px;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .btn--mono:hover { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+  /* ========================================
+     STATS — humanist label + mono numeral
+     ======================================== */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+    padding: 48px 0;
+    border-top: 2px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  .stat {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 18px;
+    align-items: baseline;
+  }
+  .stat .num {
+    font-family: var(--mono);
+    font-feature-settings: "tnum" 1, "lnum" 1;
+    font-weight: 600;
+    font-size: 56px;
+    line-height: 0.9;
+    color: var(--oxblood);
+    letter-spacing: -0.02em;
+  }
+  .stat .label {
+    font-family: var(--serif-body);
+    font-style: italic;
+    font-size: 15px;
+    color: var(--ink-soft);
+    line-height: 1.4;
+  }
+  .stat .label strong {
+    display: block;
+    font-family: var(--mono);
+    font-style: normal;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+
+  /* ========================================
+     LIVE GAMES TABLE
+     ======================================== */
+  .games-now { margin-top: 84px; }
+  .games-now .section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .games-now .section-head h2 {
+    font-family: var(--serif-display);
+    font-variation-settings: "opsz" 96, "SOFT" 50;
+    font-weight: 380;
+    font-size: 32px;
+    letter-spacing: -0.015em;
+  }
+  .games-now .section-head h2 em {
+    font-style: italic;
+    font-variation-settings: "opsz" 96, "SOFT" 100, "WONK" 1;
+    color: var(--oxblood);
+    font-weight: 320;
+  }
+  .games-now .section-head .meta {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+  }
+
+  .game-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto 60px;
+    gap: 24px;
+    align-items: center;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--rule-soft);
+    transition: background 120ms linear;
+  }
+  .game-row:hover { background: var(--bg-soft); }
+  .game-row .matchup .names {
+    font-family: var(--serif-display);
+    font-variation-settings: "opsz" 144, "SOFT" 50;
+    font-weight: 420;
+    font-size: 22px;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .game-row .matchup .names em {
+    font-style: italic;
+    font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+    font-weight: 380;
+    color: var(--ink-faint);
+    margin: 0 0.4em;
+  }
+  .game-row .matchup .opening {
+    margin-top: 4px;
+    font-family: var(--serif-body);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .game-row .clock-pair {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-feature-settings: "tnum" 1;
+    color: var(--ink-soft);
+    text-align: right;
+  }
+  .game-row .clock-pair .active { color: var(--signal); font-weight: 600; }
+  .game-row .move-count {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--ink-faint);
+  }
+  .game-row .watch {
+    font-family: var(--serif-body);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--oxblood);
+    text-align: right;
+    text-decoration: none;
+  }
+  .game-row .watch::after { content: " →"; }
+
+  /* ========================================
+     FEATURE — editorial essay + technical city card
+     ======================================== */
+  .feature {
+    margin-top: 96px;
+    display: grid;
+    grid-template-columns: 7fr 5fr;
+    gap: 56px;
+    padding-top: 36px;
+    border-top: 1px solid var(--rule);
+  }
+  .feature .label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 14px;
+  }
+  .feature h2 {
+    font-family: var(--serif-display);
+    font-variation-settings: "opsz" 96, "SOFT" 50;
+    font-weight: 380;
+    font-size: 38px;
+    line-height: 1.05;
+    letter-spacing: -0.015em;
+    margin-bottom: 14px;
+  }
+  .feature h2 em { font-style: italic; font-variation-settings: "opsz" 96, "SOFT" 100, "WONK" 1; color: var(--oxblood); font-weight: 320; }
+  .feature .byline {
+    font-family: var(--serif-body);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 22px;
+  }
+  .feature .body p { margin-bottom: 12px; max-width: 56ch; line-height: 1.62; }
+
+  /* City card — same softened pattern as live-preview */
+  .city-card {
+    border: 1px solid var(--rule);
+    background: var(--bg-soft);
+  }
+  .city-card .head {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--rule-soft);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .city-card .body { padding: 22px 22px 18px; }
+  .city-card .name {
+    font-family: var(--serif-display);
+    font-variation-settings: "opsz" 144, "SOFT" 50;
+    font-weight: 420;
+    font-size: 32px;
+    line-height: 1.05;
+    letter-spacing: -0.012em;
+    margin-bottom: 4px;
+    color: var(--ink);
+  }
+  .city-card .name em {
+    font-style: italic;
+    font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+    color: var(--oxblood);
+    font-weight: 380;
+  }
+  .city-card .quote {
+    font-family: var(--serif-body);
+    font-style: italic;
+    font-size: 15px;
+    color: var(--ink-soft);
+    line-height: 1.45;
+    margin: 14px 0 18px;
+    padding-left: 14px;
+    border-left: 1px solid var(--rule-soft);
+  }
+  .city-card .data {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--rule-soft);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .city-card .data dt { color: var(--ink-soft); }
+  .city-card .data dd { color: var(--ink); font-weight: 500; text-align: right; }
+
+  /* ========================================
+     COLOPHON — single line, no triple-column
+     ======================================== */
+  .colophon {
+    margin-top: 96px;
+    padding-top: 24px;
+    border-top: 4px double var(--rule);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-family: var(--serif-body);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .colophon em { font-style: italic; }
+
+  /* ========================================
+     ON-LOAD REVEAL
+     ======================================== */
+  @keyframes rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes type { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  h1.hero-title, .deck, .stat, .feature h2, .feature .byline, .feature .body, .games-now .section-head h2, .city-card .name, .city-card .quote {
+    opacity: 0;
+    animation: rise 900ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
+  .live-preview, .cta-strip, .games-now .game-row, .city-card .data {
+    opacity: 0;
+    animation: type 500ms steps(8) forwards;
+  }
+  h1.hero-title { animation-delay: 80ms; }
+  .deck         { animation-delay: 280ms; }
+  .live-preview { animation-delay: 380ms; }
+  .cta-strip    { animation-delay: 540ms; }
+  .stat         { animation-delay: 660ms; }
+  .games-now .section-head h2 { animation-delay: 760ms; }
+  .games-now .game-row:nth-child(2) { animation-delay: 820ms; }
+  .games-now .game-row:nth-child(3) { animation-delay: 880ms; }
+  .games-now .game-row:nth-child(4) { animation-delay: 940ms; }
+  .feature h2 { animation-delay: 1040ms; }
+  .feature .byline { animation-delay: 1100ms; }
+  .feature .body { animation-delay: 1160ms; }
+  .city-card .name { animation-delay: 1080ms; }
+  .city-card .quote { animation-delay: 1180ms; }
+  .city-card .data { animation-delay: 1280ms; }
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" id="theme-toggle">DARK</button>
+
+<div class="frame">
+
+  <header class="masthead">
+    <div class="left">
+      <span class="tech-label"><span class="live-dot"></span>3 LIVE NOW</span>
+    </div>
+    <div class="wordmark">
+      <span class="narr">Narrative</span>
+      <span class="chess">CHESS</span>
+    </div>
+    <div class="right">May 7, 2026</div>
+  </header>
+
+  <section class="hero">
+    <div>
+      <div class="dateline">A periodical of play, set in moves.</div>
+      <h1 class="hero-title">Chess<br/><em>that tells</em><br/>stories.</h1>
+      <p class="deck">Two players sit. A board opens. Somewhere between move 1 and the resignation, a story arrives — and the engine quietly records it.</p>
+
+      <div class="cta-strip">
+        <a href="#" class="btn btn--primary">Begin a game<span class="arrow">→</span></a>
+        <a href="#" class="btn btn--mono">Sign in</a>
+      </div>
+    </div>
+
+    <aside class="live-preview">
+      <div class="lp-head">
+        <span class="id">Live · Game a8f3</span>
+        <span>5+0 Blitz</span>
+      </div>
+      <div class="lp-meta">
+        <div class="players">
+          <div class="player left">
+            <div class="name">taylor</div>
+            <div class="meta">White · 1842</div>
+          </div>
+          <div class="vs">vs</div>
+          <div class="player right">
+            <div class="name">alt+2</div>
+            <div class="meta">Black · 1798</div>
+          </div>
+        </div>
+        <div class="clocks">
+          <div class="clock-cell">
+            <div class="clock">02:14</div>
+            <div class="clock-label">white</div>
+          </div>
+          <div class="clock-cell right">
+            <div class="clock active">01:47</div>
+            <div class="clock-label">black</div>
+          </div>
+        </div>
+      </div>
+      <div class="moves">
+        <span class="num">22.</span> cxb3 Nb6 &nbsp; <span class="num">23.</span> Bxb6 Rxb6 &nbsp; <span class="num">24.</span> Nf5 Bxf5 &nbsp; <span class="num">25.</span> Bxf5 g6 &nbsp; <span class="num">26.</span> Bd3<span class="check">+</span> &nbsp; <span class="num">26...</span><span class="cursor"></span>
+      </div>
+    </aside>
+  </section>
+
+  <section class="stats">
+    <div class="stat">
+      <div class="num">12</div>
+      <div class="label"><strong>Now playing</strong>Live games on the boards at this hour.</div>
+    </div>
+    <div class="stat">
+      <div class="num">47</div>
+      <div class="label"><strong>Today</strong>Games begun since this morning.</div>
+    </div>
+    <div class="stat">
+      <div class="num">1,243</div>
+      <div class="label"><strong>This week</strong>Moves submitted to the record.</div>
+    </div>
+  </section>
+
+  <section class="games-now">
+    <div class="section-head">
+      <h2>Now <em>playing</em>.</h2>
+      <div class="meta"><span class="live-dot"></span>12 live</div>
+    </div>
+
+    <div class="game-row">
+      <div class="matchup">
+        <div class="names">taylor <em>vs</em> alt+2</div>
+        <div class="opening">Najdorf Sicilian, English Attack</div>
+      </div>
+      <div class="clock-pair">02:14 · <span class="active">01:47</span></div>
+      <div class="move-count">26</div>
+      <a href="#" class="watch">Watch</a>
+    </div>
+
+    <div class="game-row">
+      <div class="matchup">
+        <div class="names">marcus_b <em>vs</em> rina.k</div>
+        <div class="opening">Queen's Gambit Accepted</div>
+      </div>
+      <div class="clock-pair"><span class="active">04:32</span> · 04:01</div>
+      <div class="move-count">11</div>
+      <a href="#" class="watch">Watch</a>
+    </div>
+
+    <div class="game-row">
+      <div class="matchup">
+        <div class="names">eli.m <em>vs</em> jovan_p</div>
+        <div class="opening">King's Indian Defence</div>
+      </div>
+      <div class="clock-pair">12:08 · <span class="active">11:54</span></div>
+      <div class="move-count">38</div>
+      <a href="#" class="watch">Watch</a>
+    </div>
+  </section>
+
+  <section class="feature">
+    <div>
+      <div class="label">From the archive</div>
+      <h2>The bishop and the rook: a <em>quiet correspondence</em>.</h2>
+      <p class="byline">By the editors · A study in long diagonals · 9 days, 38 moves</p>
+      <div class="body">
+        <p>What the bishop says, the rook eventually answers. We followed a correspondence game across nine days and found, in the lulls between moves, the same patient music we hear in epistolary fiction.</p>
+        <p>This slot is where M2 narrative content surfaces. Beside it, technical metadata frames the same game in mono — opening code, ELO delta, time control. Two voices, one record.</p>
+      </div>
+    </div>
+
+    <aside class="city-card">
+      <div class="head">City · B92 — B99</div>
+      <div class="body">
+        <div class="name"><em>Najdorf</em> Sicilian</div>
+        <div class="quote">A long, narrow city built along a single diagonal. Travellers say the queen's bishop is its mayor; nobody re-elects him.</div>
+        <dl class="data">
+          <dt>First recorded</dt><dd>1942</dd>
+          <dt>Games played</dt><dd>2,847,193</dd>
+          <dt>Active now</dt><dd>3</dd>
+          <dt>White / Black win</dt><dd>34.2 / 32.8</dd>
+        </dl>
+      </div>
+    </aside>
+  </section>
+
+  <footer class="colophon">
+    <div>Set in <em>Fraunces</em>, <em>Newsreader</em> &amp; <em>JetBrains Mono</em>.</div>
+    <div>Narrative <em>Chess</em> · Volume I</div>
+  </footer>
+
+</div>
+
+<script>
+  const t = document.getElementById('theme-toggle');
+  const root = document.documentElement;
+  // Honour system preference on first load if we haven't set one
+  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    root.setAttribute('data-theme', 'dark');
+    t.textContent = 'LIGHT';
+  }
+  t.addEventListener('click', () => {
+    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    t.textContent = next === 'dark' ? 'LIGHT' : 'DARK';
+  });
+</script>
+</body>
+</html>
