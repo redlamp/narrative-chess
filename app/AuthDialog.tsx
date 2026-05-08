@@ -25,7 +25,7 @@ type Props = {
 export function AuthDialog({ open, onOpenChange, initialMode = "signin" }: Props) {
   const router = useRouter();
   // Use `key={initialMode}` on the content so the internal mode state resets
-  // correctly whenever the caller (AuthHeader) switches between Sign in / Sign up.
+  // correctly whenever the caller (StageCtas) switches between Sign in / Sign up.
   const [mode, setMode] = useState<Mode>(initialMode);
 
   // The forms invoke the no-redirect action variants, so this fires on success

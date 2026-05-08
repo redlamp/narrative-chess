@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Narrative Chess — Editorial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..900,0..100,0..1;1,9..144,300..900,0..100,0..1&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #1a1815;
+    --ink-soft: #44403a;
+    --rule: #2a2725;
+    --cream: #f3ece1;
+    --cream-deep: #e8dfce;
+    --oxblood: #7a1f25;
+    --max: 1180px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--cream); color: var(--ink); }
+  body {
+    font-family: "Newsreader", Georgia, serif;
+    font-optical-sizing: auto;
+    font-weight: 380;
+    font-size: 17px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .frame {
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 36px 56px 96px;
+  }
+
+  /* ===== Masthead ===== */
+  .masthead {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: end;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .masthead .left, .masthead .right {
+    font-family: "Newsreader", serif;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .masthead .right { text-align: right; }
+  .masthead .wordmark {
+    font-family: "Fraunces", serif;
+    font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 0;
+    font-weight: 460;
+    font-size: 28px;
+    letter-spacing: -0.01em;
+  }
+  .masthead .wordmark em {
+    font-style: italic;
+    font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+  }
+
+  /* Thin double-rule */
+  .double-rule {
+    height: 4px;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    margin: 4px 0 56px;
+  }
+
+  /* ===== Hero ===== */
+  .hero {
+    display: grid;
+    grid-template-columns: 7fr 5fr;
+    gap: 56px;
+    align-items: start;
+    margin-bottom: 84px;
+  }
+  .hero .dateline {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .hero h1 {
+    font-family: "Fraunces", serif;
+    font-variation-settings: "opsz" 144, "SOFT" 50, "WONK" 0;
+    font-weight: 360;
+    font-size: clamp(64px, 9vw, 132px);
+    line-height: 0.92;
+    letter-spacing: -0.025em;
+    color: var(--ink);
+  }
+  .hero h1 em {
+    font-style: italic;
+    font-variation-settings: "opsz" 144, "SOFT" 80, "WONK" 1;
+    color: var(--oxblood);
+    font-weight: 320;
+  }
+  .hero h1 .ampersand {
+    font-style: italic;
+    font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+    font-weight: 280;
+    color: var(--oxblood);
+    margin: 0 0.04em;
+  }
+
+  .deck {
+    margin-top: 32px;
+    font-family: "Newsreader", serif;
+    font-style: italic;
+    font-weight: 320;
+    font-size: 22px;
+    line-height: 1.45;
+    color: var(--ink-soft);
+    max-width: 32ch;
+    border-left: 1px solid var(--rule);
+    padding-left: 18px;
+  }
+
+  .lede {
+    font-size: 19px;
+    line-height: 1.62;
+    column-count: 1;
+  }
+  .lede::first-letter {
+    font-family: "Fraunces", serif;
+    font-variation-settings: "opsz" 144, "SOFT" 0, "WONK" 1;
+    font-weight: 380;
+    font-size: 5.4em;
+    float: left;
+    line-height: 0.86;
+    padding: 0.05em 0.08em 0 0;
+    color: var(--oxblood);
+  }
+  .lede p + p { margin-top: 14px; text-indent: 1.6em; }
+
+  /* ===== CTA strip ===== */
+  .cta-strip {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid var(--rule);
+  }
+  .btn {
+    display: inline-block;
+    padding: 14px 22px;
+    font-family: "Newsreader", serif;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: 1px solid var(--ink);
+    background: var(--ink);
+    color: var(--cream);
+    transition: background 200ms ease, color 200ms ease;
+  }
+  .btn:hover { background: var(--oxblood); border-color: var(--oxblood); }
+  .btn--ghost {
+    background: transparent;
+    color: var(--ink);
+  }
+  .btn--ghost:hover { background: var(--ink); color: var(--cream); }
+
+  /* ===== Edition number badge ===== */
+  .edition {
+    position: relative;
+  }
+  .edition .num {
+    position: absolute;
+    right: 0; top: -8px;
+    font-family: "Fraunces", serif;
+    font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+    font-style: italic;
+    font-weight: 280;
+    font-size: 220px;
+    line-height: 0.8;
+    color: var(--cream-deep);
+    z-index: -1;
+    letter-spacing: -0.04em;
+  }
+
+  /* ===== Stats — footnoted ===== */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+    padding: 48px 0;
+    border-top: 2px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  .stat {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 16px;
+    align-items: baseline;
+  }
+  .stat .marker {
+    font-family: "Fraunces", serif;
+    font-variation-settings: "opsz" 144, "SOFT" 0;
+    font-weight: 380;
+    font-size: 56px;
+    line-height: 0.9;
+    color: var(--oxblood);
+    font-feature-settings: "lnum", "tnum";
+  }
+  .stat .label {
+    font-family: "Newsreader", serif;
+    font-style: italic;
+    font-size: 15px;
+    color: var(--ink-soft);
+    line-height: 1.35;
+  }
+  .stat .label strong {
+    display: block;
+    font-style: normal;
+    font-weight: 580;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+
+  /* ===== Pull-out essay teaser (preview of M2 narrative slot) ===== */
+  .feature {
+    margin-top: 88px;
+    display: grid;
+    grid-template-columns: 1fr 4fr;
+    gap: 48px;
+    padding-top: 36px;
+    border-top: 1px solid var(--rule);
+  }
+  .feature .label {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    line-height: 1.35;
+  }
+  .feature h2 {
+    font-family: "Fraunces", serif;
+    font-variation-settings: "opsz" 96, "SOFT" 50;
+    font-weight: 380;
+    font-size: 38px;
+    line-height: 1.05;
+    letter-spacing: -0.015em;
+    margin-bottom: 14px;
+  }
+  .feature h2 em { font-style: italic; color: var(--oxblood); font-weight: 320; }
+  .feature .byline {
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin-bottom: 18px;
+  }
+  .feature .body p { margin-bottom: 12px; max-width: 64ch; }
+
+  /* ===== Footer plate ===== */
+  .colophon {
+    margin-top: 96px;
+    padding-top: 24px;
+    border-top: 4px double var(--rule);
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+  }
+  .colophon h4 {
+    font-family: "Newsreader", serif;
+    font-weight: 580;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+
+  /* ===== Live indicator ===== */
+  .live {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .live::before {
+    content: "";
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--oxblood);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.4; transform: scale(0.85); }
+    50% { opacity: 1; transform: scale(1.15); }
+  }
+
+  /* Reveal animations on load — proxy for the GSAP timeline that would replace this */
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .hero h1, .deck, .lede, .cta-strip, .stats, .feature {
+    opacity: 0;
+    animation: rise 900ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
+  .hero h1 { animation-delay: 60ms; }
+  .deck    { animation-delay: 280ms; }
+  .lede    { animation-delay: 380ms; }
+  .cta-strip { animation-delay: 520ms; }
+  .stats   { animation-delay: 640ms; }
+  .feature { animation-delay: 760ms; }
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <header class="masthead">
+    <div class="left">
+      <span class="live">3 games in progress</span>
+    </div>
+    <div class="wordmark"><em>N</em>arrative <em>C</em>hess</div>
+    <div class="right">Vol. I &nbsp;·&nbsp; Edition No. 47 &nbsp;·&nbsp; May MMXXVI</div>
+  </header>
+  <div class="double-rule"></div>
+
+  <section class="hero edition">
+    <div class="num">47</div>
+    <div>
+      <div class="dateline">A Periodical of Play &nbsp;—&nbsp; Established 2026</div>
+      <h1>Chess<br/><em>that tells</em><br/>stories.</h1>
+      <p class="deck">Two players sit down. A board opens. Somewhere between the first move and the last, a story arrives — and we publish it.</p>
+      <div class="cta-strip">
+        <a href="#" class="btn">Begin a game</a>
+        <a href="#" class="btn btn--ghost">Sign in</a>
+      </div>
+    </div>
+    <div class="lede">
+      <p>The game is older than every word written about it, and yet each game is unrepeatable. Players carry a tone — bold, hesitant, lyrical, brutal — into a finite grid, and what comes out the other side is, in our reading, a piece of literature.</p>
+      <p>This site is an effort to take that reading seriously. Every game is a document. Every move is a sentence. The pieces walk where they must, and we are merely the ones who read what they have written.</p>
+    </div>
+  </section>
+
+  <section class="stats">
+    <div class="stat">
+      <div class="marker">12</div>
+      <div class="label"><strong>Now playing</strong>Live games on the boards at this hour, observable to all members.</div>
+    </div>
+    <div class="stat">
+      <div class="marker">47</div>
+      <div class="label"><strong>Today's filings</strong>Games begun and dispatched since the printing this morning.</div>
+    </div>
+    <div class="stat">
+      <div class="marker">1,243</div>
+      <div class="label"><strong>The week's moves</strong>Single-character editorial decisions submitted to the record.</div>
+    </div>
+  </section>
+
+  <section class="feature">
+    <div class="label">From the<br/>archive</div>
+    <div>
+      <h2>The bishop and the rook: a <em>quiet correspondence</em>.</h2>
+      <p class="byline">By the editors &nbsp;·&nbsp; A study in long diagonals</p>
+      <div class="body">
+        <p>What the bishop says, the rook eventually answers. We followed a correspondence game across nine days and found, in the lulls between moves, the same patient music we hear in epistolary fiction.</p>
+        <p>This is the slot, in M2, where the narrative layer surfaces. Cities. Characters. Story beats threaded through a real game's score.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="colophon">
+    <div>
+      <h4>Imprint</h4>
+      Narrative Chess is published from a small workshop. Type set in Fraunces and Newsreader.
+    </div>
+    <div>
+      <h4>Sections</h4>
+      Live · Today · This Week · Archive · Subscribers
+    </div>
+    <div>
+      <h4>Contact</h4>
+      hello@narrative-chess · @narrative-chess
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

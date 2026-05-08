@@ -26,9 +26,17 @@ export default async function AccountPage() {
 
   return (
     <main className="container mx-auto max-w-xl py-12 px-6 space-y-8">
-      <header>
-        <h1 className="text-2xl font-heading font-semibold">Account</h1>
-        <p className="text-sm text-muted-foreground">
+      <header className="space-y-2">
+        <h1 className="font-display text-3xl tracking-tight text-foreground">
+          Your{" "}
+          <em
+            className="font-display italic"
+            style={{ color: "var(--oxblood)" }}
+          >
+            account
+          </em>
+        </h1>
+        <p className="font-body italic text-sm text-ink-soft">
           First-draft account page. Edit-display-name + change-password flows
           land in a follow-up.
         </p>

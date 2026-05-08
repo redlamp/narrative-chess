@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Narrative Chess — Cartographic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&family=Spectral+SC:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper: #ebe1c8;
+    --paper-shade: #ddd1b3;
+    --paper-deep: #c9bb96;
+    --ink: #2c2418;
+    --ink-soft: #5a4a32;
+    --rule: #6b5a3e;
+    --military: #5a6b4a;
+    --military-deep: #3e4d34;
+    --tide: #4a6878;
+    --plot: #8a3a28;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--paper); color: var(--ink); }
+  body {
+    font-family: "Spectral", Georgia, serif;
+    font-weight: 350;
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    /* Aged paper texture: layered radial + repeating linear for grain */
+    background-image:
+      radial-gradient(ellipse at top left, rgba(110, 80, 30, 0.14), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(90, 60, 20, 0.1), transparent 60%),
+      repeating-linear-gradient(45deg, rgba(80, 60, 30, 0.025) 0 1px, transparent 1px 3px),
+      repeating-linear-gradient(-45deg, rgba(80, 60, 30, 0.02) 0 1px, transparent 1px 3px);
+  }
+
+  /* Latitude / longitude grid */
+  .map-grid {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      linear-gradient(to right, rgba(60, 40, 18, 0.06) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(60, 40, 18, 0.06) 1px, transparent 1px);
+    background-size: 80px 80px;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+  }
+
+  .frame {
+    position: relative;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 56px 96px;
+    z-index: 1;
+  }
+
+  /* ===== Sextant header ===== */
+  .header {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 24px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .compass {
+    width: 56px; height: 56px;
+    border: 1px solid var(--rule);
+    border-radius: 50%;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .compass::before, .compass::after {
+    content: "";
+    position: absolute;
+    background: var(--rule);
+  }
+  .compass::before {
+    top: 4px; bottom: 4px; left: 50%; width: 1px; transform: translateX(-50%);
+  }
+  .compass::after {
+    left: 4px; right: 4px; top: 50%; height: 1px; transform: translateY(-50%);
+  }
+  .compass .n {
+    position: absolute;
+    top: 6px; left: 50%; transform: translateX(-50%);
+    font-family: "Spectral SC", serif;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    color: var(--plot);
+    background: var(--paper);
+    padding: 0 2px;
+  }
+  .compass .star {
+    position: absolute; inset: 0;
+    background:
+      conic-gradient(from 0deg,
+        transparent 0 22%, var(--ink) 22% 28%, transparent 28% 50%,
+        transparent 50% 72%, var(--ink) 72% 78%, transparent 78%);
+    opacity: 0.5;
+    border-radius: 50%;
+    transform: scale(0.55);
+  }
+  .header .title {
+    font-family: "Spectral", serif;
+    font-weight: 400;
+    font-size: 22px;
+    letter-spacing: 0.04em;
+  }
+  .header .title em { font-style: italic; color: var(--plot); }
+  .header .coords {
+    font-family: "Spectral SC", serif;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    color: var(--ink-soft);
+    text-align: right;
+  }
+  .header .coords .live::before {
+    content: "•";
+    color: var(--plot);
+    margin-right: 4px;
+    animation: blink 2s ease-in-out infinite;
+  }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  /* ===== Hero map plate ===== */
+  .plate {
+    margin-top: 56px;
+    position: relative;
+    border: 1px solid var(--rule);
+    padding: 64px 56px 52px;
+    background:
+      linear-gradient(135deg, transparent 0 14px, var(--paper) 14px),
+      linear-gradient(-45deg, transparent 0 14px, var(--paper) 14px);
+    background-size: 100% 100%;
+  }
+  /* Ornamental corners */
+  .plate::before, .plate::after {
+    content: "";
+    position: absolute;
+    width: 32px; height: 32px;
+    border: 1px solid var(--rule);
+  }
+  .plate::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+  .plate::after  { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+  /* Tick marks along top edge — like a map ruler */
+  .plate-ticks {
+    position: absolute;
+    top: -1px; left: 32px; right: 32px;
+    height: 8px;
+    background-image: linear-gradient(to right, var(--rule) 1px, transparent 1px);
+    background-size: 24px 100%;
+  }
+
+  .plate-label {
+    position: absolute;
+    top: -10px; left: 64px;
+    background: var(--paper);
+    padding: 0 12px;
+    font-family: "Spectral SC", serif;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    color: var(--ink-soft);
+  }
+  .plate-edition {
+    position: absolute;
+    top: -10px; right: 64px;
+    background: var(--paper);
+    padding: 0 12px;
+    font-family: "Spectral", serif;
+    font-style: italic;
+    font-size: 12px;
+    color: var(--plot);
+  }
+
+  h1.title {
+    font-family: "Spectral", serif;
+    font-weight: 400;
+    font-style: italic;
+    font-size: clamp(56px, 8.4vw, 116px);
+    line-height: 0.96;
+    letter-spacing: -0.012em;
+    margin-bottom: 8px;
+  }
+  h1.title .strong {
+    display: block;
+    font-style: normal;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.022em;
+  }
+  h1.title .accent {
+    color: var(--plot);
+    font-style: italic;
+    font-weight: 300;
+  }
+
+  .deck {
+    margin-top: 24px;
+    max-width: 56ch;
+    font-family: "Spectral", serif;
+    font-style: italic;
+    font-weight: 350;
+    font-size: 19px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+
+  /* ===== CTA — embossed tickets ===== */
+  .ctas {
+    margin-top: 36px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .ticket {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 14px;
+    padding: 14px 22px 14px 18px;
+    border: 1px solid var(--ink);
+    background: var(--paper);
+    font-family: "Spectral SC", serif;
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    color: var(--ink);
+    text-decoration: none;
+    box-shadow: 3px 3px 0 var(--paper-deep);
+    transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+  }
+  .ticket:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 5px 5px 0 var(--paper-deep);
+    background: var(--paper-shade);
+  }
+  .ticket .num {
+    font-family: "Spectral", serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 14px;
+    letter-spacing: 0;
+    color: var(--plot);
+  }
+  .ticket--filled {
+    background: var(--ink);
+    color: var(--paper);
+    box-shadow: 3px 3px 0 var(--military-deep);
+  }
+  .ticket--filled .num { color: var(--paper-shade); }
+  .ticket--filled:hover { background: var(--military-deep); box-shadow: 5px 5px 0 var(--ink); }
+
+  /* ===== Coordinates / stats ===== */
+  .coords-row {
+    margin-top: 80px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+  .coord {
+    border: 1px solid var(--rule);
+    padding: 24px 22px;
+    position: relative;
+    background:
+      linear-gradient(to right, transparent 0 0.4rem, rgba(60,40,18,0.04) 0.4rem 0.42rem, transparent 0.42rem);
+  }
+  .coord::before {
+    content: "";
+    position: absolute;
+    top: 8px; right: 8px;
+    width: 10px; height: 10px;
+    border: 1px solid var(--rule);
+    transform: rotate(45deg);
+  }
+  .coord .lat {
+    font-family: "Spectral SC", serif;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    color: var(--ink-soft);
+    margin-bottom: 12px;
+  }
+  .coord .value {
+    font-family: "Spectral", serif;
+    font-weight: 500;
+    font-size: 48px;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    color: var(--plot);
+    font-feature-settings: "lnum", "tnum";
+  }
+  .coord .label {
+    margin-top: 10px;
+    font-family: "Spectral", serif;
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.4;
+  }
+
+  /* ===== Legend / Cities preview (M2 hook) ===== */
+  .legend {
+    margin-top: 80px;
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 36px;
+    padding-top: 28px;
+    border-top: 1px dashed var(--rule);
+  }
+  .legend .key {
+    font-family: "Spectral SC", serif;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    color: var(--ink-soft);
+  }
+  .legend h3 {
+    font-family: "Spectral", serif;
+    font-weight: 500;
+    font-size: 26px;
+    line-height: 1.15;
+    margin-bottom: 12px;
+  }
+  .legend h3 em { color: var(--plot); }
+  .legend p { color: var(--ink-soft); max-width: 64ch; }
+
+  .cities {
+    margin-top: 22px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .city {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    font-family: "Spectral SC", serif;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--ink);
+  }
+  .city::before {
+    content: "";
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--plot);
+    box-shadow: 0 0 0 2px var(--paper), 0 0 0 3px var(--rule);
+  }
+  .city.tide::before { background: var(--tide); }
+  .city.mil::before { background: var(--military); }
+
+  /* ===== Footer scale-bar ===== */
+  .scale-bar {
+    margin-top: 88px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 16px;
+    align-items: center;
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+    font-family: "Spectral SC", serif;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    color: var(--ink-soft);
+  }
+  .scale {
+    height: 8px;
+    background:
+      repeating-linear-gradient(to right, var(--ink) 0 32px, var(--paper) 32px 64px);
+    border: 1px solid var(--ink);
+  }
+
+  /* On-load reveal — proxy for GSAP timeline */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  h1.title, .deck, .ctas, .coords-row, .legend {
+    opacity: 0;
+    animation: fadeUp 900ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
+  h1.title { animation-delay: 80ms; }
+  .deck    { animation-delay: 240ms; }
+  .ctas    { animation-delay: 380ms; }
+  .coords-row { animation-delay: 520ms; }
+  .legend  { animation-delay: 660ms; }
+</style>
+</head>
+<body>
+<div class="map-grid"></div>
+<div class="frame">
+
+  <header class="header">
+    <div class="compass"><div class="star"></div><span class="n">N</span></div>
+    <div class="title">Narrative <em>Chess</em></div>
+    <div class="coords">
+      <div>50.4501° N &nbsp;·&nbsp; 30.5234° E</div>
+      <div class="live">3 expeditions in progress</div>
+    </div>
+  </header>
+
+  <section class="plate">
+    <div class="plate-ticks"></div>
+    <div class="plate-label">Plate I</div>
+    <div class="plate-edition">— folio 47</div>
+    <h1 class="title">
+      An atlas
+      <span class="strong">of games <span class="accent">— and the</span></span>
+      <span class="strong"><em>stories they leave</em>.</span>
+    </h1>
+    <p class="deck">Two players sit at opposite poles. A board unfolds between them like terrain. We chart the journey, mark the cities passed through, and store each crossing in a folio for the archive.</p>
+    <div class="ctas">
+      <a href="#" class="ticket ticket--filled"><span class="num">→</span>Begin a passage</a>
+      <a href="#" class="ticket"><span class="num">·</span>Sign in</a>
+      <a href="#" class="ticket"><span class="num">47</span>Today's folio</a>
+    </div>
+  </section>
+
+  <section class="coords-row">
+    <div class="coord">
+      <div class="lat">Latitude · LIVE</div>
+      <div class="value">12</div>
+      <div class="label">games on the boards at this hour, observable to all members.</div>
+    </div>
+    <div class="coord">
+      <div class="lat">Longitude · TODAY</div>
+      <div class="value">47</div>
+      <div class="label">passages opened since this morning's plate was struck.</div>
+    </div>
+    <div class="coord">
+      <div class="lat">Bearing · WEEK</div>
+      <div class="value">1,243</div>
+      <div class="label">individual moves entered into the rolling chart.</div>
+    </div>
+  </section>
+
+  <section class="legend">
+    <div class="key">Legend<br/>&amp; cities</div>
+    <div>
+      <h3>Each game crosses <em>cities</em>, gathers <em>characters</em>, leaves a <em>route</em>.</h3>
+      <p>Cities are positions of consequence — Sicilian, the King's Indian, the long endgame plain. Characters are the pieces, named and remembered. Routes are the score sheet, traced over the map.</p>
+      <div class="cities">
+        <span class="city">Reykjavík</span>
+        <span class="city tide">Hastings</span>
+        <span class="city mil">Linares</span>
+        <span class="city">Wijk aan Zee</span>
+        <span class="city tide">Dortmund</span>
+        <span class="city mil">Sofia</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="scale-bar">
+    <div>0</div>
+    <div class="scale"></div>
+    <div>1 game · ~40 moves</div>
+  </footer>
+
+</div>
+</body>
+</html>

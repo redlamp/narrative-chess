@@ -15,9 +15,9 @@ Rewrite of [[narrative-chess-v1]]. Chess-first rebuild with narrative layer, des
 - **M1 shipped: 2026-05-03.** Phases 1–6 all in production. Squash-merged via PR #12 (`e81a3d9` on `main`).
 - **M1.5 shipped: 2026-05-04.** Phase 7 + terminal banner fix + header nav + Phase 8 landing/3D hero. Squash-merged via PR #18 (`681f809` on `main`).
 - **M1.5+ shipped: 2026-05-04.** Hero3D WebGL context recovery + AuthDialog onSuccess + theme toggle UI + dev-only fool's mate smoke + husky pre-commit shebang chore. Squash-merged via PR #25 (`67243d5` on `main`).
+- **M1.5++ shipped: 2026-05-06.** Clocks (live + correspondence), per-side timeout detection (lazy + auto-claim + daily cron sweep), strict-reconnect policy + post-merge polish (hydration fix, open-challenges visibility, account page + display name in header, live games lobby + game-started toast, drop redundant Home link, home stat panels + vertical-stack layout). Squash-merged via PR #34 (`5706e2b` on `main`). 6 migrations live on hosted Supabase. CRON_SECRET set in Vercel envs (Production + Preview/dev). Spec + plan at `docs/superpowers/specs/2026-05-05-clocks-timeout-reconnect-design.md` and `docs/superpowers/plans/2026-05-05-clocks-timeout-reconnect.md`.
 - Stable production alias: https://narrative-chess.vercel.app
-- Two real users can sign up, create + join a game via shared URL, play with drag-or-click, see opponent's moves over realtime, end on checkmate / stalemate / resignation / abort. Observers (third+ authenticated viewer with the URL) can watch read-only. Top-level header nav with theme toggle, games directory at `/games`, terminal banner "Back to games" on game-end, marketing landing page with 3D hero + auth dialog.
-- **M1.5++ merged into `dev` (2026-05-05).** PR #27 merge commit `684256c` (`--no-ff` per policy). Clocks (live + correspondence), per-side timeout detection (lazy + auto-claim + daily cron), strict-reconnect policy. 5 migrations live on hosted Supabase. CRON_SECRET set in Vercel envs. Awaiting `dev` → `main` squash for production ship. Spec + plan at `docs/superpowers/specs/2026-05-05-clocks-timeout-reconnect-design.md` and `docs/superpowers/plans/2026-05-05-clocks-timeout-reconnect.md`.
+- Two real users can sign up, create + join a game via shared URL, play with drag-or-click, see opponent's moves over realtime, end on checkmate / stalemate / resignation / abort / **timeout**. Observers (third+ authenticated viewer with the URL) can watch read-only. Header now shows display name → `/account`. Games directory updates live (no manual refresh) and toasts on game start. Landing page: hero → centered CTAs → three live stat panels.
 - **Polish A/B/C** queued post-M1.5++: draw-by-agreement, move-list stepper (review-only), mobile/touch.
 
 ## Stack
@@ -84,13 +84,19 @@ What success looks like for M1: two browsers, end-to-end smoke test green, no v1
 | polish | — | (in M1.5+ squash) | Dev-only fool's mate smoke (PR #22) |
 | chore | — | (in M1.5+ squash) | Husky pre-commit shebang + LF gitattributes (PR #24) |
 | M1.5+ | (ship) | `67243d5` | Production deploy via PR #25 |
+| M1.5++ | (in M1.5++ squash) | — | Clocks (live + correspondence) + lazy/auto-claim/cron timeout + strict reconnect (PR #27) |
+| polish | (in M1.5++ squash) | — | Clock SSR hydration fix (PR #28) |
+| polish | (in M1.5++ squash) | — | Open-challenges null-side filter (PR #29) |
+| polish | (in M1.5++ squash) | — | Account page + display-name in header (PR #30) |
+| polish | (in M1.5++ squash) | — | Live games lobby + game-started toast (PR #31) |
+| polish | (in M1.5++ squash) | — | Drop redundant Home nav link (PR #32) |
+| polish | (in M1.5++ squash) | — | Home stat panels + vertical-stack layout + public_stats RPC (PR #33) |
+| M1.5++ | (ship) | `5706e2b` | Production deploy via PR #34 |
+| frontend-pass-1 | (PR pending) | — | Editorial-hybrid theme: Fraunces+Newsreader+JetBrains Mono fonts; ink+oxblood+cream palette (replaces shadcn-default teal); 3D hero rebuilt with walnut plinth, 5-piece cluster, GSAP entrance, theme-aware materials; new StageOverlay + StageCtas + LiveGameCard components; typography pass on game/auth/account/games-directory pages. Reference mockup at design/variants/06-hybrid-3d.html. |
 
-## Staged on `dev` (post-M1.5+, not yet on `main`)
+## Staged on `dev` (post-M1.5++, not yet on `main`)
 
-- **M1.5++ delta** — merged from `feat/clocks-schema-rpcs` via PR #27 at merge commit `684256c` (2026-05-05). 7 feat-branch commits + organize-pass docs commit. Branch deleted local + remote post-merge. CRON_SECRET set in Vercel envs (Production + Preview/dev).
-- **Hydration fix** — merged from `fix/clocks-hydration-mismatch` via PR #28 at merge commit `99d4890` (2026-05-06). Clock + GameClient `tickNow` state init flipped from `() => Date.now()` to `null`, with mount effect seeding the wall-clock value post-hydrate. Captured as cross-project pattern in `~/.claude/memory/tools/react-19-lint-patterns.md`.
-- **Open challenges fix** — merged from `fix/open-challenges-null-side` via PR #29 at merge commit `91591d9` (2026-05-06). Other players' open challenges now visible (NULL-side filter).
-- **Home polish** — PR #32 (remove redundant Home link, `3d4dd90`) + PR #33 (3 stat panels + vertical layout, `8d2897c`) merged.
+- **frontend-pass-1** — PR open against `dev` (`feat/frontend-pass-1`). Six-phase editorial-hybrid theme + 3D hero rebuild + landing rewrite. Two pre-existing e2e bugs fixed in Phase 6 (wordmark aria-label, clocks-display selector). Plan: `docs/superpowers/plans/2026-05-07-frontend-pass-1.md`.
 
 ## M1.5++ ship details
 
@@ -107,13 +113,12 @@ What success looks like for M1: two browsers, end-to-end smoke test green, no v1
 
 ## Branch state
 
-- `main` — production (latest squash: M1.5+ `67243d5`)
-- `dev` — at `91591d9` (M1.5++ + hydration fix + null-side fix + home polish merges); ahead of `main` by full M1.5++ delta + post-merge fixes/polish
+- `main` — production (latest squash: M1.5++ `5706e2b`, 2026-05-06)
+- `dev` — content-equal to `main` post-reconciliation merge `589403d`
 
-## Open threads — post-M1.5+
+## Open threads — post-M1.5++
 
-- **M1.5++ ship gate**: smoke `dev` preview → squash `dev` → `main`. Reconciliation per [[lesson-dev-main-merge-after-squash]] expected.
-- **CI workflow bug**: `compgen -G "e2e/**/*.spec.ts"` misses top-level specs without `shopt -s globstar`. All 14 e2e specs currently no-op in CI. One-line chore PR.
+- **CI workflow bug**: `compgen -G "e2e/**/*.spec.ts"` misses top-level specs without `shopt -s globstar`. All 15 e2e specs currently no-op in CI. One-line chore PR.
 - **Polish A — draw-by-agreement** (offer / accept / decline flow): queued post-M1.5++ ship.
 - **Polish B — move-list stepper** (review-only, click-to-step + forward/back, no undo): queued post-M1.5++ ship.
 - **Polish C — mobile / touch optimization**: queued last (after polish A + B settle UI).

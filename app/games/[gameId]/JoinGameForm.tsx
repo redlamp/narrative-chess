@@ -51,13 +51,22 @@ export function JoinGameForm({ gameId, emptySide, timeControlLabel }: Props) {
 
   return (
     <main className="container mx-auto max-w-xl py-16 px-6 space-y-6 text-center">
-      <h1 className="text-2xl font-heading font-semibold">Join this game?</h1>
-      <p className="text-sm text-muted-foreground">
+      <h1 className="font-display text-3xl tracking-tight text-foreground">
+        Join this{" "}
+        <em
+          className="font-display italic"
+          style={{ color: "var(--oxblood)" }}
+        >
+          game
+        </em>
+        ?
+      </h1>
+      <p className="font-body italic text-sm text-ink-soft">
         The {emptySide === "white" ? "white" : "black"} side is open.
       </p>
-      <p className="text-sm">
+      <p className="font-mono text-xs uppercase tracking-wide text-ink-faint">
         Time control:{" "}
-        <span className="font-medium">{timeControlLabel}</span>
+        <span className="text-foreground">{timeControlLabel}</span>
       </p>
       <Button size="lg" onClick={onClick} disabled={pending}>
         {pending ? "Joining…" : `Join as ${emptySide}`}
