@@ -796,9 +796,9 @@ export function GameClient({
         className={cn(
           "relative flex-1 rounded border px-3 py-2 transition-shadow overflow-hidden",
           isBlack
-            ? "bg-zinc-900 text-zinc-100 border-zinc-700"
-            : "bg-white text-zinc-900 border-zinc-300",
-          isActive && "ring-2 ring-amber-400",
+            ? "bg-black text-white border-black"
+            : "bg-white text-black border-rule",
+          isActive && "ring-2 ring-signal",
         )}
       >
         {overlay && (
@@ -809,11 +809,11 @@ export function GameClient({
           />
         )}
         <div className="relative space-y-1">
-          <p className="text-[10px] uppercase tracking-wide opacity-60 flex items-center justify-between gap-2">
+          <p className="font-mono text-[10px] uppercase tracking-wide opacity-60 flex items-center justify-between gap-2">
             <span>{isBlack ? "Black" : "White"}</span>
             {isYou && <span>(you)</span>}
           </p>
-          <p className="font-medium truncate">{name}</p>
+          <p className="font-display truncate">{name}</p>
           {mode !== "untimed" && (
             <Clock
               side={side === "w" ? "white" : "black"}
@@ -883,12 +883,12 @@ export function GameClient({
         <div
           className={cn(
             "flex flex-col items-center justify-center rounded border px-3 py-2 min-w-[112px] transition-colors",
-            !inProgress && "bg-muted text-muted-foreground border-border",
-            whiteActive && "bg-white text-zinc-900 border-zinc-300",
-            blackActive && "bg-zinc-900 text-zinc-100 border-zinc-700",
+            !inProgress && "bg-bg-soft text-ink-soft border-rule-soft",
+            whiteActive && "bg-white text-black border-rule",
+            blackActive && "bg-black text-white border-black",
           )}
         >
-          <span className="font-medium text-xs">{turnText}</span>
+          <span className="font-mono uppercase tracking-wide text-[10px]">{turnText}</span>
           {inProgress && (
             <span
               className="text-base leading-none mt-0.5"
@@ -898,7 +898,7 @@ export function GameClient({
               {arrowChar}
             </span>
           )}
-          <span className="text-[10px] opacity-60 mt-0.5">ply {state.ply}</span>
+          <span className="font-mono text-[10px] tabular-nums opacity-60 mt-0.5">ply {state.ply}</span>
         </div>
 
         {renderPlayerPill(rightSide)}

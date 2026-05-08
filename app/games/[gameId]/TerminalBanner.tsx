@@ -54,14 +54,17 @@ export function TerminalBanner({ status, terminationReason, isObserver }: Props)
   return (
     <div
       className={cn(
-        "max-w-xl mx-auto w-full rounded border bg-card p-4",
+        "max-w-xl mx-auto w-full rounded border border-foreground bg-foreground text-background p-4",
         "flex items-center justify-between gap-4",
       )}
       role="status"
     >
-      <div className="min-w-0">
-        <h2 className="text-lg font-heading font-semibold truncate">{title}</h2>
-        <p className="text-sm text-muted-foreground truncate">{subtitle}</p>
+      <div className="min-w-0 space-y-1">
+        <p className="font-mono uppercase tracking-wide text-[10px] text-signal">
+          &gt; result
+        </p>
+        <h2 className="font-display text-lg truncate">{title}</h2>
+        <p className="font-mono text-xs opacity-70 truncate">{subtitle}</p>
       </div>
       {!isObserver && (
         <div className="flex items-center gap-2 shrink-0">

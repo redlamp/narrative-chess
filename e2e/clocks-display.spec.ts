@@ -64,7 +64,7 @@ test("5+0 live clocks render + DB rows have time control state", async ({
   expect(bobClocks.length).toBe(2);
 
   // White clock should be active (it's white-to-move at ply 0).
-  const aliceWhiteClock = alice.getByTestId("clock").locator("[data-side='white']");
+  const aliceWhiteClock = alice.locator("[data-testid='clock'][data-side='white']");
   await expect(alice.locator("[data-testid='clock'][data-side='white']")).toHaveAttribute(
     "data-active",
     "true",

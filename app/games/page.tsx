@@ -102,7 +102,15 @@ export default async function GamesPage() {
     <main className="container mx-auto max-w-4xl py-12 px-6 space-y-10">
       <GamesRealtime viewerUserId={uid} />
       <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-heading font-semibold">Games</h1>
+        <h1 className="font-display text-3xl tracking-tight text-foreground">
+          Your{" "}
+          <em
+            className="font-display italic"
+            style={{ color: "var(--oxblood)" }}
+          >
+            games
+          </em>
+        </h1>
         <Button asChild>
           <Link href="/games/new">Start new game</Link>
         </Button>
@@ -149,11 +157,11 @@ function Section({
 }) {
   return (
     <section>
-      <h2 className="text-sm uppercase tracking-wide text-muted-foreground mb-3">
+      <h2 className="font-mono uppercase tracking-wide text-[10px] text-ink-faint mb-3">
         {title}
       </h2>
       {rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{emptyHint}</p>
+        <p className="font-body text-sm text-ink-soft">{emptyHint}</p>
       ) : (
         <ul className="space-y-2">
           {rows.map((g) => (
@@ -186,17 +194,17 @@ function GameRowRender({ row, viewer }: { row: GameRow; viewer: string }) {
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="min-w-0">
-        <p className="font-medium truncate">{opponentName}</p>
-        <p className="text-xs text-muted-foreground">
+        <p className="font-display text-base text-foreground truncate">{opponentName}</p>
+        <p className="font-mono text-[11px] text-ink-faint tabular-nums">
           {statusLabel(row.status)} · ply {row.ply}
           {youColor ? ` · you play ${youColor}` : ""}
         </p>
       </div>
       <div className="flex items-center gap-3 shrink-0">
-        <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
+        <span className="font-mono text-[11px] px-2 py-0.5 rounded border border-rule-soft text-ink-soft">
           {tcLabel}
         </span>
-        <span className="text-xs text-muted-foreground">
+        <span className="font-mono text-[11px] text-ink-faint tabular-nums">
           {new Date(row.created_at).toLocaleString()}
         </span>
       </div>

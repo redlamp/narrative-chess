@@ -28,29 +28,27 @@ async function fetchStats(): Promise<Stats> {
 export async function StatPanels() {
   const stats = await fetchStats();
 
-  const panels: Array<{ value: number; label: string }> = [
-    { value: stats.games_played, label: "Games played" },
-    { value: stats.active_games, label: "Active games" },
-    { value: stats.accounts, label: "Accounts" },
+  const panels: Array<{ eyebrow: string; value: number; label: string }> = [
+    { eyebrow: "Now playing", value: stats.active_games, label: "Live games on the boards at this hour." },
+    { eyebrow: "Today", value: stats.games_played, label: "Games begun since this morning." },
+    { eyebrow: "All accounts", value: stats.accounts, label: "Members who have signed up." },
   ];
 
   return (
-    <section className="relative z-10 mx-auto max-w-5xl px-4 pt-4 pb-16">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {panels.map((p) => (
-          <div
-            key={p.label}
-            className="rounded-lg border bg-background/80 backdrop-blur px-6 py-8 text-center shadow-sm transition-shadow hover:shadow-md"
-          >
-            <p className="font-heading text-4xl font-semibold tabular-nums tracking-tight">
-              {p.value.toLocaleString()}
-            </p>
-            <p className="mt-1 text-sm uppercase tracking-wide text-muted-foreground">
-              {p.label}
-            </p>
+    <section className="grid grid-cols-1 sm:grid-cols-3 gap-8 py-12 border-t-2 border-rule border-b border-rule">
+      {panels.map((p) => (
+        <div key={p.eyebrow} className="grid grid-cols-[auto_1fr] gap-4 items-baseline">
+          <div className="font-mono font-semibold text-[56px] leading-[0.9] tracking-[-0.02em] text-oxblood tabular-nums">
+            {p.value.toLocaleString()}
           </div>
-        ))}
-      </div>
+          <div className="font-body italic text-[15px] leading-[1.4] text-ink-soft">
+            <strong className="block font-mono not-italic font-medium text-[9px] tracking-[0.22em] uppercase text-foreground mb-1.5">
+              {p.eyebrow}
+            </strong>
+            {p.label}
+          </div>
+        </div>
+      ))}
     </section>
   );
 }

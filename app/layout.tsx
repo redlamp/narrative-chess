@@ -1,19 +1,35 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Raleway, Inter } from "next/font/google";
+import { Fraunces, Newsreader, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
 import { SiteHeader } from "@/components/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
 
-const interHeading = Inter({ subsets: ["latin"], variable: "--font-heading" });
-const raleway = Raleway({ subsets: ["latin"], variable: "--font-sans" });
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+// Display — characterful serif with optical-sizing, soft, and wonk axes.
+// Used for headings + the wordmark italic.
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-display",
+  axes: ["SOFT", "WONK", "opsz"],
+});
+
+// Body — magazine-grade variable serif.
+const newsreader = Newsreader({
+  subsets: ["latin"],
+  variable: "--font-body",
+  axes: ["opsz"],
+});
+
+// Mono — technical voice (clocks, move log, IDs, system metadata, boxed CHESS).
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+});
 
 export const metadata: Metadata = {
   title: "Narrative Chess",
-  description: "Multiplayer chess with a story.",
+  description: "Games that tell stories.",
 };
 
 export default function RootLayout({
@@ -26,14 +42,12 @@ export default function RootLayout({
       className={cn(
         "h-full",
         "antialiased",
-        geistSans.variable,
-        geistMono.variable,
-        "font-sans",
-        raleway.variable,
-        interHeading.variable,
+        fraunces.variable,
+        newsreader.variable,
+        jetbrainsMono.variable,
       )}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col font-body">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

@@ -57,7 +57,15 @@ export function LoginForm({ action = login, onSuccess }: LoginFormProps) {
 
   return (
     <form action={formAction} className="space-y-4">
-      <h1 className="text-2xl font-semibold text-foreground">Log in</h1>
+      <h1 className="font-display text-3xl tracking-tight text-foreground">
+        Log{" "}
+        <em
+          className="font-display italic"
+          style={{ color: "var(--oxblood)" }}
+        >
+          in
+        </em>
+      </h1>
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input

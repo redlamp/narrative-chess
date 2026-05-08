@@ -72,9 +72,9 @@ export function Clock({ side, mode, remainingMs, turnStartedAt, isActive }: Prop
   return (
     <div
       className={cn(
-        "rounded border px-3 py-2 font-mono text-lg tabular-nums text-center min-w-[88px]",
-        isActive ? "ring-2 ring-amber-400" : "opacity-60",
-        lowTime && isActive && "text-red-600 animate-pulse",
+        "rounded border border-rule-soft px-3 py-2 font-mono text-lg tabular-nums text-center min-w-[88px]",
+        isActive ? "ring-2 ring-foreground" : "opacity-60",
+        lowTime && isActive && "text-signal animate-pulse",
       )}
       data-testid="clock"
       data-side={side}
