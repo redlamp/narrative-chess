@@ -30,11 +30,15 @@ jobs:
         id: detect_e2e
         shell: bash
         run: |
+          # `shopt -s globstar` is required for `**` to recurse. Without it,
+          # bash treats `**` as `*` and the pattern only matches at one depth,
+          # which misses top-level specs like e2e/landing.spec.ts.
+          shopt -s globstar nullglob
           if compgen -G "e2e/**/*.spec.ts" > /dev/null 2>&1; then
             echo "has_specs=true" >> "$GITHUB_OUTPUT"
           else
             echo "has_specs=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No Playwright specs found under e2e/ — skipping e2e step (will activate when Phase 3+ adds specs)"
+            echo "::notice::No Playwright specs found under e2e/ - skipping e2e step (will activate when Phase 3+ adds specs)"
           fi
 
       - name: Install Playwright browsers
