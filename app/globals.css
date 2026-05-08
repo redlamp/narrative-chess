@@ -119,14 +119,16 @@
   --sidebar-border: oklch(0.85 0.02 75);
   --sidebar-ring: oklch(0.40 0.13 25);
 
-  /* 3D scene tokens */
+  /* 3D scene tokens.
+     bg-top/bot are CSS-only (gradient), oklch is fine.
+     The rest are read by Three.js, which doesn't parse oklch — must be hex. */
   --scene-bg-top: oklch(0.94 0.02 75);
   --scene-bg-bot: oklch(0.83 0.04 80);
-  --scene-floor: oklch(0.84 0.05 85);
-  --scene-fog: oklch(0.91 0.025 80);
-  --plinth-color: oklch(0.32 0.04 50);
-  --piece-light: oklch(0.92 0.04 80);
-  --piece-dark: oklch(0.20 0.03 45);
+  --scene-floor: #ddcca0;
+  --scene-fog: #ebe2d2;
+  --plinth-color: #5a4128;
+  --piece-light: #f0e7cf;
+  --piece-dark: #332618;
 }
 
 /* ============================================
@@ -177,13 +179,17 @@
   --sidebar-border: oklch(0.30 0.02 60);
   --sidebar-ring: oklch(0.62 0.13 22);
 
+  /* Dark scene tokens — floor pushed darker than 0.27L so the cream-toned
+     overlay text (Two players sit…) reads against it. Plinth lifted slightly
+     above floor so the walnut block separates visually. Hex required for
+     Three.js consumers (oklch on the bg-* gradient is fine). */
   --scene-bg-top: oklch(0.16 0.01 60);
   --scene-bg-bot: oklch(0.22 0.025 50);
-  --scene-floor: oklch(0.27 0.03 60);
-  --scene-fog: oklch(0.18 0.015 55);
-  --plinth-color: oklch(0.22 0.03 55);
-  --piece-light: oklch(0.84 0.05 85);
-  --piece-dark: oklch(0.16 0.025 50);
+  --scene-floor: #1f1812;
+  --scene-fog: #181210;
+  --plinth-color: #3a2a1a;
+  --piece-light: #dfcca0;
+  --piece-dark: #0a0805;
 }
 
 @layer base {
