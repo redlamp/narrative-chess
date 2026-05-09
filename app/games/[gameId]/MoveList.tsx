@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import { pairsFromMoves, type MoveLike } from "@/lib/chess/move-list";
+import { useEffect, useMemo } from "react";
+import { pairsFromMoves, stepPly, type MoveLike } from "@/lib/chess/move-list";
 import { MoveCell } from "./MoveCell";
 
 type Props = {
@@ -12,6 +12,30 @@ type Props = {
 };
 
 export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const t = e.target as HTMLElement;
+      if (t?.matches?.("input, textarea, [contenteditable]")) return;
+
+      if (e.key === "ArrowLeft") {
+        const next = stepPly(viewedPly, -1, livePly);
+        onScrub(next === livePly ? null : next);
+      } else if (e.key === "ArrowRight") {
+        const next = stepPly(viewedPly, +1, livePly);
+        onScrub(next === livePly ? null : next);
+      } else if (e.key === "ArrowUp") {
+        onScrub(0);
+      } else if (e.key === "ArrowDown") {
+        onScrub(null);
+      } else {
+        return;
+      }
+      e.preventDefault();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [viewedPly, livePly, onScrub]);
+
   const pairs = useMemo(() => pairsFromMoves(moves), [moves]);
   const activePly = viewedPly ?? livePly;
   const recentThreshold = Math.max(1, livePly - 7);
