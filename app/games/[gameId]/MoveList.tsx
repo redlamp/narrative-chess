@@ -91,29 +91,25 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
 
   if (moves.length === 0) {
     return (
-      <div className="w-full max-w-xl mx-auto px-1 py-3">
+      <div className="w-full px-1 py-3">
         <p className="font-body italic text-ink-soft text-sm">No moves yet.</p>
       </div>
     );
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full max-w-xl mx-auto px-1 py-2 max-h-72 overflow-y-auto"
-      data-testid="move-list"
-    >
-      <div className="grid grid-cols-[40px_1fr_1fr] gap-x-2 gap-y-1">
+    <div ref={containerRef} className="w-full" data-testid="move-list">
+      {/* Mobile: inline PGN ribbon. Wraps naturally. Reads like a score sheet. */}
+      <div className="lg:hidden font-mono text-[13px] leading-7 px-1 py-2 max-h-48 overflow-y-auto">
         {pairs.map((pair) => (
-          <div className="contents move-row" data-move-num={pair.moveNum} key={pair.moveNum}>
-            <span className="font-mono text-[11px] text-ink-faint self-center text-right pr-1">
-              {pair.moveNum}.
-            </span>
+          <span key={pair.moveNum} className="move-row" data-move-num={pair.moveNum}>
+            <span className="text-ink-faint">{pair.moveNum}.</span>
             <MoveCell
               ply={pair.white.ply}
               san={pair.white.san}
               isActive={pair.white.ply === activePly}
               isRecent={pair.white.ply >= recentThreshold}
+              inline
               onSelect={onScrub}
             />
             {pair.black ? (
@@ -122,13 +118,46 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
                 san={pair.black.san}
                 isActive={pair.black.ply === activePly}
                 isRecent={pair.black.ply >= recentThreshold}
+                inline
                 onSelect={onScrub}
               />
-            ) : (
-              <span aria-hidden />
-            )}
-          </div>
+            ) : null}{" "}
+          </span>
         ))}
+      </div>
+
+      {/* Desktop: two-column grid pinned to the side of the board. */}
+      <div className="hidden lg:block px-2 py-3 max-h-[640px] overflow-y-auto border border-rule-soft rounded-md bg-bg-soft/40">
+        <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-faint mb-2 px-1">
+          Move list
+        </p>
+        <div className="grid grid-cols-[32px_1fr_1fr] gap-x-2 gap-y-1">
+          {pairs.map((pair) => (
+            <div className="contents move-row" data-move-num={pair.moveNum} key={pair.moveNum}>
+              <span className="font-mono text-[11px] text-ink-faint self-center text-right pr-1">
+                {pair.moveNum}.
+              </span>
+              <MoveCell
+                ply={pair.white.ply}
+                san={pair.white.san}
+                isActive={pair.white.ply === activePly}
+                isRecent={pair.white.ply >= recentThreshold}
+                onSelect={onScrub}
+              />
+              {pair.black ? (
+                <MoveCell
+                  ply={pair.black.ply}
+                  san={pair.black.san}
+                  isActive={pair.black.ply === activePly}
+                  isRecent={pair.black.ply >= recentThreshold}
+                  onSelect={onScrub}
+                />
+              ) : (
+                <span aria-hidden />
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
