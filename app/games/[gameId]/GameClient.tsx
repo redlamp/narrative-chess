@@ -27,6 +27,8 @@ import { ObserverCount } from "./ObserverCount";
 import { Clock } from "./Clock";
 import { useAutoClaim } from "./useAutoClaim";
 import { computeRemaining, type ClockMode } from "@/lib/chess/clock";
+import { viewedFen, type MoveLike } from "@/lib/chess/move-list";
+import { MoveList } from "./MoveList";
 import dynamic from "next/dynamic";
 
 // Dev-only smoke button — dynamic import gated on VERCEL_ENV. We can't
@@ -146,8 +148,6 @@ export function GameClient({
   initialTurnStartedAt,
   initialMoves,
 }: Props) {
-  // Touch initialMoves so unused-prop lint doesn't fire (T4 wires real usage)
-  void initialMoves;
   const router = useRouter();
   const isObserver = myColor === null;
   const [state, setState] = useState<State>({
@@ -160,6 +160,32 @@ export function GameClient({
     blackRemainingMs: initialBlackRemainingMs,
     turnStartedAt: initialTurnStartedAt,
   });
+
+  const [moves, setMoves] = useState<MoveLike[]>(
+    initialMoves.map((m) => ({ ply: m.ply, san: m.san, fen_after: m.fen_after })),
+  );
+  const [viewedPly, setViewedPly] = useState<number | null>(null);
+
+  const livePly = state.ply;
+
+  const displayFen = useMemo(
+    () => viewedFen(moves, viewedPly, state.fen),
+    [moves, viewedPly, state.fen],
+  );
+
+  // Auto-snap to live: when livePly bumps (own optimistic apply or
+  // realtime opponent INSERT), reset viewedPly to null so the viewer
+  // jumps back to the live position. Without this, a player who's
+  // scrubbed back stays scrubbed when their opponent moves — easy to
+  // miss the new position. The ref tracks the last seen livePly so we
+  // only fire when it actually changes (not on unrelated re-renders).
+  const prevLivePlyRef = useRef(livePly);
+  useEffect(() => {
+    if (livePly !== prevLivePlyRef.current) {
+      setViewedPly(null);
+      prevLivePlyRef.current = livePly;
+    }
+  }, [livePly]);
 
   const mode: ClockMode = timeControlType ?? "untimed";
 
@@ -265,6 +291,13 @@ export function GameClient({
     let cancelled = false;
     void subscribeToMoves(gameId, (m) => {
       applyMoveLocal({ ply: m.ply, fen: m.fen_after });
+      setMoves((prev) => {
+        if (prev.some((x) => x.ply === m.ply)) return prev;
+        return [
+          ...prev,
+          { ply: m.ply, san: m.san, fen_after: m.fen_after },
+        ].sort((a, b) => a.ply - b.ply);
+      });
     }).then((s) => {
       if (cancelled) s.unsubscribe();
       else sub = s;
@@ -503,6 +536,17 @@ export function GameClient({
             fen: result.data.fen_after,
             status: result.data.status,
             terminationReason: result.data.termination_reason ?? null,
+          });
+          setMoves((prev) => {
+            if (prev.some((x) => x.ply === result.data.ply)) return prev;
+            return [
+              ...prev,
+              {
+                ply: result.data.ply,
+                san: result.data.san,
+                fen_after: result.data.fen_after,
+              },
+            ].sort((a, b) => a.ply - b.ply);
           });
           if (TERMINAL.includes(result.data.status)) {
             toast.success(`Game over: ${statusLabel(result.data.status)}`);
@@ -859,7 +903,7 @@ export function GameClient({
       <div className="flex justify-center">
         <div className="w-full max-w-xl aspect-square">
           <Chessboard
-            position={state.fen}
+            position={displayFen}
             boardOrientation={myColor === "b" ? "black" : "white"}
             onPieceDrop={onPieceDrop}
             onPieceDragBegin={onPieceDragBegin}
@@ -868,7 +912,9 @@ export function GameClient({
             onSquareClick={onSquareClick}
             onMouseOverSquare={onSquareMouseOver}
             onMouseOutSquare={onSquareMouseOut}
-            arePiecesDraggable={inProgress && !isObserver}
+            arePiecesDraggable={
+              inProgress && !isObserver && (viewedPly === null || viewedPly === livePly)
+            }
             isDraggablePiece={isDraggablePiece}
             customSquareStyles={customSquareStyles}
             customBoardStyle={{ borderRadius: 6 }}
@@ -907,6 +953,13 @@ export function GameClient({
 
         {renderPlayerPill(rightSide)}
       </aside>
+
+      <MoveList
+        moves={moves}
+        livePly={livePly}
+        viewedPly={viewedPly}
+        onScrub={setViewedPly}
+      />
 
       <ObserverCount
         gameId={gameId}
