@@ -1,10 +1,3 @@
----
-tags:
-  - domain/chess-engine
-  - domain/narrative
-  - origin/external-research
----
-
 # 15 Key Chess Opening Principles
 
 **Type:** article
