@@ -187,6 +187,48 @@ export function GameClient({
     }
   }, [livePly]);
 
+  // Audio cue — wooden thunk on every livePly bump (own + opponent moves).
+  // Asset: public/sounds/move.mp3 (lichess CC-BY 4.0).
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    const a = new Audio("/sounds/move.mp3");
+    a.volume = 0.5;
+    a.preload = "auto";
+    audioRef.current = a;
+  }, []);
+
+  // Cue + Your-turn toast on livePly bump.
+  // Audio plays for every move (own + opponent). Toast only fires when the
+  // new live position is the viewer's turn — so you hear the thunk on your
+  // own move but the toast only appears when the opponent has played and
+  // the clock is now on you.
+  const prevLivePlyForCueRef = useRef(livePly);
+  useEffect(() => {
+    if (livePly === 0) return;
+    if (livePly === prevLivePlyForCueRef.current) return;
+    prevLivePlyForCueRef.current = livePly;
+
+    const a = audioRef.current;
+    if (a) {
+      a.currentTime = 0;
+      // Browser autoplay policy: first call before user interaction may
+      // reject. Subsequent calls unlock once user has interacted with the
+      // page anywhere (clicking sign-in, the board, etc).
+      a.play().catch(() => { /* swallow autoplay rejection */ });
+    }
+
+    // Derive side-to-move from fen — `state.currentTurn` doesn't exist
+    // on the State shape; the canonical turn is fenTurn(state.fen).
+    const currentTurn = fenTurn(state.fen);
+    if (
+      !isObserver &&
+      state.status === "in_progress" &&
+      currentTurn === myColor
+    ) {
+      toast("Your turn.", { duration: 3500 });
+    }
+  }, [livePly, isObserver, state.status, state.fen, myColor]);
+
   const mode: ClockMode = timeControlType ?? "untimed";
 
   // Click-to-move: square the user has tapped/clicked to start a move
