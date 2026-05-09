@@ -20,7 +20,7 @@ import {
   subscribeToMoves,
   subscribeToGameStatus,
 } from "@/lib/realtime/subscribe";
-import type { GameStatus, TerminationReason } from "@/lib/schemas/game";
+import type { GameStatus, MoveEvent, TerminationReason } from "@/lib/schemas/game";
 import { GameActions } from "./GameActions";
 import { TerminalBanner } from "./TerminalBanner";
 import { ObserverCount } from "./ObserverCount";
@@ -69,6 +69,7 @@ type Props = {
   initialWhiteRemainingMs: number | null;
   initialBlackRemainingMs: number | null;
   initialTurnStartedAt: string | null;
+  initialMoves: MoveEvent[];
 };
 
 type State = {
@@ -143,7 +144,10 @@ export function GameClient({
   initialWhiteRemainingMs,
   initialBlackRemainingMs,
   initialTurnStartedAt,
+  initialMoves,
 }: Props) {
+  // Touch initialMoves so unused-prop lint doesn't fire (T4 wires real usage)
+  void initialMoves;
   const router = useRouter();
   const isObserver = myColor === null;
   const [state, setState] = useState<State>({

@@ -50,10 +50,11 @@ export default async function GamePage({
   } = await supabase.auth.getUser();
   if (!user) redirect(`/login?next=/games/${gameId}`);
 
-  const [{ data, error }, observerCountResult] = await Promise.all([
-    supabase
-      .from("games")
-      .select(`
+  const [{ data, error }, observerCountResult, movesResult] = await Promise.all(
+    [
+      supabase
+        .from("games")
+        .select(`
         id,
         white_id,
         black_id,
@@ -72,13 +73,19 @@ export default async function GamePage({
         white_name:white_id ( display_name ),
         black_name:black_id ( display_name )
       `)
-      .eq("id", gameId)
-      .single(),
-    supabase
-      .from("game_observers")
-      .select("*", { count: "exact", head: true })
-      .eq("game_id", gameId),
-  ]);
+        .eq("id", gameId)
+        .single(),
+      supabase
+        .from("game_observers")
+        .select("*", { count: "exact", head: true })
+        .eq("game_id", gameId),
+      supabase
+        .from("game_moves")
+        .select("game_id, ply, san, uci, fen_after, played_by, played_at")
+        .eq("game_id", gameId)
+        .order("ply", { ascending: true }),
+    ],
+  );
 
   if (error || !data) notFound();
 
@@ -130,6 +137,7 @@ export default async function GamePage({
   // Participants OR observers (any other authenticated user with the URL)
   // both render <GameClient>. Observers pass myColor=null and the client
   // disables drag/click and shows an "Observing" status.
+  const initialMoves = movesResult.data ?? [];
   return (
     <GameClient
       gameId={gameId}
@@ -146,6 +154,7 @@ export default async function GamePage({
       initialWhiteRemainingMs={row.white_remaining_ms}
       initialBlackRemainingMs={row.black_remaining_ms}
       initialTurnStartedAt={row.turn_started_at}
+      initialMoves={initialMoves}
     />
   );
 }
