@@ -25,47 +25,59 @@ export function SiteHeaderNav({ displayName }: Props) {
 
   return (
     <header className="border-b border-rule bg-background">
-      <nav className="max-w-5xl mx-auto px-4 h-12 flex items-center justify-between gap-4">
+      {/* min-h-12 keeps the 48px target height when the wordmark is on a
+          single line (>= 820px). Below 820 the wordmark stacks to two
+          lines (~46px tall at sm size) and py-2 lets the nav grow to
+          accommodate without crushing the marks. */}
+      <nav className="max-w-5xl mx-auto px-4 min-h-12 py-2 flex items-center justify-between gap-4">
         <Link href="/" aria-label="Narrative Chess" className="text-foreground">
           <Wordmark size="sm" layout="responsive" />
         </Link>
         <div className="flex items-center gap-1">
-          {displayName && (
-            <Link
-              href="/account"
-              className={cn(
-                "px-3 py-1.5 font-body italic text-[14px] transition-colors mr-1",
-                pathname === "/account"
-                  ? "text-oxblood"
-                  : "text-ink-soft hover:text-foreground",
-              )}
-              aria-current={pathname === "/account" ? "page" : undefined}
-              title="Account"
-            >
-              {displayName}
-            </Link>
-          )}
-          <ul className="flex items-center gap-1">
-            {links.map((link) => {
-              const active = pathname === link.href;
-              return (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className={cn(
-                      "px-3 py-1.5 font-mono text-[10px] tracking-[0.18em] uppercase transition-colors",
-                      active
-                        ? "text-foreground"
-                        : "text-ink-soft hover:text-foreground",
-                    )}
-                    aria-current={active ? "page" : undefined}
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          {/* Baseline-align the display-name link with the nav-link list:
+              both pieces of text drop into a flex items-baseline group so
+              the italic Fraunces baseline sits flush with the mono uppercase
+              baseline rather than floating higher per their default
+              line-box centering. ThemeToggle stays outside this group so
+              it keeps icon-centered. */}
+          <div className="flex items-baseline gap-1">
+            {displayName && (
+              <Link
+                href="/account"
+                className={cn(
+                  "px-3 py-1.5 font-body italic text-[14px] leading-none transition-colors mr-1",
+                  pathname === "/account"
+                    ? "text-oxblood"
+                    : "text-ink-soft hover:text-foreground",
+                )}
+                aria-current={pathname === "/account" ? "page" : undefined}
+                title="Account"
+              >
+                {displayName}
+              </Link>
+            )}
+            <ul className="flex items-baseline gap-1">
+              {links.map((link) => {
+                const active = pathname === link.href;
+                return (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      className={cn(
+                        "px-3 py-1.5 font-mono text-[10px] leading-none tracking-[0.18em] uppercase transition-colors",
+                        active
+                          ? "text-foreground"
+                          : "text-ink-soft hover:text-foreground",
+                      )}
+                      aria-current={active ? "page" : undefined}
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
           <ThemeToggle />
         </div>
       </nav>

@@ -1131,12 +1131,20 @@ export function GameClient({
       <div
         className={cn(
           "grid gap-2",
+          // Single-column stack below 820px: banner / board / pills / list.
+          // The banner cell is full grid-width but its content gets capped
+          // to max-w-xl (matching the board) so the banner aligns with
+          // the board edges in the 1-col layout.
           "grid-cols-1 [grid-template-areas:'banner''board''pills''list']",
-          "lg:grid-cols-[minmax(0,1fr)_180px] lg:gap-x-3 lg:gap-y-2 lg:items-start lg:max-w-3xl lg:mx-auto",
-          "lg:[grid-template-areas:'banner_banner''board_list''pills_list']",
+          // 820px+: banner spans both columns; board+list sit side by
+          // side; pills row hugs board column. 820 chosen over Tailwind's
+          // default lg (1024) so the two-column layout kicks in earlier
+          // on tablets.
+          "min-[820px]:grid-cols-[minmax(0,1fr)_180px] min-[820px]:gap-x-3 min-[820px]:gap-y-2 min-[820px]:items-start min-[820px]:max-w-3xl min-[820px]:mx-auto",
+          "min-[820px]:[grid-template-areas:'banner_banner''board_list''pills_list']",
         )}
       >
-        <div className="[grid-area:banner]">
+        <div className="[grid-area:banner] max-w-xl mx-auto w-full min-[820px]:max-w-none">
           <InGameBanner
             status={state.status}
             currentTurn={turn ?? "w"}
@@ -1204,7 +1212,7 @@ export function GameClient({
           {renderPlayerPill(rightSide)}
         </aside>
 
-        <div className="[grid-area:list] lg:sticky lg:top-4 max-w-xl mx-auto w-full lg:max-w-none space-y-2">
+        <div className="[grid-area:list] min-[820px]:sticky min-[820px]:top-4 max-w-xl mx-auto w-full min-[820px]:max-w-none space-y-2">
           <MoveList
             moves={moves}
             livePly={livePly}

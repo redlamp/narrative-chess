@@ -32,16 +32,18 @@ export function Wordmark({
 }: Props) {
   const dims = SIZES[size];
 
-  // Responsive layout uses Tailwind to flip flex direction at the `sm`
-  // breakpoint (640px). Below sm we stack (col, items-end); at sm+ we
-  // sit on a single line (row, items-center). Gap is the same in both
-  // axes per the Figma master, so a single `gap` style covers both.
+  // Responsive layout uses Tailwind to flip flex direction at 820px
+  // (the same breakpoint the game page uses to switch from single-
+  // column board+list to two-column board|list). Below 820 we stack
+  // (col, items-end); at 820+ we sit on a single line (row,
+  // items-center). Gap is the same in both axes per the Figma
+  // master, so a single `gap` style covers both.
   const layoutClass =
     layout === "1-line"
       ? "flex-row items-center"
       : layout === "2-line"
         ? "flex-col items-end"
-        : "flex-col items-end sm:flex-row sm:items-center";
+        : "flex-col items-end min-[820px]:flex-row min-[820px]:items-center";
 
   return (
     <span
