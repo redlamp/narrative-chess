@@ -62,11 +62,16 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
 
       if (!initRanRef.current) {
         initRanRef.current = true;
-        gsap.from(cells, {
-          opacity: 0,
-          y: 8,
+        // Lock cells invisible synchronously so the SSR paint-then-tween
+        // window doesn't flash. useGSAP runs in useLayoutEffect, so this
+        // set lands before the next browser paint.
+        gsap.set(cells, { opacity: 0, y: 8 });
+        gsap.to(cells, {
+          opacity: 1,
+          y: 0,
           duration: 0.2,
           stagger: 0.03,
+          delay: 0,
           ease: "power2.out",
         });
         return;
@@ -84,10 +89,12 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
         if (placeholder) targets.push(placeholder);
       }
       if (targets.length === 0) return;
-      gsap.from(targets, {
-        opacity: 0,
-        y: 8,
+      gsap.set(targets, { opacity: 0, y: 8 });
+      gsap.to(targets, {
+        opacity: 1,
+        y: 0,
         duration: 0.2,
+        delay: 0,
         ease: "power2.out",
       });
     },
