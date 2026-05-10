@@ -1128,26 +1128,7 @@ export function GameClient({
           />
         </div>
         <div className="[grid-area:board] flex justify-center">
-          <div
-            className={cn(
-              "w-full max-w-xl aspect-square",
-              // .scrub-playback in globals.css overrides each piece's
-              // inline `transition: transform <duration>ms` (which has no
-              // easing function and therefore falls to the browser default
-              // `ease`) with quadInOut so multi-step playback flows
-              // smoothly across the board. --scrub-piece-duration tracks
-              // the per-move budget so the override matches the inline
-              // duration the chessboard set on the same render.
-              scrubAnimDuration !== null && "scrub-playback",
-            )}
-            style={
-              scrubAnimDuration !== null
-                ? ({
-                    "--scrub-piece-duration": `${scrubAnimDuration}ms`,
-                  } as React.CSSProperties)
-                : undefined
-            }
-          >
+          <div className="w-full max-w-xl aspect-square">
             <Chessboard
               position={displayFen}
               boardOrientation={myColor === "b" ? "black" : "white"}
@@ -1168,9 +1149,7 @@ export function GameClient({
               customSquareStyles={customSquareStyles}
               customBoardStyle={{ borderRadius: 6 }}
               customPieces={taylorPieces}
-              {...(scrubAnimDuration !== null
-                ? { animationDuration: scrubAnimDuration }
-                : {})}
+              animationDuration={scrubAnimDuration ?? 200}
             />
           </div>
         </div>

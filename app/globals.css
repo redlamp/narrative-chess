@@ -244,19 +244,20 @@
 }
 
 /* ============================================
-   Scrub-playback piece easing. react-chessboard sets
-   `style="transition: transform <duration>ms"` inline on every piece;
-   no easing function is specified so it falls to CSS default `ease`,
-   which feels uneven when chained across many quick steps. While the
-   GameClient is mid-scrub-playback it adds .scrub-playback to the
-   board container along with --scrub-piece-duration; the rule below
-   wins via !important and replaces the timing function with quadInOut
-   (easings.net easeInOutQuad). [data-piece] is the attribute
-   react-chessboard puts on each piece DOM node.
+   Chessboard piece easing override. react-chessboard sets
+   `style="transition: transform <duration>ms"` inline on every piece,
+   which (per the CSS shorthand) implicitly resets the timing function
+   to `ease` (slow-in/slow-out, peak velocity around 30%). Both
+   chess.com and lichess (chessground) use the Material standard curve
+   `cubic-bezier(0.4, 0, 0.2, 1)` — fast-out, slow-in, peak velocity
+   near the start. Override the timing-function via !important so it
+   wins over the inline shorthand without us having to clobber the
+   inline duration. Applies during live moves, click-to-move, and
+   scrub-playback alike for a consistent piece-motion feel.
+   [data-piece] is the attribute react-chessboard puts on each piece.
    ============================================ */
-.scrub-playback [data-piece] {
-  transition: transform var(--scrub-piece-duration, 200ms)
-    cubic-bezier(0.45, 0, 0.55, 1) !important;
+[data-piece] {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 /* Cells that arrive AFTER the initial baseline lock (own optimistic +
