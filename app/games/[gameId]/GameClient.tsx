@@ -1149,13 +1149,12 @@ export function GameClient({
           // row height. Row height = left column natural height. List
           // scrolls internally if its content exceeds.
           //
-          // Outer width = sum of children naturally (left 576 fixed
-          // + gap + list content-fit). max-w cap keeps it sane on
-          // ultra-wide screens (576 board + 12 gap + 460 list cap =
-          // 1048, rounded to 1068 for breathing room). Board stays
-          // 576px the whole way — left column is basis-[576px]
-          // shrink-0 so it never gives up width.
-          "min-[820px]:flex-row min-[820px]:items-stretch min-[820px]:gap-x-3 min-[820px]:gap-y-0 min-[820px]:max-w-[1068px] min-[820px]:mx-auto",
+          // Outer width caps at exactly the cluster size (left 576
+          // + gap 12 + list 180 = 768). With both columns shrink-0
+          // and no flex-grow item, anything wider than 768 would
+          // leave dead space on the right. mx-auto centers the
+          // 768-wide cluster within the page's main container.
+          "min-[820px]:flex-row min-[820px]:items-stretch min-[820px]:gap-x-3 min-[820px]:gap-y-0 min-[820px]:max-w-[768px] min-[820px]:mx-auto",
         )}
       >
         {/* Left column wrapper. display:contents at mobile so the
