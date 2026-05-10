@@ -1261,7 +1261,7 @@ export function GameClient({
             at 3 (driven from pairs.length inside MoveList) so its
             height stays bounded under the left column's height; no
             absolute-positioning trick needed. */}
-        <div className="max-w-xl mx-auto w-full min-[820px]:max-w-none min-[820px]:w-fit min-[820px]:shrink-0 min-[820px]:mx-0">
+        <div className="max-w-xl mx-auto w-full min-[820px]:max-w-none min-[820px]:shrink-0 min-[820px]:mx-0">
         <div className="space-y-2 min-[820px]:space-y-0 min-[820px]:flex min-[820px]:flex-col min-[820px]:gap-2">
           <MoveList
             moves={moves}
