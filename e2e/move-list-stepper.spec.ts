@@ -20,6 +20,12 @@ const BOB = {
   password: "movelist-pw-bob",
 };
 
+// MoveList renders TWO branches in DOM (mobile inline ribbon + desktop grid)
+// and CSS hides one per breakpoint. CI viewport is desktop, so target the
+// visible branch. Active cell uses the shadcn `bg-accent` token (which maps
+// to oxblood) so assertions match against bg-accent, not bg-oxblood.
+const VISIBLE = { visible: true } as const;
+
 test("move-list stepper renders + scrubs + keyboard", async ({
   browser,
   baseURL,
@@ -84,26 +90,36 @@ test("move-list stepper renders + scrubs + keyboard", async ({
   await loginAs(ctx, page, ALICE.email, ALICE.password, baseURL!);
   await page.goto(`${baseURL}/games/${gameId}`);
 
-  // Move list panel renders
+  // Move list panel renders. Scope to visible cells (the responsive layout
+  // renders both branches in DOM but only one is visible per breakpoint).
   const list = page.getByTestId("move-list");
   await expect(list).toBeVisible();
-  await expect(list.locator(".move-cell")).toHaveCount(3);
+  const visibleCells = list.locator(".move-cell").filter(VISIBLE);
+  await expect(visibleCells).toHaveCount(3);
 
-  // Click ply 1 -> the cell becomes active (oxblood class applied)
-  await list.locator("[data-ply='1']").click();
-  await expect(list.locator("[data-ply='1']")).toHaveClass(/bg-oxblood/);
+  // Click ply 1 -> the cell becomes active (bg-accent applied)
+  await list.locator("[data-ply='1']").filter(VISIBLE).click();
+  await expect(list.locator("[data-ply='1']").filter(VISIBLE)).toHaveClass(
+    /bg-accent/,
+  );
 
   // ArrowDown -> snap to live (latest ply 3 active)
   await page.keyboard.press("ArrowDown");
-  await expect(list.locator("[data-ply='3']")).toHaveClass(/bg-oxblood/);
+  await expect(list.locator("[data-ply='3']").filter(VISIBLE)).toHaveClass(
+    /bg-accent/,
+  );
 
   // ArrowUp -> ply 0 (no cell exists for ply 0, so no cell is active)
   await page.keyboard.press("ArrowUp");
-  await expect(list.locator(".move-cell.bg-oxblood")).toHaveCount(0);
+  await expect(
+    list.locator(".move-cell.bg-accent").filter(VISIBLE),
+  ).toHaveCount(0);
 
   // ArrowRight from start -> ply 1 active
   await page.keyboard.press("ArrowRight");
-  await expect(list.locator("[data-ply='1']")).toHaveClass(/bg-oxblood/);
+  await expect(list.locator("[data-ply='1']").filter(VISIBLE)).toHaveClass(
+    /bg-accent/,
+  );
 
   await ctx.close();
 });
@@ -153,12 +169,14 @@ test("opponent move auto-snaps board back to live", async ({
   // attached) before pressing keys.
   const list = alicePage.getByTestId("move-list");
   await expect(list).toBeVisible();
-  await expect(list.locator("[data-ply='1']")).toHaveClass(/bg-oxblood/);
+  await expect(list.locator("[data-ply='1']").filter(VISIBLE)).toHaveClass(
+    /bg-accent/,
+  );
 
   // Alice scrubs to ply 0 (start of game, no cell active)
   await alicePage.keyboard.press("ArrowUp");
   await expect(
-    alicePage.locator(".move-cell.bg-oxblood"),
+    list.locator(".move-cell.bg-accent").filter(VISIBLE),
   ).toHaveCount(0);
 
   // Bob's move arrives via service-role insert (simulates realtime)
@@ -183,8 +201,8 @@ test("opponent move auto-snaps board back to live", async ({
 
   // Auto-snap: ply 2 should now be active (latest)
   await expect(
-    alicePage.locator(".move-cell[data-ply='2']"),
-  ).toHaveClass(/bg-oxblood/, { timeout: 10000 });
+    list.locator(".move-cell[data-ply='2']").filter(VISIBLE),
+  ).toHaveClass(/bg-accent/, { timeout: 10000 });
 
   await aliceCtx.close();
 });
