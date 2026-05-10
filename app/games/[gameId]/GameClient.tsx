@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { Chessboard } from "react-chessboard";
+import gsap from "gsap";
 import type { Piece, PromotionPieceOption, Square } from "@/lib/chess/board-types";
 import { taylorPieces } from "@/lib/chess/piece-set";
 import { capturedFromFen } from "@/lib/chess/captures";
@@ -172,9 +173,110 @@ export function GameClient({
 
   const livePly = state.ply;
 
+  // Scrub playback state. When the user clicks a non-adjacent ply in the
+  // move list, we run a GSAP timeline that walks the board through every
+  // intermediate FEN at a per-move tween speed. While playback is active
+  // `scrubPlaybackFen` overrides the natural displayFen so the board
+  // renders the timeline's intermediate position rather than snapping to
+  // the target. `scrubAnimDuration` is fed to react-chessboard's
+  // animationDuration prop so each intermediate position eases over the
+  // same per-move budget. `currentScrubPlyRef` tracks the ply currently
+  // shown so a re-click mid-playback resumes from where the eye left off.
+  const [scrubPlaybackFen, setScrubPlaybackFen] = useState<string | null>(null);
+  const [scrubAnimDuration, setScrubAnimDuration] = useState<number | null>(null);
+  const scrubTlRef = useRef<gsap.core.Timeline | null>(null);
+  const currentScrubPlyRef = useRef<number | null>(null);
+
+  // Kill in-flight playback on unmount so a navigation away doesn't leave
+  // a dangling timeline firing setState on a stale React tree.
+  useEffect(() => {
+    return () => {
+      scrubTlRef.current?.kill();
+      scrubTlRef.current = null;
+    };
+  }, []);
+
   const displayFen = useMemo(
-    () => viewedFen(moves, viewedPly, state.fen),
-    [moves, viewedPly, state.fen],
+    () => scrubPlaybackFen ?? viewedFen(moves, viewedPly, state.fen),
+    [scrubPlaybackFen, moves, viewedPly, state.fen],
+  );
+
+  /**
+   * Scrub handler — wraps setViewedPly with a GSAP timeline that animates
+   * the chessboard through every intermediate FEN between the current
+   * shown ply and `target`.
+   *
+   * Per-move tween budget (per the design): perMove = clamp(20, 200, 2000/N)
+   * where N is the number of intervening plies. Single-ply scrub plays at
+   * 200ms (snappy). 10-move scrub fills the 2s budget at 200ms each.
+   * Long scrubs floor at 20ms per move; total may exceed 2s past N=100.
+   *
+   * react-chessboard's animationDuration prop drives its internal piece
+   * tween. We set it equal to perMove so each intermediate position eases
+   * over the same window the timeline allots before firing the next
+   * position. (Per chessboard docs: setting position before animation
+   * completes cancels the in-flight tween — equal timing avoids that.)
+   *
+   * Re-click mid-playback: kill the existing timeline, take whatever ply
+   * was last painted (currentScrubPlyRef) as the new start, build a fresh
+   * timeline. Snap-to-live (livePly bump) goes through the auto-snap
+   * effect which clears playback wholesale.
+   */
+  const handleScrub = useCallback(
+    (target: number | null) => {
+      if (scrubTlRef.current) {
+        scrubTlRef.current.kill();
+        scrubTlRef.current = null;
+      }
+
+      const targetPly = target ?? livePly;
+      const startPly =
+        currentScrubPlyRef.current ?? (viewedPly ?? livePly);
+      currentScrubPlyRef.current = null;
+
+      // Reflect the click in the move-list highlight + draggable-pieces
+      // gate immediately, regardless of whether we play back a sequence.
+      setViewedPly(target);
+
+      if (startPly === targetPly) {
+        setScrubPlaybackFen(null);
+        setScrubAnimDuration(null);
+        return;
+      }
+
+      const direction = targetPly > startPly ? 1 : -1;
+      const steps = Math.abs(targetPly - startPly);
+      const perMoveMs = Math.max(20, Math.min(200, Math.round(2000 / steps)));
+
+      // Freeze the board at the start FEN, switch animationDuration to
+      // the per-move budget, then schedule each intermediate FEN.
+      setScrubPlaybackFen(viewedFen(moves, startPly, state.fen));
+      setScrubAnimDuration(perMoveMs);
+
+      const tl = gsap.timeline({
+        onComplete: () => {
+          setScrubPlaybackFen(null);
+          setScrubAnimDuration(null);
+          currentScrubPlyRef.current = null;
+          scrubTlRef.current = null;
+        },
+      });
+
+      for (let i = 1; i <= steps; i++) {
+        const stepPly = startPly + direction * i;
+        tl.call(
+          () => {
+            setScrubPlaybackFen(viewedFen(moves, stepPly, state.fen));
+            currentScrubPlyRef.current = stepPly;
+          },
+          undefined,
+          (i * perMoveMs) / 1000,
+        );
+      }
+
+      scrubTlRef.current = tl;
+    },
+    [moves, viewedPly, livePly, state.fen],
   );
 
   // Auto-snap to live: when livePly bumps (own optimistic apply or
@@ -186,7 +288,18 @@ export function GameClient({
   const prevLivePlyRef = useRef(livePly);
   useEffect(() => {
     if (livePly !== prevLivePlyRef.current) {
+      // A new live position landed (own confirm or opponent realtime).
+      // If the user was mid-scrub-playback when this fired, kill the
+      // timeline outright — the auto-snap takes priority over watching
+      // the rest of an old sequence play out.
+      if (scrubTlRef.current) {
+        scrubTlRef.current.kill();
+        scrubTlRef.current = null;
+      }
       setViewedPly(null);
+      setScrubPlaybackFen(null);
+      setScrubAnimDuration(null);
+      currentScrubPlyRef.current = null;
       prevLivePlyRef.current = livePly;
     }
   }, [livePly]);
@@ -1018,6 +1131,9 @@ export function GameClient({
               customSquareStyles={customSquareStyles}
               customBoardStyle={{ borderRadius: 6 }}
               customPieces={taylorPieces}
+              {...(scrubAnimDuration !== null
+                ? { animationDuration: scrubAnimDuration }
+                : {})}
             />
           </div>
         </div>
@@ -1055,7 +1171,7 @@ export function GameClient({
             moves={moves}
             livePly={livePly}
             viewedPly={viewedPly}
-            onScrub={setViewedPly}
+            onScrub={handleScrub}
           />
 
           {/* Resign + abort buttons live alongside the move list so the
