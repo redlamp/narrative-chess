@@ -240,7 +240,11 @@
 
 .move-cell {
   animation: move-list-entry 0.2s ease-out both;
-  animation-delay: calc(var(--cell-idx, 0) * 30ms);
+  /* --stagger-step is set on the MoveList container based on total
+     cell count, so the page-load reveal stays bounded at ~500ms total
+     stagger regardless of game length. Falls back to 30ms when the
+     variable isn't set (defensive). */
+  animation-delay: calc(var(--cell-idx, 0) * var(--stagger-step, 30ms));
 }
 
 /* Cells that arrive AFTER the initial baseline lock (own optimistic +

@@ -39,6 +39,21 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
   const pairs = useMemo(() => pairsFromMoves(moves), [moves]);
   const activePly = viewedPly ?? livePly;
 
+  // Per-cell stagger step. Caps the page-load reveal at ~500ms total
+  // regardless of game length: step = clamp(6, 500/N, 30) ms. Short
+  // games keep the lazy 30ms cadence; long games compress so the tail
+  // doesn't drag past ~700ms total reveal (step + 200ms tween). Set
+  // as a CSS custom property on the container; .move-cell rules in
+  // globals.css consume it via var(--stagger-step).
+  const totalCells = pairs.reduce(
+    (acc, p) => acc + 1 + (p.black ? 1 : 0),
+    0,
+  );
+  const staggerStepMs =
+    totalCells > 0
+      ? Math.max(6, Math.min(30, Math.round(500 / totalCells)))
+      : 30;
+
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Initial-mount baseline. Animation index for each cell is its sequential
@@ -100,7 +115,12 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
   let mobileIdx = 0;
 
   return (
-    <div ref={containerRef} className="w-full" data-testid="move-list">
+    <div
+      ref={containerRef}
+      className="w-full"
+      data-testid="move-list"
+      style={{ "--stagger-step": `${staggerStepMs}ms` } as React.CSSProperties}
+    >
       {/* Mobile: inline PGN ribbon. Wraps naturally. Reads like a score sheet. */}
       <div className="lg:hidden font-mono text-[13px] leading-7 px-1 py-2 max-h-48 overflow-y-auto">
         {pairs.map((pair) => {
