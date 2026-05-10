@@ -38,10 +38,9 @@ export function CapturedStrip({ pieces }: Props) {
             // First icon nudges 8px LEFT so the strip aligns with the
             // player-name baseline above (the SVG's transparent margin
             // would otherwise push it visually inset). Successors
-            // overlap -16px (was -8) for a denser, more chess-app-like
-            // ribbon that still reads piece-by-piece on a long capture
-            // list.
-            marginLeft: i === 0 ? -8 : -16,
+            // overlap -12px for a denser ribbon that still reads
+            // piece-by-piece on a long capture list.
+            marginLeft: i === 0 ? -8 : -12,
             opacity: 0.9,
             pointerEvents: "none",
             userSelect: "none",
