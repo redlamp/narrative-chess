@@ -1,12 +1,12 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import type { CSSProperties } from "react";
 
 type Props = {
   ply: number;
   san: string;
   isActive: boolean;
-  isRecent: boolean;
   inline?: boolean;
   /**
    * Subtle column-tint hint for the desktop grid. "white" paints a low-alpha
@@ -14,16 +14,26 @@ type Props = {
    * active (the oxblood accent wins).
    */
   side?: "white" | "black";
+  /**
+   * Sequential entry-animation index. Drives the CSS keyframe stagger via
+   * `--cell-idx` (read by .move-cell rule in globals.css). 0 = first to
+   * animate.
+   */
+  staggerIdx?: number;
   onSelect: (ply: number) => void;
 };
 
-export function MoveCell({ ply, san, isActive, isRecent, inline, side, onSelect }: Props) {
+export function MoveCell({ ply, san, isActive, inline, side, staggerIdx, onSelect }: Props) {
   return (
     <button
       type="button"
       data-ply={ply}
-      data-recent={isRecent ? "" : undefined}
       onClick={() => onSelect(ply)}
+      style={
+        staggerIdx !== undefined
+          ? ({ "--cell-idx": staggerIdx } as CSSProperties)
+          : undefined
+      }
       className={cn(
         "move-cell font-mono text-[13px] tabular-nums transition-colors rounded-sm",
         inline

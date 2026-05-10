@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
-import { useGSAP } from "@gsap/react";
-import gsap from "gsap";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { pairsFromMoves, stepPly, type MoveLike } from "@/lib/chess/move-list";
 import { MoveCell } from "./MoveCell";
 
@@ -42,64 +40,29 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
   const activePly = viewedPly ?? livePly;
 
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const initRanRef = useRef(false);
 
-  // Combined entry animation:
-  // - First fire (mount): stagger every cell (real moves + the empty
-  //   trailing-black placeholder when white has just played) by 10ms each.
-  //   Long games animate longer; matches user spec "x*10ms stagger".
-  // - Subsequent fires (livePly bump): animate the just-played cell. When
-  //   white plays into a fresh row, also animate the empty black placeholder
-  //   sitting beside it so the row appears as a unit, not half-poppy.
-  useGSAP(
-    () => {
+  // Initial-mount baseline. Animation index for each cell is its sequential
+  // position MINUS this baseline. On SSR / first client paint, baseline is
+  // null so cells receive their raw position (0..N-1) and stagger naturally.
+  // After hydration, useEffect locks the baseline to the rendered cell count
+  // so cells appended later (mid-game arrivals) receive an idx near 0,
+  // avoiding a long stagger tail on the latest move. Held as state (not ref)
+  // so render can read it without tripping react-hooks/refs.
+  const [baseline, setBaseline] = useState<number | null>(null);
+  useEffect(() => {
+    setBaseline((prev) => {
+      if (prev !== null) return prev;
       const root = containerRef.current;
-      if (!root) return;
-      const cells = Array.from(
-        root.querySelectorAll(".move-cell, .move-cell-placeholder"),
+      return (
+        root?.querySelectorAll(".move-cell, .move-cell-placeholder").length ?? 0
       );
-      if (cells.length === 0) return;
+    });
+  }, []);
 
-      if (!initRanRef.current) {
-        initRanRef.current = true;
-        // Lock cells invisible synchronously so the SSR paint-then-tween
-        // window doesn't flash. useGSAP runs in useLayoutEffect, so this
-        // set lands before the next browser paint.
-        gsap.set(cells, { opacity: 0, y: 8 });
-        gsap.to(cells, {
-          opacity: 1,
-          y: 0,
-          duration: 0.2,
-          stagger: 0.03,
-          delay: 0,
-          ease: "power2.out",
-        });
-        return;
-      }
-
-      // Per-arrival path
-      if (livePly === 0) return;
-      const newCell = root.querySelector(`.move-cell[data-ply="${livePly}"]`);
-      const targets: Element[] = [];
-      if (newCell) targets.push(newCell);
-      if (livePly % 2 === 1) {
-        // White just played into a fresh row; the placeholder span next
-        // to it materialised at the same time. Animate them together.
-        const placeholder = root.querySelector(".move-cell-placeholder");
-        if (placeholder) targets.push(placeholder);
-      }
-      if (targets.length === 0) return;
-      gsap.set(targets, { opacity: 0, y: 8 });
-      gsap.to(targets, {
-        opacity: 1,
-        y: 0,
-        duration: 0.2,
-        delay: 0,
-        ease: "power2.out",
-      });
-    },
-    { scope: containerRef, dependencies: [livePly, moves.length] },
-  );
+  function staggerIdx(cellPos: number): number {
+    if (baseline === null) return cellPos;
+    return Math.max(0, cellPos - baseline);
+  }
 
   // Auto-scroll latest move into view ONLY when not in review mode.
   // While scrubbed back, leave scroll position alone.
@@ -110,7 +73,6 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
     const newest = cells[cells.length - 1];
     newest.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [moves.length, viewedPly]);
-  const recentThreshold = Math.max(1, livePly - 7);
 
   if (moves.length === 0) {
     return (
@@ -120,33 +82,45 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
     );
   }
 
+  // Walking counters for the desktop grid + mobile ribbon. Each cell's CSS
+  // animation reads --cell-idx and applies animation-delay = idx * 30ms.
+  // The animation rule lives in app/globals.css under @layer utilities so
+  // the keyframe + descendant selector ship in the SSR'd CSS bundle and
+  // run from first paint - no JS required.
+  let desktopIdx = 0;
+  let mobileIdx = 0;
+
   return (
     <div ref={containerRef} className="w-full" data-testid="move-list">
       {/* Mobile: inline PGN ribbon. Wraps naturally. Reads like a score sheet. */}
       <div className="lg:hidden font-mono text-[13px] leading-7 px-1 py-2 max-h-48 overflow-y-auto">
-        {pairs.map((pair) => (
-          <span key={pair.moveNum} className="move-row" data-move-num={pair.moveNum}>
-            <span className="text-ink-faint">{pair.moveNum}.</span>
-            <MoveCell
-              ply={pair.white.ply}
-              san={pair.white.san}
-              isActive={pair.white.ply === activePly}
-              isRecent={pair.white.ply >= recentThreshold}
-              inline
-              onSelect={onScrub}
-            />
-            {pair.black ? (
+        {pairs.map((pair) => {
+          const whiteIdx = staggerIdx(mobileIdx++);
+          const blackIdx = pair.black ? staggerIdx(mobileIdx++) : null;
+          return (
+            <span key={pair.moveNum} className="move-row" data-move-num={pair.moveNum}>
+              <span className="text-ink-faint">{pair.moveNum}.</span>
               <MoveCell
-                ply={pair.black.ply}
-                san={pair.black.san}
-                isActive={pair.black.ply === activePly}
-                isRecent={pair.black.ply >= recentThreshold}
+                ply={pair.white.ply}
+                san={pair.white.san}
+                isActive={pair.white.ply === activePly}
                 inline
+                staggerIdx={whiteIdx}
                 onSelect={onScrub}
               />
-            ) : null}{" "}
-          </span>
-        ))}
+              {pair.black && blackIdx !== null ? (
+                <MoveCell
+                  ply={pair.black.ply}
+                  san={pair.black.san}
+                  isActive={pair.black.ply === activePly}
+                  inline
+                  staggerIdx={blackIdx}
+                  onSelect={onScrub}
+                />
+              ) : null}{" "}
+            </span>
+          );
+        })}
       </div>
 
       {/* Desktop: two-column grid pinned to the side of the board. Each move
@@ -158,37 +132,46 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
           Move list
         </p>
         <div className="grid grid-cols-[28px_1fr_1fr] gap-x-1 gap-y-1">
-          {pairs.map((pair) => (
-            <div className="contents move-row" data-move-num={pair.moveNum} key={pair.moveNum}>
-              <span className="font-mono text-[11px] text-ink-faint self-center text-right pr-1">
-                {pair.moveNum}.
-              </span>
-              <MoveCell
-                ply={pair.white.ply}
-                san={pair.white.san}
-                isActive={pair.white.ply === activePly}
-                isRecent={pair.white.ply >= recentThreshold}
-                side="white"
-                onSelect={onScrub}
-              />
-              {pair.black ? (
+          {pairs.map((pair) => {
+            const whiteIdx = staggerIdx(desktopIdx++);
+            // The placeholder also counts toward stagger so column rhythm
+            // stays aligned even when black hasn't responded.
+            const blackIdx = staggerIdx(desktopIdx++);
+            return (
+              <div className="contents move-row" data-move-num={pair.moveNum} key={pair.moveNum}>
+                <span className="font-mono text-[11px] text-ink-faint self-center text-right pr-1">
+                  {pair.moveNum}.
+                </span>
                 <MoveCell
-                  ply={pair.black.ply}
-                  san={pair.black.san}
-                  isActive={pair.black.ply === activePly}
-                  isRecent={pair.black.ply >= recentThreshold}
-                  side="black"
+                  ply={pair.white.ply}
+                  san={pair.white.san}
+                  isActive={pair.white.ply === activePly}
+                  side="white"
+                  staggerIdx={whiteIdx}
                   onSelect={onScrub}
                 />
-              ) : (
-                /* Reserve column space + paint the black tint so the
-                   trailing-white-move row keeps the same column rhythm.
-                   move-cell-placeholder participates in the entry tween
-                   alongside the white cell. */
-                <span aria-hidden className="move-cell-placeholder rounded-sm bg-black/20" />
-              )}
-            </div>
-          ))}
+                {pair.black ? (
+                  <MoveCell
+                    ply={pair.black.ply}
+                    san={pair.black.san}
+                    isActive={pair.black.ply === activePly}
+                    side="black"
+                    staggerIdx={blackIdx}
+                    onSelect={onScrub}
+                  />
+                ) : (
+                  /* Empty trailing-black slot keeps column rhythm + black
+                     tint, and participates in the CSS entry stagger via
+                     --cell-idx so the row materialises as a unit. */
+                  <span
+                    aria-hidden
+                    className="move-cell-placeholder rounded-sm bg-black/20"
+                    style={{ "--cell-idx": blackIdx } as React.CSSProperties}
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

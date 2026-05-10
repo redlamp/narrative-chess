@@ -220,3 +220,26 @@
   }
   html { font-family: var(--font-body); }
 }
+
+/* ============================================
+   Move-list entry animation. CSS-driven (not GSAP) so cells fade up from
+   the very first browser paint without waiting for JS hydration. Each
+   cell carries an inline `--cell-idx` (set by MoveList based on the cell's
+   sequential position post-baseline) which drives the staggered delay.
+   ============================================ */
+@keyframes move-list-entry {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.move-cell,
+.move-cell-placeholder {
+  animation: move-list-entry 0.2s ease-out both;
+  animation-delay: calc(var(--cell-idx, 0) * 30ms);
+}
