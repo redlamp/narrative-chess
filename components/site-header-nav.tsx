@@ -9,12 +9,17 @@ import { Wordmark } from "@/components/wordmark";
 type Props = {
   /** Logged-in user's display name, or null if signed out. */
   displayName: string | null;
+  /**
+   * The user's most-recently active in-progress game (last-moved-by-them
+   * with fallback to most recent participant game). Drives the "Current"
+   * nav link visibility — shown whenever the user is in any in-progress
+   * game, not only when the current URL is a game page.
+   */
+  currentGameId: string | null;
 };
 
-export function SiteHeaderNav({ displayName }: Props) {
+export function SiteHeaderNav({ displayName, currentGameId }: Props) {
   const pathname = usePathname() ?? "/";
-  const gameMatch = pathname.match(/^\/games\/([0-9a-f-]{36})$/i);
-  const currentGameId = gameMatch?.[1] ?? null;
 
   const links: Array<{ href: string; label: string }> = [
     { href: "/games", label: "Games" },

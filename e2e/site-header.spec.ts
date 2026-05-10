@@ -66,19 +66,33 @@ test("site header navigation across routes", async ({ browser, baseURL }) => {
     "aria-current",
     "page",
   );
-  // No current-game link off a game route.
-  await expect(header.getByRole("link", { name: /current game/i })).toHaveCount(0);
+  // Current-game link IS visible on / now (Alice is in an in-progress
+  // game seeded above; the header server-side resolves the most recent
+  // active game and surfaces "Current" everywhere). Should not be the
+  // active page when we're on /.
+  await expect(
+    header.getByRole("link", { name: /^current$/i }),
+  ).toBeVisible();
+  await expect(
+    header.getByRole("link", { name: /^current$/i }),
+  ).not.toHaveAttribute("aria-current", "page");
 
-  // Click Games — lands on /games, that link becomes active.
+  // Click Games — lands on /games, that link becomes active. Current
+  // still visible (in-progress game persists), still not active.
   await header.getByRole("link", { name: "Games" }).click();
   await page.waitForURL(`${baseURL}/games`);
   await expect(header.getByRole("link", { name: "Games" })).toHaveAttribute(
     "aria-current",
     "page",
   );
-  await expect(header.getByRole("link", { name: /^current$/i })).toHaveCount(0);
+  await expect(
+    header.getByRole("link", { name: /^current$/i }),
+  ).toBeVisible();
+  await expect(
+    header.getByRole("link", { name: /^current$/i }),
+  ).not.toHaveAttribute("aria-current", "page");
 
-  // Visit game route — Current link appears + is active.
+  // Visit game route — Current link is now the active page.
   await page.goto(`${baseURL}/games/${gameId}`);
   await expect(
     header.getByRole("link", { name: /^current$/i }),
