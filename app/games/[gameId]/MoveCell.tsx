@@ -15,11 +15,12 @@ type Props = {
    */
   side?: "white" | "black";
   /**
-   * Sequential entry-animation index. Drives the CSS keyframe stagger via
-   * `--cell-idx` (read by .move-cell rule in globals.css). 0 = first to
-   * animate.
+   * Absolute entry-animation delay in ms. Drives the CSS keyframe via
+   * `--cell-delay` (read by the .move-cell rule in globals.css). The
+   * caller computes this from a quadratic gap-decay curve so the early
+   * cells stagger lazily and the tail compresses.
    */
-  staggerIdx?: number;
+  delayMs?: number;
   /**
    * True when this cell arrived AFTER the initial render baseline locked
    * (i.e. an own optimistic move or an opponent's realtime move). Adds
@@ -31,15 +32,15 @@ type Props = {
   onSelect: (ply: number) => void;
 };
 
-export function MoveCell({ ply, san, isActive, inline, side, staggerIdx, isFresh, onSelect }: Props) {
+export function MoveCell({ ply, san, isActive, inline, side, delayMs, isFresh, onSelect }: Props) {
   return (
     <button
       type="button"
       data-ply={ply}
       onClick={() => onSelect(ply)}
       style={
-        staggerIdx !== undefined
-          ? ({ "--cell-idx": staggerIdx } as CSSProperties)
+        delayMs !== undefined
+          ? ({ "--cell-delay": `${delayMs}ms` } as CSSProperties)
           : undefined
       }
       className={cn(

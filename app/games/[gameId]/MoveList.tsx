@@ -39,30 +39,42 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
   const pairs = useMemo(() => pairsFromMoves(moves), [moves]);
   const activePly = viewedPly ?? livePly;
 
-  // Per-cell stagger step. Caps the page-load reveal at ~500ms total
-  // regardless of game length: step = clamp(6, 500/N, 30) ms. Short
-  // games keep the lazy 30ms cadence; long games compress so the tail
-  // doesn't drag past ~700ms total reveal (step + 200ms tween). Set
-  // as a CSS custom property on the container; .move-cell rules in
-  // globals.css consume it via var(--stagger-step).
   const totalCells = pairs.reduce(
     (acc, p) => acc + 1 + (p.black ? 1 : 0),
     0,
   );
-  const staggerStepMs =
-    totalCells > 0
-      ? Math.max(6, Math.min(30, Math.round(500 / totalCells)))
-      : 30;
+
+  // Per-cell entry delay using a quadratic decay on the inter-cell GAP:
+  //
+  //   gap(i) = startGap - (startGap - endGap) * (i / (N-2))^2
+  //
+  // gap(0) = 30ms  (delay between cell 0 and cell 1)
+  // gap(N-2) = 5ms (delay between the last two cells)
+  //
+  // Each cell's absolute delay is the running sum of gaps before it,
+  // so the early cascade feels lazy and the tail compresses. Closed-
+  // form via the standard 1^2 + 2^2 + ... + (K-1)^2 = (K-1)K(2K-1)/6
+  // identity to avoid a per-render loop.
+  function staggerDelayMs(cellPos: number): number {
+    if (cellPos <= 0 || totalCells <= 1) return 0;
+    const startGap = 30;
+    const endGap = 5;
+    const m = Math.max(totalCells - 2, 1); // (N-2), guarded for N<=2
+    const b = startGap - endGap; // 25
+    const K = cellPos;
+    const sumSquares = ((K - 1) * K * (2 * K - 1)) / 6;
+    const delay = startGap * K - (b / (m * m)) * sumSquares;
+    return Math.round(Math.max(0, delay));
+  }
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // Initial-mount baseline. Animation index for each cell is its sequential
-  // position MINUS this baseline. On SSR / first client paint, baseline is
-  // null so cells receive their raw position (0..N-1) and stagger naturally.
-  // After hydration, useEffect locks the baseline to the rendered cell count
-  // so cells appended later (mid-game arrivals) receive an idx near 0,
-  // avoiding a long stagger tail on the latest move. Held as state (not ref)
-  // so render can read it without tripping react-hooks/refs.
+  // Initial-mount baseline = how many cells were rendered at first paint.
+  // SSR / first client paint: baseline=null, every cell is treated as
+  // pre-baseline (gets a staggered delay from the curve). After hydration
+  // the effect locks baseline to the rendered count; later cellPos values
+  // (>= baseline) flag a fresh arrival, which the .move-cell-fresh CSS
+  // override pins to delay 0 so it lands in lockstep with the piece tween.
   const [baseline, setBaseline] = useState<number | null>(null);
   useEffect(() => {
     setBaseline((prev) => {
@@ -72,20 +84,8 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
     });
   }, []);
 
-  function staggerIdx(cellPos: number): number {
-    // Pre-mount: every cell gets its raw sequential position so the
-    // SSR'd HTML carries a 0..N-1 stagger that fires from first paint.
-    if (baseline === null) return cellPos;
-    // Cells that were already present when baseline locked keep their
-    // original idx forever - clamping them to 0 would erase the stagger
-    // on the first post-mount re-render (the effect's setState fires
-    // before paint completes for many cells, so the inline --cell-idx
-    // attribute gets overwritten to 0 and the keyframe re-resolves).
-    if (cellPos < baseline) return cellPos;
-    // Cells that arrived after mount get a small idx so they fade in
-    // promptly without inheriting the long stagger tail of the existing
-    // list. Walks 0, 1, 2... per arrival batch.
-    return cellPos - baseline;
+  function isFreshCell(cellPos: number): boolean {
+    return baseline !== null && cellPos >= baseline;
   }
 
   // Auto-scroll latest move into view ONLY when not in review mode.
@@ -115,22 +115,17 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
   let mobileIdx = 0;
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full"
-      data-testid="move-list"
-      style={{ "--stagger-step": `${staggerStepMs}ms` } as React.CSSProperties}
-    >
+    <div ref={containerRef} className="w-full" data-testid="move-list">
       {/* Mobile: inline PGN ribbon. Wraps naturally. Reads like a score sheet. */}
       <div className="lg:hidden font-mono text-[13px] leading-7 px-1 py-2 max-h-48 overflow-y-auto">
         {pairs.map((pair) => {
           const whitePos = mobileIdx++;
-          const whiteIdx = staggerIdx(whitePos);
-          const whiteFresh = baseline !== null && whitePos >= baseline;
+          const whiteFresh = isFreshCell(whitePos);
+          const whiteDelay = whiteFresh ? 0 : staggerDelayMs(whitePos);
           const blackPos = pair.black ? mobileIdx++ : null;
-          const blackIdx = blackPos !== null ? staggerIdx(blackPos) : null;
-          const blackFresh =
-            blackPos !== null && baseline !== null && blackPos >= baseline;
+          const blackFresh = blackPos !== null && isFreshCell(blackPos);
+          const blackDelay =
+            blackPos === null ? null : blackFresh ? 0 : staggerDelayMs(blackPos);
           return (
             <span key={pair.moveNum} className="move-row" data-move-num={pair.moveNum}>
               <span className="text-ink-faint">{pair.moveNum}.</span>
@@ -139,17 +134,17 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
                 san={pair.white.san}
                 isActive={pair.white.ply === activePly}
                 inline
-                staggerIdx={whiteIdx}
+                delayMs={whiteDelay}
                 isFresh={whiteFresh}
                 onSelect={onScrub}
               />
-              {pair.black && blackIdx !== null ? (
+              {pair.black && blackDelay !== null ? (
                 <MoveCell
                   ply={pair.black.ply}
                   san={pair.black.san}
                   isActive={pair.black.ply === activePly}
                   inline
-                  staggerIdx={blackIdx}
+                  delayMs={blackDelay}
                   isFresh={blackFresh}
                   onSelect={onScrub}
                 />
@@ -170,21 +165,25 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
         <div className="grid grid-cols-[28px_1fr_1fr] gap-x-1 gap-y-1">
           {pairs.map((pair) => {
             const whitePos = desktopIdx++;
-            const whiteIdx = staggerIdx(whitePos);
             // Cells with cellPos >= baseline arrived AFTER first paint
             // (mid-game live arrivals — own optimistic + opponent
             // realtime). They drop the slide-up keyframe so they pop in
             // synchronously with the piece animation rather than reading
             // as "list updates after the piece lands".
-            const whiteFresh = baseline !== null && whitePos >= baseline;
+            const whiteFresh = isFreshCell(whitePos);
+            const whiteDelay = whiteFresh ? 0 : staggerDelayMs(whitePos);
             // Only advance the counter when black actually moved. During
             // white's turn the third grid column is left empty so we don't
             // imply black has moved; the column rhythm picks back up on the
             // next pair.
             const blackPos = pair.black ? desktopIdx++ : null;
-            const blackIdx = blackPos !== null ? staggerIdx(blackPos) : null;
-            const blackFresh =
-              blackPos !== null && baseline !== null && blackPos >= baseline;
+            const blackFresh = blackPos !== null && isFreshCell(blackPos);
+            const blackDelay =
+              blackPos === null
+                ? null
+                : blackFresh
+                  ? 0
+                  : staggerDelayMs(blackPos);
             return (
               <div className="contents move-row" data-move-num={pair.moveNum} key={pair.moveNum}>
                 <span className="font-mono text-[11px] text-ink-faint self-center text-right pr-1">
@@ -195,17 +194,17 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
                   san={pair.white.san}
                   isActive={pair.white.ply === activePly}
                   side="white"
-                  staggerIdx={whiteIdx}
+                  delayMs={whiteDelay}
                   isFresh={whiteFresh}
                   onSelect={onScrub}
                 />
-                {pair.black && blackIdx !== null ? (
+                {pair.black && blackDelay !== null ? (
                   <MoveCell
                     ply={pair.black.ply}
                     san={pair.black.san}
                     isActive={pair.black.ply === activePly}
                     side="black"
-                    staggerIdx={blackIdx}
+                    delayMs={blackDelay}
                     isFresh={blackFresh}
                     onSelect={onScrub}
                   />
