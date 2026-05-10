@@ -44,9 +44,9 @@ export function CapturedStrip({ pieces }: Props) {
             //     vw=640 ->  -8px   (editorial breathing room)
             //     vw=900+-> -4px    (just a hair tucked in)
             //   successor:
-            //     vw=320 -> -32px   (full 32px icon overlap on phones)
-            //     vw=640 -> -12px   (mid)
-            //     vw=720+->  -8px   (wide ribbon)
+            //     vw=320  -> -24px   (deep overlap on phones)
+            //     vw=640  -> -12px   (mid)
+            //     vw=746+ ->  -8px   (wide ribbon)
             //
             // The slope expression is calc(intercept + slope*vw),
             // computed once per viewport size; clamp's min/max ensure
@@ -54,7 +54,7 @@ export function CapturedStrip({ pieces }: Props) {
             marginLeft:
               i === 0
                 ? "clamp(-12px, calc(-16px + 1.25vw), -4px)"
-                : "clamp(-32px, calc(-52px + 6.25vw), -8px)",
+                : "clamp(-24px, calc(-36px + 3.75vw), -8px)",
           }}
         />
       ))}
