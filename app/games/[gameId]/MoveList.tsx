@@ -66,7 +66,7 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
           opacity: 0,
           y: 8,
           duration: 0.2,
-          stagger: 0.01,
+          stagger: 0.03,
           ease: "power2.out",
         });
         return;
