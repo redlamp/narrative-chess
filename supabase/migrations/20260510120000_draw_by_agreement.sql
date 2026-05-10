@@ -17,7 +17,7 @@ set check_function_bodies = off;
 
 alter table public.games
   add column draw_offered_by uuid
-    references public.profiles(id) on delete set null;
+    references public.profiles(user_id) on delete set null;
 
 comment on column public.games.draw_offered_by is
   'Player who has a draw offer outstanding. Null while no offer is live. '
