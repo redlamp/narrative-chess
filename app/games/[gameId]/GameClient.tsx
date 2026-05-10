@@ -24,6 +24,7 @@ import {
 import type { GameStatus, TerminationReason } from "@/lib/schemas/game";
 import { GameActions } from "./GameActions";
 import { TerminalBanner } from "./TerminalBanner";
+import { InGameBanner } from "./InGameBanner";
 import { ObserverCount } from "./ObserverCount";
 import { Clock } from "./Clock";
 import { useAutoClaim } from "./useAutoClaim";
@@ -843,10 +844,17 @@ export function GameClient({
         className="sr-only"
       />
 
-      {/* Terminal banner — renders only on terminal status (returns null
-          otherwise). Mounted above the board so the result is the first
-          thing the eye lands on after a game ends. Width matches the
+      {/* Status panel — same bordered shell, content swaps with state.
+          InGameBanner renders on `open` / `in_progress`, TerminalBanner
+          renders on terminal statuses. Mounted above the board so the
+          panel frames the game from start to finish. Width matches the
           sidebar/board column for visual alignment. */}
+      <InGameBanner
+        status={state.status}
+        currentTurn={turn ?? "w"}
+        ply={state.ply}
+        isObserver={isObserver}
+      />
       <TerminalBanner
         status={state.status}
         terminationReason={state.terminationReason}
