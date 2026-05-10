@@ -123,15 +123,22 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
     return baseline !== null && cellPos >= baseline;
   }
 
-  // Auto-scroll latest move into view ONLY when not in review mode.
-  // While scrubbed back, leave scroll position alone.
+  // Auto-scroll the *active* cell into view whenever it changes.
+  // activePly = viewedPly ?? livePly, so both review-mode scrubs and
+  // live arrivals (viewedPly null, livePly bumped) route through the
+  // same path: keep the highlighted cell visible. block: "nearest"
+  // means we only scroll when the cell is actually outside the
+  // current viewport — no movement when already in view.
   useEffect(() => {
-    if (viewedPly !== null) return;
-    const cells = containerRef.current?.querySelectorAll(".move-cell");
-    if (!cells || cells.length === 0) return;
-    const newest = cells[cells.length - 1];
-    newest.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [moves.length, viewedPly]);
+    const root = containerRef.current;
+    if (!root) return;
+    const target = root.querySelector<HTMLElement>(
+      `.move-cell[data-ply="${activePly}"]`,
+    );
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [activePly]);
 
   if (moves.length === 0) {
     return (
@@ -208,11 +215,13 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
         </div>
       </div>
 
-      {/* Desktop: two-column grid pinned to the side of the board. Each move
+      {/* Desktop: header (title + play + step buttons) is non-scrolling,
+          fixed at the top of the panel. Only the moves grid below scrolls
+          — keeps controls always reachable as the list grows. Each move
           column gets a subtle low-alpha tint matching the side that played
           it (white wash for white moves, black wash for black moves) so the
           eye can scan column-by-column without changing text colour. */}
-      <div className="hidden min-[820px]:block min-[820px]:h-full min-[820px]:overflow-y-auto px-2 py-3 border border-rule-soft rounded-md bg-bg-soft/40">
+      <div className="hidden min-[820px]:flex min-[820px]:flex-col min-[820px]:h-full min-[820px]:overflow-hidden px-2 py-3 border border-rule-soft rounded-md bg-bg-soft/40">
         <div className="flex items-center justify-between mb-1.5 px-1">
           <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-faint font-bold">
             Move list
@@ -279,6 +288,10 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
             <ArrowRightToLine aria-hidden className="h-3 w-3" />
           </button>
         </div>
+        {/* Scroll body: just the moves grid. flex-1 + min-h-0 lets it
+            shrink to fit available height inside the flex-col panel
+            while keeping the header above always visible. */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="grid grid-cols-[28px_1fr_1fr] gap-x-1 gap-y-1">
           {pairs.map((pair) => {
             const whitePos = desktopIdx++;
@@ -330,7 +343,8 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
             );
           })}
         </div>
-      </div>
+        </div>{/* end scroll body */}
+      </div>{/* end desktop panel */}
     </div>
   );
 }
