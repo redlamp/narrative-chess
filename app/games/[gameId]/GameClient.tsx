@@ -223,7 +223,7 @@ export function GameClient({
    * effect which clears playback wholesale.
    */
   const handleScrub = useCallback(
-    (target: number | null) => {
+    (target: number | null, paceMs?: number) => {
       if (scrubTlRef.current) {
         scrubTlRef.current.kill();
         scrubTlRef.current = null;
@@ -246,7 +246,12 @@ export function GameClient({
 
       const direction = targetPly > startPly ? 1 : -1;
       const steps = Math.abs(targetPly - startPly);
-      const perMoveMs = Math.max(20, Math.min(200, Math.round(2000 / steps)));
+      // Fixed pace overrides the curve - used by the Play button which
+      // wants a consistent 1s/move regardless of game length. Step
+      // buttons + cell clicks omit paceMs and use the curve so 22-move
+      // jumps still fit the 2s budget.
+      const perMoveMs =
+        paceMs ?? Math.max(20, Math.min(200, Math.round(2000 / steps)));
 
       // Freeze the board at the start FEN, switch animationDuration to
       // the per-move budget, then schedule each intermediate FEN.
@@ -1204,6 +1209,7 @@ export function GameClient({
             livePly={livePly}
             viewedPly={viewedPly}
             onScrub={handleScrub}
+            onPlay={() => handleScrub(null, 1000)}
           />
 
           {/* Resign + abort buttons live alongside the move list so the

@@ -25,9 +25,16 @@ type Props = {
   livePly: number;
   viewedPly: number | null;
   onScrub: (ply: number | null) => void;
+  /**
+   * Optional play-button handler. Invoked when the user clicks the
+   * header-row Play button. GameClient binds this to a fixed-pace scrub
+   * (1000ms/move) so playback feels paced for watching, vs. the
+   * faster curve used by step buttons + cell clicks.
+   */
+  onPlay?: () => void;
 };
 
-export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
+export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay }: Props) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const t = e.target as HTMLElement;
@@ -189,7 +196,7 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
             type="button"
             aria-label="Play through to current position"
             disabled={atLive}
-            onClick={() => onScrub(null)}
+            onClick={() => (onPlay ? onPlay() : onScrub(null))}
             className={cn("w-6", stepBtnClass)}
           >
             <Play aria-hidden className="h-3 w-3" />
