@@ -242,3 +242,19 @@
   animation: move-list-entry 0.2s ease-out both;
   animation-delay: calc(var(--cell-idx, 0) * 30ms);
 }
+
+/* Cells that arrive AFTER the initial baseline lock (own optimistic +
+   opponent realtime). The slide-up + stagger reads as "list updates
+   after the piece lands"; an opacity-only fade with zero delay starts
+   in lockstep with the chessboard piece animation so they feel
+   synchronous. Higher specificity (.move-cell.move-cell-fresh) wins
+   over the base rule above without needing !important. */
+.move-cell.move-cell-fresh {
+  animation: move-list-fresh 0.2s ease-out both;
+  animation-delay: 0ms;
+}
+
+@keyframes move-list-fresh {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

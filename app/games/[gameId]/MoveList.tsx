@@ -104,8 +104,13 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
       {/* Mobile: inline PGN ribbon. Wraps naturally. Reads like a score sheet. */}
       <div className="lg:hidden font-mono text-[13px] leading-7 px-1 py-2 max-h-48 overflow-y-auto">
         {pairs.map((pair) => {
-          const whiteIdx = staggerIdx(mobileIdx++);
-          const blackIdx = pair.black ? staggerIdx(mobileIdx++) : null;
+          const whitePos = mobileIdx++;
+          const whiteIdx = staggerIdx(whitePos);
+          const whiteFresh = baseline !== null && whitePos >= baseline;
+          const blackPos = pair.black ? mobileIdx++ : null;
+          const blackIdx = blackPos !== null ? staggerIdx(blackPos) : null;
+          const blackFresh =
+            blackPos !== null && baseline !== null && blackPos >= baseline;
           return (
             <span key={pair.moveNum} className="move-row" data-move-num={pair.moveNum}>
               <span className="text-ink-faint">{pair.moveNum}.</span>
@@ -115,6 +120,7 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
                 isActive={pair.white.ply === activePly}
                 inline
                 staggerIdx={whiteIdx}
+                isFresh={whiteFresh}
                 onSelect={onScrub}
               />
               {pair.black && blackIdx !== null ? (
@@ -124,6 +130,7 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
                   isActive={pair.black.ply === activePly}
                   inline
                   staggerIdx={blackIdx}
+                  isFresh={blackFresh}
                   onSelect={onScrub}
                 />
               ) : null}{" "}
@@ -142,12 +149,22 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
         </p>
         <div className="grid grid-cols-[28px_1fr_1fr] gap-x-1 gap-y-1">
           {pairs.map((pair) => {
-            const whiteIdx = staggerIdx(desktopIdx++);
+            const whitePos = desktopIdx++;
+            const whiteIdx = staggerIdx(whitePos);
+            // Cells with cellPos >= baseline arrived AFTER first paint
+            // (mid-game live arrivals — own optimistic + opponent
+            // realtime). They drop the slide-up keyframe so they pop in
+            // synchronously with the piece animation rather than reading
+            // as "list updates after the piece lands".
+            const whiteFresh = baseline !== null && whitePos >= baseline;
             // Only advance the counter when black actually moved. During
             // white's turn the third grid column is left empty so we don't
             // imply black has moved; the column rhythm picks back up on the
             // next pair.
-            const blackIdx = pair.black ? staggerIdx(desktopIdx++) : null;
+            const blackPos = pair.black ? desktopIdx++ : null;
+            const blackIdx = blackPos !== null ? staggerIdx(blackPos) : null;
+            const blackFresh =
+              blackPos !== null && baseline !== null && blackPos >= baseline;
             return (
               <div className="contents move-row" data-move-num={pair.moveNum} key={pair.moveNum}>
                 <span className="font-mono text-[11px] text-ink-faint self-center text-right pr-1">
@@ -159,6 +176,7 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
                   isActive={pair.white.ply === activePly}
                   side="white"
                   staggerIdx={whiteIdx}
+                  isFresh={whiteFresh}
                   onSelect={onScrub}
                 />
                 {pair.black && blackIdx !== null ? (
@@ -168,6 +186,7 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
                     isActive={pair.black.ply === activePly}
                     side="black"
                     staggerIdx={blackIdx}
+                    isFresh={blackFresh}
                     onSelect={onScrub}
                   />
                 ) : null}

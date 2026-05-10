@@ -315,8 +315,13 @@ export function GameClient({
   // Tracks the in-flight optimistic fen + the prior fen, so a server
   // rejection can roll back the visual state — but only if no realtime
   // event has already replaced our optimistic fen with an opponent's
-  // move at the next ply.
-  const pendingMoveRef = useRef<{ prevFen: string; optFen: string } | null>(null);
+  // move at the next ply. `optimisticPly` lets rollback also pull the
+  // phantom move-list entry we appended at piece-place time.
+  const pendingMoveRef = useRef<{
+    prevFen: string;
+    optFen: string;
+    optimisticPly: number;
+  } | null>(null);
 
   const rollbackOptimistic = useCallback(() => {
     const m = pendingMoveRef.current;
@@ -329,6 +334,12 @@ export function GameClient({
       if (prev.fen !== m.optFen) return prev;
       return { ...prev, fen: m.prevFen };
     });
+    // Pull the phantom move-list entry. If the server-confirm path or
+    // realtime echo already inserted the canonical version (same ply),
+    // this filter is a no-op for that entry — but our optimistic one
+    // had the same ply, so dedup means at most one entry exists either
+    // way.
+    setMoves((prev) => prev.filter((x) => x.ply !== m.optimisticPly));
   }, []);
 
   // Realtime: opponent's (and our own) move INSERTs.
@@ -677,9 +688,22 @@ export function GameClient({
    * fen — which is the right thing.
    */
   const commitOptimisticAndSubmit = useCallback(
-    (uci: string, optFen: string) => {
-      pendingMoveRef.current = { prevFen: state.fen, optFen };
+    (uci: string, optFen: string, san: string) => {
+      // Optimistic ply = state.ply + 1. The server-confirm path uses the
+      // same value as result.data.ply, and the dedup-by-ply guard in
+      // submitMove + the realtime echo callback both skip when the entry
+      // is already present. That keeps the move-list rendering of our
+      // own move tied to piece-place time, not server-round-trip time.
+      const optimisticPly = state.ply + 1;
+      pendingMoveRef.current = { prevFen: state.fen, optFen, optimisticPly };
       setState((prev) => ({ ...prev, fen: optFen, pending: true }));
+      setMoves((prev) => {
+        if (prev.some((x) => x.ply === optimisticPly)) return prev;
+        return [
+          ...prev,
+          { ply: optimisticPly, san, fen_after: optFen },
+        ].sort((a, b) => a.ply - b.ply);
+      });
       void submitMove(uci, state.ply);
     },
     [state.fen, state.ply, submitMove],
@@ -747,7 +771,7 @@ export function GameClient({
       const local = validateMove(state.fen, uci);
       if (!local.ok) return false;
 
-      commitOptimisticAndSubmit(uci, local.fenAfter);
+      commitOptimisticAndSubmit(uci, local.fenAfter, local.san);
       return true;
     },
     [myTurn, state.status, state.fen, commitOptimisticAndSubmit],
@@ -774,7 +798,7 @@ export function GameClient({
       const local = validateMove(state.fen, uci);
       if (!local.ok) return false;
 
-      commitOptimisticAndSubmit(uci, local.fenAfter);
+      commitOptimisticAndSubmit(uci, local.fenAfter, local.san);
       return true;
     },
     [myTurn, state.status, state.fen, commitOptimisticAndSubmit],
@@ -810,7 +834,7 @@ export function GameClient({
           const uci = `${selected}${square}${promo}`;
           const local = validateMove(state.fen, uci);
           setSelected(null);
-          if (local.ok) commitOptimisticAndSubmit(uci, local.fenAfter);
+          if (local.ok) commitOptimisticAndSubmit(uci, local.fenAfter, local.san);
           return;
         }
         // Reselect another own piece.

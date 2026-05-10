@@ -20,10 +20,18 @@ type Props = {
    * animate.
    */
   staggerIdx?: number;
+  /**
+   * True when this cell arrived AFTER the initial render baseline locked
+   * (i.e. an own optimistic move or an opponent's realtime move). Adds
+   * the `move-cell-fresh` class so globals.css swaps in a faster, slide-
+   * less keyframe — the cell pops alongside the piece animation rather
+   * than sliding up after it.
+   */
+  isFresh?: boolean;
   onSelect: (ply: number) => void;
 };
 
-export function MoveCell({ ply, san, isActive, inline, side, staggerIdx, onSelect }: Props) {
+export function MoveCell({ ply, san, isActive, inline, side, staggerIdx, isFresh, onSelect }: Props) {
   return (
     <button
       type="button"
@@ -36,6 +44,7 @@ export function MoveCell({ ply, san, isActive, inline, side, staggerIdx, onSelec
       }
       className={cn(
         "move-cell font-mono text-[13px] tabular-nums transition-colors rounded-sm",
+        isFresh && "move-cell-fresh",
         inline
           ? "inline-block px-1.5 py-0.5 mx-0.5 align-baseline"
           : "block text-left px-2 py-1",
