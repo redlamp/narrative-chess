@@ -13,11 +13,17 @@ import { pairsFromMoves, stepPly, type MoveLike } from "@/lib/chess/move-list";
 import { MoveCell } from "./MoveCell";
 
 // Shared classes for the step buttons. Editorial mono micro-button
-// style: thin rule, subtle hover, ink-faint when disabled.
+// style: thin rule, subtle hover, ink-faint when disabled. Visual
+// size stays at h-6 (24px) so the editorial micro-button voice
+// reads; a transparent ::before overlay extends the actual hit zone
+// to ~44px (WCAG 2.5.5) for touch input. relative on the button +
+// inset-0 absolute on the pseudo so it covers the button and bleeds
+// outward via -m-2.5 (10px each side) without affecting layout.
 const stepBtnClass = cn(
-  "h-6 grid place-items-center rounded leading-none",
+  "relative h-6 grid place-items-center rounded leading-none",
   "border border-rule-soft hover:bg-bg-soft transition-colors",
   "disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent",
+  "before:content-[''] before:absolute before:inset-0 before:-m-2.5 before:rounded",
 );
 
 type Props = {
@@ -67,6 +73,13 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
 
   const pairs = useMemo(() => pairsFromMoves(moves), [moves]);
   const activePly = viewedPly ?? livePly;
+
+  // Desktop list is a single column at all game lengths. Panel
+  // scrolls to keep the active turn visible — column-major / multi
+  // -col was tried (vertical hairlines + width transitions) but
+  // reading flow felt jumpy at threshold crossings and the second-
+  // column indent looked off. Sticking with the chess.com / lichess
+  // convention: one tall list, scroll to follow play.
 
   // Step-button enabled-state derivations. atStart disables |◀/◀ when
   // we're already at ply 0; atLive disables ▶/▶| and Play when we're
@@ -123,15 +136,41 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
     return baseline !== null && cellPos >= baseline;
   }
 
-  // Auto-scroll latest move into view ONLY when not in review mode.
-  // While scrubbed back, leave scroll position alone.
+  // Auto-scroll the *active* cell into view whenever it changes.
+  // activePly = viewedPly ?? livePly, so both review-mode scrubs and
+  // live arrivals (viewedPly null, livePly bumped) route through the
+  // same path: keep the highlighted cell visible. block: "nearest"
+  // means we only scroll when the cell is actually outside the
+  // current viewport — no movement when already in view.
+  //
+  // Desktop-only: scoped to the desktop scroll container. The mobile
+  // move list isn't in its own scroll context (it flows in the page),
+  // so calling scrollIntoView on a mobile cell would scroll the
+  // window. We query inside the desktop block directly via the
+  // [data-desktop-list] attribute so the mobile cell is never
+  // selected.
   useEffect(() => {
-    if (viewedPly !== null) return;
-    const cells = containerRef.current?.querySelectorAll(".move-cell");
-    if (!cells || cells.length === 0) return;
-    const newest = cells[cells.length - 1];
-    newest.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [moves.length, viewedPly]);
+    const root = containerRef.current;
+    if (!root) return;
+    const desktopRoot = root.querySelector<HTMLElement>(
+      "[data-desktop-list]",
+    );
+    if (!desktopRoot) return;
+    const target = desktopRoot.querySelector<HTMLElement>(
+      `.move-cell[data-ply="${activePly}"]`,
+    );
+    if (target) {
+      // block + inline both "nearest" so an active cell that lives
+      // off-screen vertically OR horizontally (multi-col layouts at
+      // narrow viewports where col 2/3 are past the panel edge)
+      // gets brought into view.
+      target.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "nearest",
+      });
+    }
+  }, [activePly]);
 
   if (moves.length === 0) {
     return (
@@ -150,50 +189,74 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
   let mobileIdx = 0;
 
   return (
-    <div ref={containerRef} className="w-full" data-testid="move-list">
+    <div
+      ref={containerRef}
+      className="w-full min-[820px]:flex-1 min-[820px]:min-h-0"
+      data-testid="move-list"
+    >
       {/* Mobile: inline PGN ribbon. Wraps naturally. Reads like a score sheet. */}
-      <div className="lg:hidden font-mono text-[13px] leading-7 px-1 py-2 max-h-48 overflow-y-auto">
-        {pairs.map((pair) => {
-          const whitePos = mobileIdx++;
-          const whiteFresh = isFreshCell(whitePos);
-          const whiteDelay = whiteFresh ? 0 : staggerDelayMs(whitePos);
-          const blackPos = pair.black ? mobileIdx++ : null;
-          const blackFresh = blackPos !== null && isFreshCell(blackPos);
-          const blackDelay =
-            blackPos === null ? null : blackFresh ? 0 : staggerDelayMs(blackPos);
-          return (
-            <span key={pair.moveNum} className="move-row" data-move-num={pair.moveNum}>
-              <span className="text-ink-faint">{pair.moveNum}.</span>
-              <MoveCell
-                ply={pair.white.ply}
-                san={pair.white.san}
-                isActive={pair.white.ply === activePly}
-                inline
-                delayMs={whiteDelay}
-                isFresh={whiteFresh}
-                onSelect={onScrub}
-              />
-              {pair.black && blackDelay !== null ? (
+      <div className="min-[820px]:hidden font-mono text-[13px] px-1 py-2">
+        {/* Outer auto-fill grid wraps multiple pair-units per row. Each
+            unit is a fixed [28px_1fr_1fr] sub-grid (number / white /
+            black) so the column rhythm matches desktop. minmax(140px,
+            1fr) lets the units stretch to fill the row; auto-fill
+            packs as many as fit at the current width — 2 pairs per row
+            on phones (~360px viewport), 3-4 on tablets near the 820
+            breakpoint. */}
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-x-3 gap-y-1">
+          {pairs.map((pair) => {
+            const whitePos = mobileIdx++;
+            const whiteFresh = isFreshCell(whitePos);
+            const whiteDelay = whiteFresh ? 0 : staggerDelayMs(whitePos);
+            const blackPos = pair.black ? mobileIdx++ : null;
+            const blackFresh = blackPos !== null && isFreshCell(blackPos);
+            const blackDelay =
+              blackPos === null ? null : blackFresh ? 0 : staggerDelayMs(blackPos);
+            return (
+              <div
+                className="grid grid-cols-[28px_1fr_1fr] gap-x-1 move-row"
+                data-move-num={pair.moveNum}
+                key={pair.moveNum}
+              >
+                <span className="font-mono text-[11px] text-ink-faint self-center text-right pr-1">
+                  {pair.moveNum}.
+                </span>
                 <MoveCell
-                  ply={pair.black.ply}
-                  san={pair.black.san}
-                  isActive={pair.black.ply === activePly}
-                  inline
-                  delayMs={blackDelay}
-                  isFresh={blackFresh}
+                  ply={pair.white.ply}
+                  san={pair.white.san}
+                  isActive={pair.white.ply === activePly}
+                  side="white"
+                  delayMs={whiteDelay}
+                  isFresh={whiteFresh}
                   onSelect={onScrub}
                 />
-              ) : null}{" "}
-            </span>
-          );
-        })}
+                {pair.black && blackDelay !== null ? (
+                  <MoveCell
+                    ply={pair.black.ply}
+                    san={pair.black.san}
+                    isActive={pair.black.ply === activePly}
+                    side="black"
+                    delayMs={blackDelay}
+                    isFresh={blackFresh}
+                    onSelect={onScrub}
+                  />
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Desktop: two-column grid pinned to the side of the board. Each move
+      {/* Desktop: header (title + play + step buttons) is non-scrolling,
+          fixed at the top of the panel. Only the moves grid below scrolls
+          — keeps controls always reachable as the list grows. Each move
           column gets a subtle low-alpha tint matching the side that played
           it (white wash for white moves, black wash for black moves) so the
           eye can scan column-by-column without changing text colour. */}
-      <div className="hidden lg:block px-2 py-3 max-h-[640px] overflow-y-auto border border-rule-soft rounded-md bg-bg-soft/40">
+      <div
+        data-desktop-list
+        className="hidden min-[820px]:flex min-[820px]:flex-col min-[820px]:h-full min-[820px]:overflow-hidden px-2 py-3 border border-rule-soft rounded-md bg-bg-soft/40"
+      >
         <div className="flex items-center justify-between mb-1.5 px-1">
           <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-faint font-bold">
             Move list
@@ -260,6 +323,13 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
             <ArrowRightToLine aria-hidden className="h-3 w-3" />
           </button>
         </div>
+        {/* Scroll body: just the moves grid. flex-1 + min-h-0 lets it
+            shrink to fit available height inside the flex-col panel
+            while keeping the header above always visible. Single-
+            column [28px_1fr_1fr] grid (number / white / black) — the
+            scrollIntoView call above keeps the active cell visible
+            as ply advances or the user scrubs. */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="grid grid-cols-[28px_1fr_1fr] gap-x-1 gap-y-1">
           {pairs.map((pair) => {
             const whitePos = desktopIdx++;
@@ -283,7 +353,11 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
                   ? 0
                   : staggerDelayMs(blackPos);
             return (
-              <div className="contents move-row" data-move-num={pair.moveNum} key={pair.moveNum}>
+              <div
+                className="contents move-row"
+                data-move-num={pair.moveNum}
+                key={pair.moveNum}
+              >
                 <span className="font-mono text-[11px] text-ink-faint self-center text-right pr-1">
                   {pair.moveNum}.
                 </span>
@@ -311,7 +385,8 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
             );
           })}
         </div>
-      </div>
+        </div>{/* end scroll body */}
+      </div>{/* end desktop panel */}
     </div>
   );
 }

@@ -1072,7 +1072,11 @@ export function GameClient({
     return (
       <div
         className={cn(
-          "relative flex-1 rounded border px-3 py-2 transition-shadow overflow-hidden",
+          // @container/pill: CapturedStrip queries this element's
+          // inline-size to scale icon size + overlap to actual pill
+          // width (which depends on layout, not viewport — at vw=320
+          // each pill is ~110px, at vw=900+ each is ~280px).
+          "@container/pill relative flex-1 rounded border px-3 py-2 transition-shadow overflow-hidden",
           isBlack
             ? "bg-black text-white border-black"
             : "bg-white text-black border-rule",
@@ -1108,7 +1112,7 @@ export function GameClient({
   };
 
   return (
-    <main className="container mx-auto max-w-6xl py-8 px-6 space-y-4">
+    <main className="container mx-auto max-w-6xl py-2 px-3 sm:py-8 sm:px-6 space-y-4">
       {/* Test hook — version-agnostic state probe for e2e specs.
           E2E specs assert against data-ply and data-status; the hook
           stays library-DOM-agnostic so it survives react-chessboard
@@ -1130,13 +1134,38 @@ export function GameClient({
             board (sticky on tall pages). */}
       <div
         className={cn(
-          "grid gap-2",
-          "grid-cols-1 [grid-template-areas:'banner''board''pills''list']",
-          "lg:grid-cols-[minmax(0,1fr)_180px] lg:gap-x-3 lg:gap-y-2 lg:items-start lg:max-w-3xl lg:mx-auto",
-          "lg:[grid-template-areas:'banner_banner''board_list''pills_list']",
+          // Mobile: flex-col stack. Outer flex's children at mobile are
+          // banner/board/pills (via display:contents on the inner
+          // wrapper) plus the list wrapper at the end → stacked
+          // banner / board / pills / list with gap-2 between.
+          "flex flex-col gap-2",
+          // Desktop (820+): outer becomes flex-row with two flex
+          // items: the inner left wrapper (which switches from
+          // display:contents to flex-col grouping banner/board/pills)
+          // and the list wrapper. Cross-axis stretch (the flex
+          // default) makes the list wrapper match the row height —
+          // but because the list's *inner* scroll area is
+          // position-absolute at desktop, the list contributes 0 to
+          // row height. Row height = left column natural height. List
+          // scrolls internally if its content exceeds.
+          //
+          // Outer width caps at exactly the cluster size (left 576
+          // + gap 12 + list 180 = 768). With both columns shrink-0
+          // and no flex-grow item, anything wider than 768 would
+          // leave dead space on the right. mx-auto centers the
+          // 768-wide cluster within the page's main container.
+          "min-[820px]:flex-row min-[820px]:items-stretch min-[820px]:gap-x-3 min-[820px]:gap-y-0 min-[820px]:max-w-[768px] min-[820px]:mx-auto",
         )}
       >
-        <div className="[grid-area:banner]">
+        {/* Left column wrapper. display:contents at mobile so the
+            children flatten into the outer flex-col; switches to a
+            real flex-col at 820+ so banner/board/pills group together
+            as one flex-row item paired with the list wrapper.
+            basis-[576px] + shrink-0 locks this column to the board's
+            width — the list column gets whatever horizontal is left
+            over, and the board never gets squeezed by it. */}
+        <div className="contents min-[820px]:flex min-[820px]:flex-col min-[820px]:gap-2 min-[820px]:basis-[576px] min-[820px]:shrink-0 min-[820px]:min-w-0">
+        <div className="max-w-xl mx-auto w-full min-[820px]:max-w-none">
           <InGameBanner
             status={state.status}
             currentTurn={turn ?? "w"}
@@ -1149,7 +1178,7 @@ export function GameClient({
             isObserver={isObserver}
           />
         </div>
-        <div className="[grid-area:board] flex justify-center">
+        <div className="flex justify-center">
           <div className="w-full max-w-xl aspect-square">
             <Chessboard
               position={displayFen}
@@ -1177,18 +1206,36 @@ export function GameClient({
         </div>
 
         {/* Player pills — viewer's pill always LEFT. Active side ringed signal. */}
-        <aside className="[grid-area:pills] flex items-stretch gap-2 max-w-xl mx-auto w-full text-sm">
+        <aside className="flex items-stretch gap-2 max-w-xl mx-auto w-full text-sm min-[820px]:max-w-none">
           {renderPlayerPill(leftSide)}
 
           <div
             className={cn(
-              "flex flex-col items-center justify-center rounded border px-3 py-2 min-w-[112px] transition-colors",
+              // Below sm (640): w-auto + tight px-2 — content drives
+              //   width (arrow + ply only, turnText hidden), pill
+              //   collapses to ~50px so the player pills on either
+              //   side keep their breathing room.
+              // sm+ (>=640): w-[140px] fixed so the pill doesn't
+              //   resize as turnText cycles through 'Your turn' (9
+              //   chars) -> 'Opponent's turn' (15) -> 'Check — your
+              //   move' (17). The growth was rebalancing the flex row,
+              //   jiggling the player pills at every move flip; 140px
+              //   fits the longest standard text + truncates longer
+              //   observer strings.
+              // shrink-0 on both: center never compresses below its
+              //   own content; player pills (flex-1) absorb pressure
+              //   first.
+              "flex flex-col items-center justify-center rounded border px-2 sm:px-3 py-2 shrink-0 transition-colors sm:w-[140px]",
               !inProgress && "bg-bg-soft text-ink-soft border-rule-soft",
               whiteActive && "bg-white text-black border-rule",
               blackActive && "bg-black text-white border-black",
             )}
           >
-            <span className="font-mono uppercase tracking-wide text-[10px]">{turnText}</span>
+            {/* Hidden below sm; arrow + ply alone communicate state on
+                very narrow viewports. */}
+            <span className="hidden sm:block font-mono uppercase tracking-wide text-[10px] truncate max-w-full text-center">
+              {turnText}
+            </span>
             {inProgress && (
               <span
                 className="text-base leading-none mt-0.5"
@@ -1203,8 +1250,20 @@ export function GameClient({
 
           {renderPlayerPill(rightSide)}
         </aside>
+        </div>{/* end left column wrapper (banner/board/pills) */}
 
-        <div className="[grid-area:list] lg:sticky lg:top-4 max-w-xl mx-auto w-full lg:max-w-none space-y-2">
+        {/* List wrapper. At mobile is a normal block centered to
+            max-w-xl matching banner/board/pills width. At 820+ is
+            position-relative + fixed 180px wide (snug to the move
+            list panel — list is single-column desktop). The inner
+            flex-col is position-absolute filling this wrapper so
+            (a) the list's natural height contributes 0 to flex-row
+            row sizing — list height is bounded by row height (=
+            banner + board + pills) and never extends past the pills'
+            bottom — and (b) any list content beyond that height
+            scrolls inside the panel. */}
+        <div className="max-w-xl mx-auto w-full min-[820px]:relative min-[820px]:max-w-none min-[820px]:w-[180px] min-[820px]:shrink-0 min-[820px]:mx-0">
+        <div className="space-y-2 min-[820px]:space-y-0 min-[820px]:absolute min-[820px]:inset-0 min-[820px]:flex min-[820px]:flex-col min-[820px]:gap-2">
           <MoveList
             moves={moves}
             livePly={livePly}
@@ -1237,8 +1296,9 @@ export function GameClient({
               />
             </div>
           )}
-        </div>
-      </div>
+        </div>{/* end list scroll wrapper */}
+        </div>{/* end list outer wrapper */}
+      </div>{/* end outer flex layout */}
 
       <ObserverCount
         gameId={gameId}
