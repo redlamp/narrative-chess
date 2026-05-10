@@ -45,6 +45,15 @@ export function Wordmark({
         ? "flex-col items-end"
         : "flex-col items-end min-[820px]:flex-row min-[820px]:items-center";
 
+  // Fluid scaling: at narrow viewports (<400px-ish) the logo shrinks via
+  // clamp() down to 75% of its base size; at wider viewports it pins at
+  // base. aspect-ratio handles height so the SVG mask stays proportional.
+  // 25vw is the preferred-value coefficient — at 400px viewport a 99px
+  // mark hits 25vw=99.3, equal to its max; below that vw shrinks until
+  // the floor wins.
+  const fluidWidth = (px: number) =>
+    `clamp(${(px * 0.75).toFixed(2)}px, ${(px * 0.25).toFixed(2)}vw, ${px}px)`;
+
   return (
     <span
       className={cn(
@@ -60,8 +69,8 @@ export function Wordmark({
         aria-hidden="true"
         className="block bg-current shrink-0"
         style={{
-          width: `${dims.narrativeW}px`,
-          height: `${dims.narrativeH}px`,
+          width: fluidWidth(dims.narrativeW),
+          aspectRatio: `${dims.narrativeW} / ${dims.narrativeH}`,
           ...maskStyle("/brand/wordmark-narrative.svg"),
         }}
       />
@@ -69,8 +78,8 @@ export function Wordmark({
         aria-hidden="true"
         className="block bg-current shrink-0"
         style={{
-          width: `${dims.borderW}px`,
-          height: `${dims.borderH}px`,
+          width: fluidWidth(dims.borderW),
+          aspectRatio: `${dims.borderW} / ${dims.borderH}`,
           ...maskStyle("/brand/wordmark-chess-bordered.svg"),
         }}
       />

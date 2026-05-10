@@ -45,7 +45,9 @@ export function SiteHeaderNav({ displayName }: Props) {
               <Link
                 href="/account"
                 className={cn(
-                  "px-3 py-1.5 font-body italic text-[14px] leading-none transition-colors mr-1",
+                  // px-1.5 default → px-3 at sm+ keeps the nav compact on
+                  // phones while letting it breathe on tablets+.
+                  "px-1.5 sm:px-3 py-1.5 font-body italic text-[14px] leading-none transition-colors mr-1",
                   pathname === "/account"
                     ? "text-oxblood"
                     : "text-ink-soft hover:text-foreground",
@@ -64,7 +66,7 @@ export function SiteHeaderNav({ displayName }: Props) {
                     <Link
                       href={link.href}
                       className={cn(
-                        "px-3 py-1.5 font-mono text-[10px] leading-none tracking-[0.18em] uppercase transition-colors",
+                        "px-1.5 sm:px-3 py-1.5 font-mono text-[10px] leading-none tracking-[0.18em] uppercase transition-colors",
                         active
                           ? "text-foreground"
                           : "text-ink-soft hover:text-foreground",
