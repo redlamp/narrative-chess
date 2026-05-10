@@ -238,8 +238,7 @@
   }
 }
 
-.move-cell,
-.move-cell-placeholder {
+.move-cell {
   animation: move-list-entry 0.2s ease-out both;
   animation-delay: calc(var(--cell-idx, 0) * 30ms);
 }

@@ -53,9 +53,7 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
     setBaseline((prev) => {
       if (prev !== null) return prev;
       const root = containerRef.current;
-      return (
-        root?.querySelectorAll(".move-cell, .move-cell-placeholder").length ?? 0
-      );
+      return root?.querySelectorAll(".move-cell").length ?? 0;
     });
   }, []);
 
@@ -134,9 +132,11 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
         <div className="grid grid-cols-[28px_1fr_1fr] gap-x-1 gap-y-1">
           {pairs.map((pair) => {
             const whiteIdx = staggerIdx(desktopIdx++);
-            // The placeholder also counts toward stagger so column rhythm
-            // stays aligned even when black hasn't responded.
-            const blackIdx = staggerIdx(desktopIdx++);
+            // Only advance the counter when black actually moved. During
+            // white's turn the third grid column is left empty so we don't
+            // imply black has moved; the column rhythm picks back up on the
+            // next pair.
+            const blackIdx = pair.black ? staggerIdx(desktopIdx++) : null;
             return (
               <div className="contents move-row" data-move-num={pair.moveNum} key={pair.moveNum}>
                 <span className="font-mono text-[11px] text-ink-faint self-center text-right pr-1">
@@ -150,7 +150,7 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
                   staggerIdx={whiteIdx}
                   onSelect={onScrub}
                 />
-                {pair.black ? (
+                {pair.black && blackIdx !== null ? (
                   <MoveCell
                     ply={pair.black.ply}
                     san={pair.black.san}
@@ -159,16 +159,7 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
                     staggerIdx={blackIdx}
                     onSelect={onScrub}
                   />
-                ) : (
-                  /* Empty trailing-black slot keeps column rhythm + black
-                     tint, and participates in the CSS entry stagger via
-                     --cell-idx so the row materialises as a unit. */
-                  <span
-                    aria-hidden
-                    className="move-cell-placeholder rounded-sm bg-black/20"
-                    style={{ "--cell-idx": blackIdx } as React.CSSProperties}
-                  />
-                )}
+                ) : null}
               </div>
             );
           })}
