@@ -33,20 +33,29 @@ export function CapturedStrip({ pieces }: Props) {
           width={32}
           height={32}
           draggable={false}
-          // First icon nudges left so the strip aligns with the
-          // player-name baseline above (the SVG's transparent margin
-          // would otherwise push it visually inset). Successors
-          // overlap further to compress a long capture list.
-          // Both negative margins increase as the viewport narrows so
-          // captures fit on a single row inside the player pill on
-          // phones — at sm+ they back off for breathing room.
-          //   first:     -ml-3 (-12) below sm  -> -ml-2 (-8)  at sm+
-          //   successor: -ml-4 (-16) below sm  -> -ml-3 (-12) at sm+
-          className={
-            i === 0
-              ? "block opacity-90 pointer-events-none select-none -ml-3 sm:-ml-2"
-              : "block opacity-90 pointer-events-none select-none -ml-4 sm:-ml-3"
-          }
+          className="block opacity-90 pointer-events-none select-none"
+          style={{
+            // Fluid overlap via clamp(). margin-left scales linearly
+            // with viewport width between two stops, then floors /
+            // caps at the extremes:
+            //
+            //   first icon (aligns to name baseline):
+            //     vw=320 -> -12px   (deep overlap on phones)
+            //     vw=640 ->  -8px   (editorial breathing room)
+            //     vw=900+-> -4px    (just a hair tucked in)
+            //   successor:
+            //     vw=320 -> -20px   (very tight on phones)
+            //     vw=640 -> -12px   (mid)
+            //     vw=900+->  -8px   (wide ribbon)
+            //
+            // The slope expression is calc(intercept + slope*vw),
+            // computed once per viewport size; clamp's min/max ensure
+            // we never invert direction or overshoot.
+            marginLeft:
+              i === 0
+                ? "clamp(-12px, calc(-16px + 1.25vw), -4px)"
+                : "clamp(-20px, calc(-28px + 2.5vw), -8px)",
+          }}
         />
       ))}
     </span>
