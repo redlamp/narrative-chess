@@ -157,12 +157,14 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
     >
       {/* Mobile: inline PGN ribbon. Wraps naturally. Reads like a score sheet. */}
       <div className="min-[820px]:hidden font-mono text-[13px] px-1 py-2">
-        {/* Mobile uses the same 3-col grid as desktop so each white /
-            black cell takes a uniform 1fr width regardless of SAN
-            length. Drops the desktop chrome (title bar, soft bg
-            container, border) since mobile already lives below the
-            board and doesn't need the visual frame.  */}
-        <div className="grid grid-cols-[28px_1fr_1fr] gap-x-1 gap-y-1">
+        {/* Outer auto-fill grid wraps multiple pair-units per row. Each
+            unit is a fixed [28px_1fr_1fr] sub-grid (number / white /
+            black) so the column rhythm matches desktop. minmax(140px,
+            1fr) lets the units stretch to fill the row; auto-fill
+            packs as many as fit at the current width — 2 pairs per row
+            on phones (~360px viewport), 3-4 on tablets near the 820
+            breakpoint. */}
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-x-3 gap-y-1">
           {pairs.map((pair) => {
             const whitePos = mobileIdx++;
             const whiteFresh = isFreshCell(whitePos);
@@ -173,7 +175,7 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
               blackPos === null ? null : blackFresh ? 0 : staggerDelayMs(blackPos);
             return (
               <div
-                className="contents move-row"
+                className="grid grid-cols-[28px_1fr_1fr] gap-x-1 move-row"
                 data-move-num={pair.moveNum}
                 key={pair.moveNum}
               >
