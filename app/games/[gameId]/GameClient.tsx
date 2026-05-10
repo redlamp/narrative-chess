@@ -1142,13 +1142,17 @@ export function GameClient({
           "grid-cols-1 [grid-template-areas:'banner''board''pills''list']",
           // 820px+: list spans the full right column from banner-top to
           // pills-bottom so its visible area matches the height of the
-          // stacked left column (banner + board + pills) rather than
-          // capping at board+pills like before. items-stretch (the grid
-          // default — drop items-start) lets each row's row-track
-          // height come from the taller participant; the list's inner
-          // h-full picks up the row total.
+          // stacked left column (banner + board + pills). Row tracks
+          // are pinned to minmax(0, max-content) so the spanning list
+          // can't *inflate* them past their single-row content height
+          // (which previously stretched banner / pills into tall empty
+          // boxes when list content + grid auto-distribution kicked
+          // in). List cell adds min-h-0 + overflow-y-auto on its
+          // scrolling child so any list content beyond the row sum
+          // scrolls inside the cell rather than expanding the grid.
           "min-[820px]:grid-cols-[minmax(0,1fr)_180px] min-[820px]:gap-x-3 min-[820px]:gap-y-2 min-[820px]:max-w-3xl min-[820px]:mx-auto",
           "min-[820px]:[grid-template-areas:'banner_list''board_list''pills_list']",
+          "min-[820px]:[grid-template-rows:minmax(0,max-content)_minmax(0,max-content)_minmax(0,max-content)]",
         )}
       >
         <div className="[grid-area:banner] max-w-xl mx-auto w-full min-[820px]:max-w-none">
@@ -1237,7 +1241,7 @@ export function GameClient({
           {renderPlayerPill(rightSide)}
         </aside>
 
-        <div className="[grid-area:list] max-w-xl mx-auto w-full min-[820px]:max-w-none min-[820px]:flex min-[820px]:flex-col min-[820px]:gap-2 space-y-2 min-[820px]:space-y-0">
+        <div className="[grid-area:list] max-w-xl mx-auto w-full min-[820px]:max-w-none min-[820px]:flex min-[820px]:flex-col min-[820px]:gap-2 min-[820px]:min-h-0 min-[820px]:overflow-hidden space-y-2 min-[820px]:space-y-0">
           <MoveList
             moves={moves}
             livePly={livePly}
