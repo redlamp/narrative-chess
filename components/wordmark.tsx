@@ -29,7 +29,7 @@ export function Wordmark({
   return (
     <span
       className={cn(
-        "inline-flex",
+        "inline-flex leading-none align-middle",
         isOneLine ? "flex-row items-center" : "flex-col items-end",
         className,
       )}
