@@ -126,12 +126,15 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
         ))}
       </div>
 
-      {/* Desktop: two-column grid pinned to the side of the board. */}
+      {/* Desktop: two-column grid pinned to the side of the board. Each move
+          column gets a subtle low-alpha tint matching the side that played
+          it (white wash for white moves, black wash for black moves) so the
+          eye can scan column-by-column without changing text colour. */}
       <div className="hidden lg:block px-2 py-3 max-h-[640px] overflow-y-auto border border-rule-soft rounded-md bg-bg-soft/40">
-        <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-faint mb-2 px-1">
+        <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-faint font-bold mb-2 px-1">
           Move list
         </p>
-        <div className="grid grid-cols-[32px_1fr_1fr] gap-x-2 gap-y-1">
+        <div className="grid grid-cols-[28px_1fr_1fr] gap-x-1 gap-y-1">
           {pairs.map((pair) => (
             <div className="contents move-row" data-move-num={pair.moveNum} key={pair.moveNum}>
               <span className="font-mono text-[11px] text-ink-faint self-center text-right pr-1">
@@ -142,6 +145,7 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
                 san={pair.white.san}
                 isActive={pair.white.ply === activePly}
                 isRecent={pair.white.ply >= recentThreshold}
+                side="white"
                 onSelect={onScrub}
               />
               {pair.black ? (
@@ -150,10 +154,13 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
                   san={pair.black.san}
                   isActive={pair.black.ply === activePly}
                   isRecent={pair.black.ply >= recentThreshold}
+                  side="black"
                   onSelect={onScrub}
                 />
               ) : (
-                <span aria-hidden />
+                /* Reserve column space + paint the black tint so the
+                   trailing-white-move row keeps the same column rhythm. */
+                <span aria-hidden className="rounded-sm bg-black/20" />
               )}
             </div>
           ))}

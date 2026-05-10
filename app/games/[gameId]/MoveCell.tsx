@@ -8,10 +8,16 @@ type Props = {
   isActive: boolean;
   isRecent: boolean;
   inline?: boolean;
+  /**
+   * Subtle column-tint hint for the desktop grid. "white" paints a low-alpha
+   * white wash, "black" paints a low-alpha black wash. Suppressed while
+   * active (the oxblood accent wins).
+   */
+  side?: "white" | "black";
   onSelect: (ply: number) => void;
 };
 
-export function MoveCell({ ply, san, isActive, isRecent, inline, onSelect }: Props) {
+export function MoveCell({ ply, san, isActive, isRecent, inline, side, onSelect }: Props) {
   return (
     <button
       type="button"
@@ -25,7 +31,11 @@ export function MoveCell({ ply, san, isActive, isRecent, inline, onSelect }: Pro
           : "block text-left px-2 py-1",
         isActive
           ? "bg-accent text-accent-foreground"
-          : "text-foreground hover:bg-bg-soft",
+          : cn(
+              "text-foreground hover:bg-bg-soft",
+              side === "white" && "bg-white/15",
+              side === "black" && "bg-black/20",
+            ),
       )}
     >
       {san}

@@ -917,10 +917,8 @@ export function GameClient({
             <span>{isBlack ? "Black" : "White"}</span>
             {isYou && <span>(you)</span>}
           </p>
-          <div className="flex items-center justify-between gap-2 min-w-0">
-            <p className="font-display truncate">{name}</p>
-            <CapturedStrip pieces={captured} />
-          </div>
+          <p className="font-display truncate">{name}</p>
+          <CapturedStrip pieces={captured} />
           {mode !== "untimed" && (
             <Clock
               side={side === "w" ? "white" : "black"}
@@ -1028,13 +1026,29 @@ export function GameClient({
           {renderPlayerPill(rightSide)}
         </aside>
 
-        <div className="[grid-area:list] lg:sticky lg:top-4 max-w-xl mx-auto w-full lg:max-w-none">
+        <div className="[grid-area:list] lg:sticky lg:top-4 max-w-xl mx-auto w-full lg:max-w-none space-y-2">
           <MoveList
             moves={moves}
             livePly={livePly}
             viewedPly={viewedPly}
             onScrub={setViewedPly}
           />
+
+          {/* Dev-only fool's mate smoke button. Hidden for observers and in
+              prod bundles (gated on VERCEL_ENV at build time via the dynamic
+              import above — `SmokeFoolsMate` resolves to null in prod). Sits
+              under the move list so the right column hosts all dev / debug
+              affordances together. */}
+          {SmokeFoolsMate && !isObserver && myColor && (
+            <div className="flex items-center justify-center">
+              <SmokeFoolsMate
+                gameId={gameId}
+                myColor={myColor}
+                ply={state.ply}
+                status={state.status}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -1057,23 +1071,6 @@ export function GameClient({
           isObserver={isObserver}
         />
       </div>
-
-      {/* Dev-only fool's mate smoke button. Hidden for observers and in
-          prod bundles (gated on NODE_ENV at build time via the dynamic
-          import above — `SmokeFoolsMate` resolves to null in prod, so
-          this whole block tree-shakes). Sits alongside the resign /
-          abort controls so it's discoverable but obviously a debug
-          affordance. */}
-      {SmokeFoolsMate && !isObserver && myColor && (
-        <div className="max-w-xl mx-auto w-full flex items-center justify-center">
-          <SmokeFoolsMate
-            gameId={gameId}
-            myColor={myColor}
-            ply={state.ply}
-            status={state.status}
-          />
-        </div>
-      )}
     </main>
   );
 }

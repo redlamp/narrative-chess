@@ -8,16 +8,21 @@ type Props = {
 };
 
 /**
- * Compact horizontal strip of small Cburnett-via-Taylor piece icons sitting
- * inline next to a player's name in their pill. Icons overlap by ~60% via
- * negative margin so a long capture list still fits in the pill width.
+ * Horizontal strip of small Taylor-piece icons that sits below the player's
+ * name in their pill. Icons stack to the RIGHT via negative left margin on
+ * each successor so a long capture list compresses gracefully. Reserves a
+ * fixed-height row even when empty so the pill height doesn't jitter as
+ * captures land.
  */
 export function CapturedStrip({ pieces }: Props) {
-  if (pieces.length === 0) return null;
   return (
     <span
-      aria-label={`captured ${pieces.length} piece${pieces.length === 1 ? "" : "s"}`}
-      className="inline-flex items-center"
+      aria-label={
+        pieces.length === 0
+          ? "no pieces captured"
+          : `captured ${pieces.length} piece${pieces.length === 1 ? "" : "s"}`
+      }
+      className="inline-flex items-center min-h-[20px]"
     >
       {pieces.map((p, i) => (
         // eslint-disable-next-line @next/next/no-img-element -- static SVG, see piece-set.tsx note
@@ -25,13 +30,13 @@ export function CapturedStrip({ pieces }: Props) {
           key={`${p}-${i}`}
           src={`/pieces/taylor/${p[0]}${p[1].toLowerCase()}.svg`}
           alt={p}
-          width={14}
-          height={14}
+          width={20}
+          height={20}
           draggable={false}
           className="block"
           style={{
-            marginLeft: i === 0 ? 0 : -6,
-            opacity: 0.85,
+            marginLeft: i === 0 ? 0 : -10,
+            opacity: 0.9,
             pointerEvents: "none",
             userSelect: "none",
           }}
