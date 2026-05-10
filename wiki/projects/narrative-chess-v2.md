@@ -16,6 +16,7 @@ Rewrite of [[narrative-chess-v1]]. Chess-first rebuild with narrative layer, des
 - **M1.5 shipped: 2026-05-04.** Phase 7 + terminal banner fix + header nav + Phase 8 landing/3D hero. Squash-merged via PR #18 (`681f809` on `main`).
 - **M1.5+ shipped: 2026-05-04.** Hero3D WebGL context recovery + AuthDialog onSuccess + theme toggle UI + dev-only fool's mate smoke + husky pre-commit shebang chore. Squash-merged via PR #25 (`67243d5` on `main`).
 - **M1.5++ shipped: 2026-05-06.** Clocks (live + correspondence), per-side timeout detection (lazy + auto-claim + daily cron sweep), strict-reconnect policy + post-merge polish (hydration fix, open-challenges visibility, account page + display name in header, live games lobby + game-started toast, drop redundant Home link, home stat panels + vertical-stack layout). Squash-merged via PR #34 (`5706e2b` on `main`). 6 migrations live on hosted Supabase. CRON_SECRET set in Vercel envs (Production + Preview/dev). Spec + plan at `docs/superpowers/specs/2026-05-05-clocks-timeout-reconnect-design.md` and `docs/superpowers/plans/2026-05-05-clocks-timeout-reconnect.md`.
+- **Design pass shipped: 2026-05-08.** Editorial-hybrid theme. Fraunces + Newsreader + JetBrains Mono fonts, ink + cream + oxblood + signal palette (replaces shadcn-default teal), 3D hero rebuilt with walnut plinth + 5-piece cluster + GSAP entrance + theme-aware materials, new StageOverlay + StageCtas + LiveGameCard components, typography pass on game / auth / account / lobby pages, Three.js + oklch fix (scene tokens swapped to hex). Six-phase plan at `docs/superpowers/plans/2026-05-07-frontend-pass-1.md`. Reference mockup at `design/variants/06-hybrid-3d.html`. Squash-merged via PR #36 (`02ea59f` on `main`).
 - Stable production alias: https://narrative-chess.vercel.app
 - Two real users can sign up, create + join a game via shared URL, play with drag-or-click, see opponent's moves over realtime, end on checkmate / stalemate / resignation / abort / **timeout**. Observers (third+ authenticated viewer with the URL) can watch read-only. Header now shows display name → `/account`. Games directory updates live (no manual refresh) and toasts on game start. Landing page: hero → centered CTAs → three live stat panels.
 - **Polish A/B/C** queued post-M1.5++: draw-by-agreement, move-list stepper (review-only), mobile/touch.
@@ -92,11 +93,11 @@ What success looks like for M1: two browsers, end-to-end smoke test green, no v1
 | polish | (in M1.5++ squash) | — | Drop redundant Home nav link (PR #32) |
 | polish | (in M1.5++ squash) | — | Home stat panels + vertical-stack layout + public_stats RPC (PR #33) |
 | M1.5++ | (ship) | `5706e2b` | Production deploy via PR #34 |
-| frontend-pass-1 | (PR pending) | — | Editorial-hybrid theme: Fraunces+Newsreader+JetBrains Mono fonts; ink+oxblood+cream palette (replaces shadcn-default teal); 3D hero rebuilt with walnut plinth, 5-piece cluster, GSAP entrance, theme-aware materials; new StageOverlay + StageCtas + LiveGameCard components; typography pass on game/auth/account/games-directory pages. Reference mockup at design/variants/06-hybrid-3d.html. |
+| design pass | (ship) | `02ea59f` | Editorial-hybrid theme: Fraunces + Newsreader + JetBrains Mono fonts; ink + oxblood + cream palette (replaces shadcn-default teal); 3D hero rebuilt with walnut plinth, 5-piece cluster, GSAP entrance, theme-aware materials; new StageOverlay + StageCtas + LiveGameCard components; typography pass on game / auth / account / lobby pages; Three.js + oklch fix (scene tokens to hex). Production deploy via PR #36. |
 
-## Staged on `dev` (post-M1.5++, not yet on `main`)
+## Staged on `dev` (post-design-pass, not yet on `main`)
 
-- **frontend-pass-1** — PR open against `dev` (`feat/frontend-pass-1`). Six-phase editorial-hybrid theme + 3D hero rebuild + landing rewrite. Two pre-existing e2e bugs fixed in Phase 6 (wordmark aria-label, clocks-display selector). Plan: `docs/superpowers/plans/2026-05-07-frontend-pass-1.md`.
+(none, `dev` content-equal to `main` post-design-pass squash)
 
 ## M1.5++ ship details
 

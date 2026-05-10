@@ -1,6 +1,6 @@
 ---
 tags:
-  - domain/chess-engine
+  - domain/stack
   - origin/external-research
 ---
 

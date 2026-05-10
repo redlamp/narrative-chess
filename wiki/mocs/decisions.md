@@ -19,3 +19,7 @@ Significant project decisions and their rationale. Each entry should link to a `
 - [[decision-supabase-local-dev]] — hosted-first; Docker deferred until trigger condition fires
 - [[decision-vercel-default-previews]] — auto-deploy every branch (Vercel default) (2026-05-03, supersedes [[decision-vercel-branch-filter]])
 - [[decision-auth-email-password]] — email + password for M1; OAuth deferred to M2+
+
+### Branding / naming
+
+- [[decision-project-name-narrative-chess]] — keep "Narrative Chess" with trade-offs noted; Pawnsong reserved as future strong-brand pivot (2026-05-09)

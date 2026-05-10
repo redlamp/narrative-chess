@@ -13,6 +13,8 @@
  * the codebase keeps importing from `@/lib/chess/board-types`.
  */
 export type {
+  CustomPieceFn,
+  CustomPieces,
   Piece,
   PromotionPieceOption,
   Square,
