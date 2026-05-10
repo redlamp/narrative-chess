@@ -1072,7 +1072,11 @@ export function GameClient({
     return (
       <div
         className={cn(
-          "relative flex-1 rounded border px-3 py-2 transition-shadow overflow-hidden",
+          // @container/pill: CapturedStrip queries this element's
+          // inline-size to scale icon size + overlap to actual pill
+          // width (which depends on layout, not viewport — at vw=320
+          // each pill is ~110px, at vw=900+ each is ~280px).
+          "@container/pill relative flex-1 rounded border px-3 py-2 transition-shadow overflow-hidden",
           isBlack
             ? "bg-black text-white border-black"
             : "bg-white text-black border-rule",
