@@ -234,11 +234,11 @@ export function GameClient({
         currentScrubPlyRef.current ?? (viewedPly ?? livePly);
       currentScrubPlyRef.current = null;
 
-      // Reflect the click in the move-list highlight + draggable-pieces
-      // gate immediately, regardless of whether we play back a sequence.
-      setViewedPly(target);
-
       if (startPly === targetPly) {
+        // Click landed on the same ply we're already showing — sync the
+        // viewedPly state (handles the live<->scrubbed null/livePly
+        // mapping) and bail without playback.
+        setViewedPly(target);
         setScrubPlaybackFen(null);
         setScrubAnimDuration(null);
         return;
@@ -264,8 +264,18 @@ export function GameClient({
 
       for (let i = 1; i <= steps; i++) {
         const stepPly = startPly + direction * i;
+        // Map the final step to viewedPly=null when target was null, so
+        // we land in the canonical "live" state rather than viewedPly =
+        // livePly (functionally equivalent for the FEN, but auto-snap
+        // and arePiecesDraggable both prefer the explicit null).
+        const stepViewedPly =
+          i === steps && target === null ? null : stepPly;
         tl.call(
           () => {
+            // viewedPly walks alongside scrubPlaybackFen so MoveList's
+            // active highlight (activePly = viewedPly ?? livePly) tracks
+            // the cell whose ply matches the currently-painted board.
+            setViewedPly(stepViewedPly);
             setScrubPlaybackFen(viewedFen(moves, stepPly, state.fen));
             currentScrubPlyRef.current = stepPly;
           },
@@ -1125,7 +1135,10 @@ export function GameClient({
               onMouseOverSquare={onSquareMouseOver}
               onMouseOutSquare={onSquareMouseOut}
               arePiecesDraggable={
-                inProgress && !isObserver && (viewedPly === null || viewedPly === livePly)
+                inProgress &&
+                !isObserver &&
+                scrubAnimDuration === null &&
+                (viewedPly === null || viewedPly === livePly)
               }
               isDraggablePiece={isDraggablePiece}
               customSquareStyles={customSquareStyles}
