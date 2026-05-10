@@ -156,51 +156,54 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
       data-testid="move-list"
     >
       {/* Mobile: inline PGN ribbon. Wraps naturally. Reads like a score sheet. */}
-      <div className="min-[820px]:hidden font-mono text-[13px] leading-7 px-1 py-2">
-        {pairs.map((pair) => {
-          const whitePos = mobileIdx++;
-          const whiteFresh = isFreshCell(whitePos);
-          const whiteDelay = whiteFresh ? 0 : staggerDelayMs(whitePos);
-          const blackPos = pair.black ? mobileIdx++ : null;
-          const blackFresh = blackPos !== null && isFreshCell(blackPos);
-          const blackDelay =
-            blackPos === null ? null : blackFresh ? 0 : staggerDelayMs(blackPos);
-          return (
-            // inline-block + whitespace-nowrap keeps each [N. white black]
-            // turn-pair together as a single unit. Without this the inline
-            // ribbon was happy to break mid-pair so a black move could land
-            // orphaned at the start of the next line. mr-2 spaces pairs
-            // apart, replacing the ad-hoc trailing space the old layout
-            // used.
-            <span
-              key={pair.moveNum}
-              className="move-row inline-block whitespace-nowrap mr-2"
-              data-move-num={pair.moveNum}
-            >
-              <span className="text-ink-faint">{pair.moveNum}.</span>
-              <MoveCell
-                ply={pair.white.ply}
-                san={pair.white.san}
-                isActive={pair.white.ply === activePly}
-                inline
-                delayMs={whiteDelay}
-                isFresh={whiteFresh}
-                onSelect={onScrub}
-              />
-              {pair.black && blackDelay !== null ? (
+      <div className="min-[820px]:hidden font-mono text-[13px] px-1 py-2">
+        {/* Mobile uses the same 3-col grid as desktop so each white /
+            black cell takes a uniform 1fr width regardless of SAN
+            length. Drops the desktop chrome (title bar, soft bg
+            container, border) since mobile already lives below the
+            board and doesn't need the visual frame.  */}
+        <div className="grid grid-cols-[28px_1fr_1fr] gap-x-1 gap-y-1">
+          {pairs.map((pair) => {
+            const whitePos = mobileIdx++;
+            const whiteFresh = isFreshCell(whitePos);
+            const whiteDelay = whiteFresh ? 0 : staggerDelayMs(whitePos);
+            const blackPos = pair.black ? mobileIdx++ : null;
+            const blackFresh = blackPos !== null && isFreshCell(blackPos);
+            const blackDelay =
+              blackPos === null ? null : blackFresh ? 0 : staggerDelayMs(blackPos);
+            return (
+              <div
+                className="contents move-row"
+                data-move-num={pair.moveNum}
+                key={pair.moveNum}
+              >
+                <span className="font-mono text-[11px] text-ink-faint self-center text-right pr-1">
+                  {pair.moveNum}.
+                </span>
                 <MoveCell
-                  ply={pair.black.ply}
-                  san={pair.black.san}
-                  isActive={pair.black.ply === activePly}
-                  inline
-                  delayMs={blackDelay}
-                  isFresh={blackFresh}
+                  ply={pair.white.ply}
+                  san={pair.white.san}
+                  isActive={pair.white.ply === activePly}
+                  side="white"
+                  delayMs={whiteDelay}
+                  isFresh={whiteFresh}
                   onSelect={onScrub}
                 />
-              ) : null}
-            </span>
-          );
-        })}
+                {pair.black && blackDelay !== null ? (
+                  <MoveCell
+                    ply={pair.black.ply}
+                    san={pair.black.san}
+                    isActive={pair.black.ply === activePly}
+                    side="black"
+                    delayMs={blackDelay}
+                    isFresh={blackFresh}
+                    onSelect={onScrub}
+                  />
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Desktop: two-column grid pinned to the side of the board. Each move
