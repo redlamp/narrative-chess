@@ -74,30 +74,12 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
   const pairs = useMemo(() => pairsFromMoves(moves), [moves]);
   const activePly = viewedPly ?? livePly;
 
-  // Desktop column-major grid. Pick a column count from the pair
-  // count: ~20 pairs per column, capped at 3. Net effect:
-  //   1-20  pairs -> 1 col   (panel 180px wide — title-row floor)
-  //   21-40 pairs -> 2 cols  (panel 308px)
-  //   41+   pairs -> 3 cols  (panel 460px, hard cap)
-  // Rows-per-col follows from ceil(pairs / cols) so columns end up
-  // balanced in length.
-  const desktopColCount =
-    pairs.length === 0
-      ? 1
-      : Math.min(3, Math.max(1, Math.ceil(pairs.length / 20)));
-  const desktopRowCount =
-    pairs.length === 0 ? 1 : Math.ceil(pairs.length / desktopColCount);
-
-  // Explicit panel width derived from col count. We set this inline
-  // (not via w-fit) so CSS can transition between the three stops
-  // — w-fit / fit-content can't be transitioned, but a numeric
-  // pixel width can. Floor at 180px so the 1-col case still has
-  // room for the title row's "Move list" label + Play button
-  // without truncation.
-  const desktopPanelWidth = Math.max(
-    180,
-    desktopColCount * 140 + (desktopColCount - 1) * 12 + 16, // cols + gaps + px-2
-  );
+  // Desktop list is a single column at all game lengths. Panel
+  // scrolls to keep the active turn visible — column-major / multi
+  // -col was tried (vertical hairlines + width transitions) but
+  // reading flow felt jumpy at threshold crossings and the second-
+  // column indent looked off. Sticking with the chess.com / lichess
+  // convention: one tall list, scroll to follow play.
 
   // Step-button enabled-state derivations. atStart disables |◀/◀ when
   // we're already at ply 0; atLive disables ▶/▶| and Play when we're
@@ -260,10 +242,7 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
           column gets a subtle low-alpha tint matching the side that played
           it (white wash for white moves, black wash for black moves) so the
           eye can scan column-by-column without changing text colour. */}
-      <div
-        className="hidden min-[820px]:flex min-[820px]:flex-col min-[820px]:h-full min-[820px]:overflow-hidden px-2 py-3 border border-rule-soft rounded-md bg-bg-soft/40 transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
-        style={{ width: `${desktopPanelWidth}px` }}
-      >
+      <div className="hidden min-[820px]:flex min-[820px]:flex-col min-[820px]:h-full min-[820px]:w-[180px] min-[820px]:overflow-hidden px-2 py-3 border border-rule-soft rounded-md bg-bg-soft/40">
         <div className="flex items-center justify-between mb-1.5 px-1">
           <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-faint font-bold">
             Move list
@@ -332,30 +311,13 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
         </div>
         {/* Scroll body: just the moves grid. flex-1 + min-h-0 lets it
             shrink to fit available height inside the flex-col panel
-            while keeping the header above always visible. Falls back
-            to overflow-y-auto if a very long game (60+ pairs across
-            3 cols) exceeds the available panel height.
-
-            Inner grid is column-major with explicit col + row counts
-            derived from pairs.length. Items fill col 1 top-to-bottom
-            for desktopRowCount rows, then col 2 starts, then col 3.
-            Col count caps at 3 so the panel stays snug. */}
+            while keeping the header above always visible. Single-
+            column [28px_1fr_1fr] grid (number / white / black) — the
+            scrollIntoView call above keeps the active cell visible
+            as ply advances or the user scrubs. */}
         <div className="flex-1 min-h-0 overflow-y-auto">
-        <div
-          className="grid gap-x-3 gap-y-1 grid-flow-col"
-          style={{
-            gridTemplateColumns: `repeat(${desktopColCount}, 140px)`,
-            gridTemplateRows: `repeat(${desktopRowCount}, 28px)`,
-          }}
-        >
-          {pairs.map((pair, idx) => {
-            // Pair-units at index 0, desktopRowCount, 2*desktopRowCount
-            // are the first row of each visual column under
-            // grid-flow-col. Add a vertical hairline rule to all
-            // *other* pair-units so the columns read as distinct
-            // sections — editorial vertical rule, magazine-style. col 1
-            // skips the rule (it sits flush against the panel padding).
-            const isColStart = idx % desktopRowCount === 0;
+        <div className="grid grid-cols-[28px_1fr_1fr] gap-x-1 gap-y-1">
+          {pairs.map((pair) => {
             const whitePos = desktopIdx++;
             // Cells with cellPos >= baseline arrived AFTER first paint
             // (mid-game live arrivals — own optimistic + opponent
@@ -378,17 +340,7 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
                   : staggerDelayMs(blackPos);
             return (
               <div
-                className={cn(
-                  "grid grid-cols-[28px_1fr_1fr] gap-x-1 move-row",
-                  // Vertical hairline rule on all pair-units except
-                  // the first of each column. ml-1 + pl-2 keep the
-                  // ruled cells visually balanced against unruled
-                  // ones (col 1 sits flush against the panel padding).
-                  // min-[820px]: scopes to desktop — the mobile
-                  // auto-fill grid keeps its own rhythm.
-                  !isColStart &&
-                    "min-[820px]:border-l min-[820px]:border-rule-soft min-[820px]:ml-1 min-[820px]:pl-2",
-                )}
+                className="contents move-row"
                 data-move-num={pair.moveNum}
                 key={pair.moveNum}
               >
