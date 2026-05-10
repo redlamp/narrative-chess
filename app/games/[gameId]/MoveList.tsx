@@ -42,40 +42,56 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
   const activePly = viewedPly ?? livePly;
 
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const initRanRef = useRef(false);
 
-  // On initial mount, fade-up the last 8 cells with 50ms stagger.
-  // Older cells render instantly so long games don't sweep for seconds.
+  // Combined entry animation:
+  // - First fire (mount): stagger every cell (real moves + the empty
+  //   trailing-black placeholder when white has just played) by 10ms each.
+  //   Long games animate longer; matches user spec "x*10ms stagger".
+  // - Subsequent fires (livePly bump): animate the just-played cell. When
+  //   white plays into a fresh row, also animate the empty black placeholder
+  //   sitting beside it so the row appears as a unit, not half-poppy.
   useGSAP(
     () => {
-      const recentCells = containerRef.current?.querySelectorAll(
-        ".move-cell[data-recent]",
+      const root = containerRef.current;
+      if (!root) return;
+      const cells = Array.from(
+        root.querySelectorAll(".move-cell, .move-cell-placeholder"),
       );
-      if (!recentCells || recentCells.length === 0) return;
-      gsap.from(recentCells, {
-        opacity: 0,
-        y: 8,
-        duration: 0.2,
-        stagger: 0.05,
-        ease: "power2.out",
-      });
-    },
-    { scope: containerRef, dependencies: [] },
-  );
+      if (cells.length === 0) return;
 
-  // On new move arrival (moves.length increase), fade-up the newest cell.
-  useGSAP(
-    () => {
-      const cells = containerRef.current?.querySelectorAll(".move-cell");
-      if (!cells || cells.length === 0) return;
-      const newest = cells[cells.length - 1];
-      gsap.from(newest, {
+      if (!initRanRef.current) {
+        initRanRef.current = true;
+        gsap.from(cells, {
+          opacity: 0,
+          y: 8,
+          duration: 0.2,
+          stagger: 0.01,
+          ease: "power2.out",
+        });
+        return;
+      }
+
+      // Per-arrival path
+      if (livePly === 0) return;
+      const newCell = root.querySelector(`.move-cell[data-ply="${livePly}"]`);
+      const targets: Element[] = [];
+      if (newCell) targets.push(newCell);
+      if (livePly % 2 === 1) {
+        // White just played into a fresh row; the placeholder span next
+        // to it materialised at the same time. Animate them together.
+        const placeholder = root.querySelector(".move-cell-placeholder");
+        if (placeholder) targets.push(placeholder);
+      }
+      if (targets.length === 0) return;
+      gsap.from(targets, {
         opacity: 0,
         y: 8,
         duration: 0.2,
         ease: "power2.out",
       });
     },
-    { scope: containerRef, dependencies: [moves.length] },
+    { scope: containerRef, dependencies: [livePly, moves.length] },
   );
 
   // Auto-scroll latest move into view ONLY when not in review mode.
@@ -159,8 +175,10 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
                 />
               ) : (
                 /* Reserve column space + paint the black tint so the
-                   trailing-white-move row keeps the same column rhythm. */
-                <span aria-hidden className="rounded-sm bg-black/20" />
+                   trailing-white-move row keeps the same column rhythm.
+                   move-cell-placeholder participates in the entry tween
+                   alongside the white cell. */
+                <span aria-hidden className="move-cell-placeholder rounded-sm bg-black/20" />
               )}
             </div>
           ))}
