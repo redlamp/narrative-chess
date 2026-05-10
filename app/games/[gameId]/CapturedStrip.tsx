@@ -31,18 +31,23 @@ export function CapturedStrip({ pieces }: Props) {
           : `captured ${pieces.length} piece${pieces.length === 1 ? "" : "s"}`
       }
       className={[
-        // Default (very narrow pill, < 140px content width):
-        //   icon 20px, successor overlap -12px → 8 captures = 76px
+        // Icon size capped at 24px across all stops so the strip (and
+        // therefore the pill) stays a constant height as pill width
+        // grows. Only the *overlap* relaxes when there's room — at
+        // wide pills icons spread out via smaller negative margin
+        // rather than getting taller. h-[24px] (not min-h) locks the
+        // row to one icon row regardless of viewport.
+        // Default (very narrow pill, < 140px): 20px icon, -12px overlap → 76px @ 8
         "[--cap-icon:20px] [--cap-overlap:-12px]",
-        // 140px pill: icon 22, overlap -10 → 8 caps = 106px
+        // 140px pill: 22px / -10 → 106px @ 8
         "@[140px]/pill:[--cap-icon:22px] @[140px]/pill:[--cap-overlap:-10px]",
-        // 180px pill: icon 26, overlap -8 → 8 caps = 152px
-        "@[180px]/pill:[--cap-icon:26px] @[180px]/pill:[--cap-overlap:-8px]",
-        // 240px pill: icon 30, overlap -6 → 8 caps = 198px
-        "@[240px]/pill:[--cap-icon:30px] @[240px]/pill:[--cap-overlap:-6px]",
-        // 280px+ pill: icon 32, overlap -4 → 8 caps = 228px (full size)
-        "@[280px]/pill:[--cap-icon:32px] @[280px]/pill:[--cap-overlap:-4px]",
-        "block min-h-[24px] overflow-hidden",
+        // 180px pill: 24 / -8 → 136px @ 8
+        "@[180px]/pill:[--cap-icon:24px] @[180px]/pill:[--cap-overlap:-8px]",
+        // 240px pill: 24 / -6 → 150px @ 8 (icon ceiling reached, overlap relaxes)
+        "@[240px]/pill:[--cap-icon:24px] @[240px]/pill:[--cap-overlap:-6px]",
+        // 280px+ pill: 24 / -4 → 164px @ 8 (max breathing room)
+        "@[280px]/pill:[--cap-icon:24px] @[280px]/pill:[--cap-overlap:-4px]",
+        "block h-[24px] overflow-hidden",
       ].join(" ")}
       style={{
         // Soft fade on right edge so any unavoidable overflow (very narrow
