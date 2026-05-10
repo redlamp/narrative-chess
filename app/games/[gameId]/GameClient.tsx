@@ -1134,28 +1134,31 @@ export function GameClient({
             board (sticky on tall pages). */}
       <div
         className={cn(
-          "grid gap-2",
-          // Single-column stack below 820px: banner / board / pills / list.
-          // The banner cell is full grid-width but its content gets capped
-          // to max-w-xl (matching the board) so the banner aligns with
-          // the board edges in the 1-col layout.
-          "grid-cols-1 [grid-template-areas:'banner''board''pills''list']",
-          // 820px+: list spans the full right column from banner-top to
-          // pills-bottom so its visible area matches the height of the
-          // stacked left column (banner + board + pills). Row tracks
-          // are pinned to minmax(0, max-content) so the spanning list
-          // can't *inflate* them past their single-row content height
-          // (which previously stretched banner / pills into tall empty
-          // boxes when list content + grid auto-distribution kicked
-          // in). List cell adds min-h-0 + overflow-y-auto on its
-          // scrolling child so any list content beyond the row sum
-          // scrolls inside the cell rather than expanding the grid.
-          "min-[820px]:grid-cols-[minmax(0,1fr)_180px] min-[820px]:gap-x-3 min-[820px]:gap-y-2 min-[820px]:max-w-3xl min-[820px]:mx-auto",
-          "min-[820px]:[grid-template-areas:'banner_list''board_list''pills_list']",
-          "min-[820px]:[grid-template-rows:minmax(0,max-content)_minmax(0,max-content)_minmax(0,max-content)]",
+          // Mobile: flex-col stack. Outer flex's children at mobile are
+          // banner/board/pills (via display:contents on the inner
+          // wrapper) plus the list wrapper at the end → stacked
+          // banner / board / pills / list with gap-2 between.
+          "flex flex-col gap-2",
+          // Desktop (820+): outer becomes flex-row with two flex
+          // items: the inner left wrapper (which switches from
+          // display:contents to flex-col grouping banner/board/pills)
+          // and the list wrapper (fixed 180px). Cross-axis stretch
+          // (the flex default) makes the list wrapper match the row
+          // height — but because the list's *inner* scroll area is
+          // position-absolute at desktop, the list contributes 0 to
+          // row height. Row height = left column natural height. List
+          // scrolls internally if its content exceeds. This avoids the
+          // grid-track inflation that used to stretch banner / pills
+          // into tall empty boxes when the move list got long.
+          "min-[820px]:flex-row min-[820px]:items-stretch min-[820px]:gap-x-3 min-[820px]:gap-y-0 min-[820px]:max-w-3xl min-[820px]:mx-auto",
         )}
       >
-        <div className="[grid-area:banner] max-w-xl mx-auto w-full min-[820px]:max-w-none">
+        {/* Left column wrapper. display:contents at mobile so the
+            children flatten into the outer flex-col; switches to a
+            real flex-col at 820+ so banner/board/pills group together
+            as one flex-row item paired with the list wrapper. */}
+        <div className="contents min-[820px]:flex min-[820px]:flex-col min-[820px]:gap-2 min-[820px]:flex-1 min-[820px]:min-w-0">
+        <div className="max-w-xl mx-auto w-full min-[820px]:max-w-none">
           <InGameBanner
             status={state.status}
             currentTurn={turn ?? "w"}
@@ -1168,7 +1171,7 @@ export function GameClient({
             isObserver={isObserver}
           />
         </div>
-        <div className="[grid-area:board] flex justify-center">
+        <div className="flex justify-center">
           <div className="w-full max-w-xl aspect-square">
             <Chessboard
               position={displayFen}
@@ -1196,7 +1199,7 @@ export function GameClient({
         </div>
 
         {/* Player pills — viewer's pill always LEFT. Active side ringed signal. */}
-        <aside className="[grid-area:pills] flex items-stretch gap-2 max-w-xl mx-auto w-full text-sm">
+        <aside className="flex items-stretch gap-2 max-w-xl mx-auto w-full text-sm min-[820px]:max-w-none">
           {renderPlayerPill(leftSide)}
 
           <div
@@ -1240,8 +1243,16 @@ export function GameClient({
 
           {renderPlayerPill(rightSide)}
         </aside>
+        </div>{/* end left column wrapper (banner/board/pills) */}
 
-        <div className="[grid-area:list] max-w-xl mx-auto w-full min-[820px]:max-w-none min-[820px]:flex min-[820px]:flex-col min-[820px]:gap-2 min-[820px]:min-h-0 min-[820px]:overflow-hidden space-y-2 min-[820px]:space-y-0">
+        {/* List wrapper. At mobile is a normal block centered to
+            max-w-xl matching banner/board/pills width. At 820+ is
+            position-relative + 180px wide; the inner scroll area is
+            position-absolute filling it so the list's natural height
+            doesn't contribute to the flex-row row height. Row height
+            = left column natural height; list scrolls inside. */}
+        <div className="max-w-xl mx-auto w-full min-[820px]:relative min-[820px]:max-w-none min-[820px]:w-[180px] min-[820px]:mx-0 min-[820px]:shrink-0">
+        <div className="space-y-2 min-[820px]:space-y-0 min-[820px]:absolute min-[820px]:inset-0 min-[820px]:flex min-[820px]:flex-col min-[820px]:gap-2 min-[820px]:overflow-y-auto">
           <MoveList
             moves={moves}
             livePly={livePly}
@@ -1274,8 +1285,9 @@ export function GameClient({
               />
             </div>
           )}
-        </div>
-      </div>
+        </div>{/* end list scroll wrapper */}
+        </div>{/* end list outer wrapper */}
+      </div>{/* end outer flex layout */}
 
       <ObserverCount
         gameId={gameId}
