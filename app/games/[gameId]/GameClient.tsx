@@ -182,8 +182,12 @@ export function GameClient({
   // animationDuration prop so each intermediate position eases over the
   // same per-move budget. `currentScrubPlyRef` tracks the ply currently
   // shown so a re-click mid-playback resumes from where the eye left off.
+  // `isPlaying` is the higher-level intent flag set when the user clicks
+  // the Play button — drives the move-list Play button's active styling
+  // independently of whether a curve-scrub is running.
   const [scrubPlaybackFen, setScrubPlaybackFen] = useState<string | null>(null);
   const [scrubAnimDuration, setScrubAnimDuration] = useState<number | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
   const scrubTlRef = useRef<gsap.core.Timeline | null>(null);
   const currentScrubPlyRef = useRef<number | null>(null);
 
@@ -223,7 +227,14 @@ export function GameClient({
    * effect which clears playback wholesale.
    */
   const handleScrub = useCallback(
-    (target: number | null, paceMs?: number) => {
+    (
+      target: number | null,
+      opts?: { paceMs?: number; isPlay?: boolean },
+    ) => {
+      const paceMs = opts?.paceMs;
+      // Any non-Play scrub clears isPlaying; the Play button passes
+      // isPlay:true to keep the active styling lit through its tl.
+      setIsPlaying(opts?.isPlay ?? false);
       if (scrubTlRef.current) {
         scrubTlRef.current.kill();
         scrubTlRef.current = null;
@@ -271,6 +282,7 @@ export function GameClient({
         onComplete: () => {
           setScrubPlaybackFen(null);
           setScrubAnimDuration(null);
+          setIsPlaying(false);
           currentScrubPlyRef.current = null;
           scrubTlRef.current = null;
         },
@@ -323,6 +335,7 @@ export function GameClient({
       setViewedPly(null);
       setScrubPlaybackFen(null);
       setScrubAnimDuration(null);
+      setIsPlaying(false);
       currentScrubPlyRef.current = null;
       prevLivePlyRef.current = livePly;
     }
@@ -1197,7 +1210,8 @@ export function GameClient({
             livePly={livePly}
             viewedPly={viewedPly}
             onScrub={handleScrub}
-            onPlay={() => handleScrub(null, 1000)}
+            onPlay={() => handleScrub(null, { paceMs: 1000, isPlay: true })}
+            isPlaying={isPlaying}
           />
 
           {/* Resign + abort buttons live alongside the move list so the

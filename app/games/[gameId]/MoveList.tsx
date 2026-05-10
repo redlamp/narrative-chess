@@ -32,9 +32,15 @@ type Props = {
    * faster curve used by step buttons + cell clicks.
    */
   onPlay?: () => void;
+  /**
+   * True while a Play-initiated playback is in flight. Drives the
+   * Play button's active (oxblood) styling so the user has a clear
+   * visual signal that auto-advance is running.
+   */
+  isPlaying?: boolean;
 };
 
-export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay }: Props) {
+export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying = false }: Props) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const t = e.target as HTMLElement;
@@ -195,11 +201,20 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay }: Props) 
           <button
             type="button"
             aria-label="Play through to current position"
-            disabled={atLive}
+            disabled={atLive && !isPlaying}
             onClick={() => (onPlay ? onPlay() : onScrub(null))}
-            className={cn("w-6", stepBtnClass)}
+            className={cn(
+              "w-6",
+              stepBtnClass,
+              // Active-while-playing: swap to oxblood-on-cream so the
+              // button reads as "engaged" and not just "hovered". Same
+              // bg-accent / text-accent-foreground pair the active move
+              // cell uses, keeps the editorial accent consistent.
+              isPlaying &&
+                "bg-accent text-accent-foreground border-accent hover:bg-accent",
+            )}
           >
-            <Play aria-hidden className="h-3 w-3" />
+            <Play aria-hidden className="h-3 w-3" fill="currentColor" />
           </button>
         </div>
         {/* Step controls — ArrowLeftToLine (first), ArrowLeft (prev),
