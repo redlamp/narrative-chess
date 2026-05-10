@@ -33,21 +33,23 @@ export function SiteHeaderNav({ displayName }: Props) {
         <Link href="/" aria-label="Narrative Chess" className="text-foreground">
           <Wordmark size="sm" layout="responsive" />
         </Link>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0 sm:gap-1">
           {/* Baseline-align the display-name link with the nav-link list:
               both pieces of text drop into a flex items-baseline group so
               the italic Fraunces baseline sits flush with the mono uppercase
               baseline rather than floating higher per their default
               line-box centering. ThemeToggle stays outside this group so
-              it keeps icon-centered. */}
-          <div className="flex items-baseline gap-1">
+              it keeps icon-centered. Gaps shrink on narrow viewports
+              (gap-0/mr-0 default → gap-1/mr-1 at sm+) so the inter-button
+              breathing room matches the link padding's own narrow scaling. */}
+          <div className="flex items-baseline gap-0 sm:gap-1">
             {displayName && (
               <Link
                 href="/account"
                 className={cn(
                   // px-1.5 default → px-3 at sm+ keeps the nav compact on
                   // phones while letting it breathe on tablets+.
-                  "px-1.5 sm:px-3 py-1.5 font-body italic text-[14px] leading-none transition-colors mr-1",
+                  "px-1.5 sm:px-3 py-1.5 font-body italic text-[14px] leading-none transition-colors mr-0 sm:mr-1",
                   pathname === "/account"
                     ? "text-oxblood"
                     : "text-ink-soft hover:text-foreground",
@@ -58,7 +60,7 @@ export function SiteHeaderNav({ displayName }: Props) {
                 {displayName}
               </Link>
             )}
-            <ul className="flex items-baseline gap-1">
+            <ul className="flex items-baseline gap-0 sm:gap-1">
               {links.map((link) => {
                 const active = pathname === link.href;
                 return (
