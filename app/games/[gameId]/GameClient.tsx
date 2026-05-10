@@ -77,6 +77,8 @@ type Props = {
   initialBlackRemainingMs: number | null;
   initialTurnStartedAt: string | null;
   initialMoves: MoveEvent[];
+  /** Polish A — uuid of player with an outstanding draw offer, or null. */
+  initialDrawOfferedBy: string | null;
 };
 
 type State = {
@@ -88,6 +90,8 @@ type State = {
   whiteRemainingMs: number | null;
   blackRemainingMs: number | null;
   turnStartedAt: string | null;
+  /** Polish A — uuid of player with an outstanding draw offer, or null. */
+  drawOfferedBy: string | null;
 };
 
 const TERMINAL: GameStatus[] = ["white_won", "black_won", "draw", "aborted"];
@@ -152,6 +156,7 @@ export function GameClient({
   initialBlackRemainingMs,
   initialTurnStartedAt,
   initialMoves,
+  initialDrawOfferedBy,
 }: Props) {
   const router = useRouter();
   const isObserver = myColor === null;
@@ -164,6 +169,7 @@ export function GameClient({
     whiteRemainingMs: initialWhiteRemainingMs,
     blackRemainingMs: initialBlackRemainingMs,
     turnStartedAt: initialTurnStartedAt,
+    drawOfferedBy: initialDrawOfferedBy,
   });
 
   const [moves, setMoves] = useState<MoveLike[]>(
@@ -437,6 +443,7 @@ export function GameClient({
         blackRemainingMs?: number | null;
         turnStartedAt?: string | null;
       },
+      drawOfferedBy?: string | null,
     ) => {
       setState((prev) => ({
         ...prev,
@@ -457,6 +464,8 @@ export function GameClient({
           clock?.turnStartedAt !== undefined
             ? clock.turnStartedAt
             : prev.turnStartedAt,
+        drawOfferedBy:
+          drawOfferedBy !== undefined ? drawOfferedBy : prev.drawOfferedBy,
       }));
     },
     [],
@@ -522,11 +531,16 @@ export function GameClient({
     let sub: { unsubscribe: () => void } | null = null;
     let cancelled = false;
     void subscribeToGameStatus(gameId, (u) =>
-      applyStatusLocal(u.status, u.termination_reason ?? null, {
-        whiteRemainingMs: u.white_remaining_ms ?? null,
-        blackRemainingMs: u.black_remaining_ms ?? null,
-        turnStartedAt: u.turn_started_at ?? null,
-      }),
+      applyStatusLocal(
+        u.status,
+        u.termination_reason ?? null,
+        {
+          whiteRemainingMs: u.white_remaining_ms ?? null,
+          blackRemainingMs: u.black_remaining_ms ?? null,
+          turnStartedAt: u.turn_started_at ?? null,
+        },
+        u.draw_offered_by ?? null,
+      ),
     ).then((s) => {
       if (cancelled) s.unsubscribe();
       else sub = s;
@@ -1281,6 +1295,8 @@ export function GameClient({
             status={state.status}
             ply={state.ply}
             isObserver={isObserver}
+            drawOfferedBy={state.drawOfferedBy}
+            viewerUserId={viewerUserId}
           />
 
           {/* Dev-only fool's mate smoke button. Hidden for observers and in

@@ -40,6 +40,7 @@ export const TerminationReasonSchema = z.enum([
   "resignation",
   "abort",
   "timeout",
+  "draw_agreement",
 ]);
 
 export type TerminationReason = z.infer<typeof TerminationReasonSchema>;

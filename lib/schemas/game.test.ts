@@ -109,10 +109,11 @@ describe("GameStatusUpdateEventSchema", () => {
 });
 
 describe("TerminationReasonSchema", () => {
-  test("accepts the eight valid reasons (incl. timeout)", () => {
+  test("accepts the nine valid reasons (incl. timeout, draw_agreement)", () => {
     for (const r of [
       "checkmate", "stalemate", "threefold",
       "fifty_move", "insufficient", "resignation", "abort", "timeout",
+      "draw_agreement",
     ] as const) {
       expect(TerminationReasonSchema.safeParse(r).success).toBe(true);
     }
