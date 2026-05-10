@@ -1,8 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 import { pairsFromMoves, stepPly, type MoveLike } from "@/lib/chess/move-list";
 import { MoveCell } from "./MoveCell";
+
+// Shared classes for the |◀ ◀ ▶ ▶| step buttons. Editorial mono micro-
+// button style: thin rule, subtle hover, ink-faint when disabled.
+const stepBtnClass = cn(
+  "h-6 grid place-items-center rounded text-[12px] leading-none",
+  "border border-rule-soft hover:bg-bg-soft transition-colors",
+  "disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent",
+);
 
 type Props = {
   moves: MoveLike[];
@@ -38,6 +47,12 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
 
   const pairs = useMemo(() => pairsFromMoves(moves), [moves]);
   const activePly = viewedPly ?? livePly;
+
+  // Step-button enabled-state derivations. atStart disables |◀/◀ when
+  // we're already at ply 0; atLive disables ▶/▶| and Play when we're
+  // already viewing the live position (viewedPly null OR equal to live).
+  const atStart = activePly === 0;
+  const atLive = viewedPly === null || viewedPly === livePly;
 
   const totalCells = pairs.reduce(
     (acc, p) => acc + 1 + (p.black ? 1 : 0),
@@ -159,9 +174,67 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
           it (white wash for white moves, black wash for black moves) so the
           eye can scan column-by-column without changing text colour. */}
       <div className="hidden lg:block px-2 py-3 max-h-[640px] overflow-y-auto border border-rule-soft rounded-md bg-bg-soft/40">
-        <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-faint font-bold mb-2 px-1">
-          Move list
-        </p>
+        <div className="flex items-center justify-between mb-1.5 px-1">
+          <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-faint font-bold">
+            Move list
+          </p>
+          <button
+            type="button"
+            aria-label="Play through to current position"
+            disabled={atLive}
+            onClick={() => onScrub(null)}
+            className={cn(
+              "h-6 w-6 grid place-items-center rounded text-[12px]",
+              "border border-rule-soft hover:bg-bg-soft transition-colors",
+              "disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent",
+              "leading-none",
+            )}
+          >
+            <span aria-hidden>▶</span>
+          </button>
+        </div>
+        {/* Step controls. |◀ first move, ◀ prev, ▶ next, ▶| live. All
+            route through the same onScrub callback the cells use, so
+            multi-ply jumps (|◀ from late-game) ride the same GSAP
+            timeline + per-move tween budget. */}
+        <div className="grid grid-cols-4 gap-1 mb-2 px-1">
+          <button
+            type="button"
+            aria-label="First move"
+            disabled={atStart}
+            onClick={() => onScrub(0)}
+            className={stepBtnClass}
+          >
+            <span aria-hidden>⏮</span>
+          </button>
+          <button
+            type="button"
+            aria-label="Previous move"
+            disabled={atStart}
+            onClick={() => onScrub(stepPly(viewedPly, -1, livePly))}
+            className={stepBtnClass}
+          >
+            <span aria-hidden>◀</span>
+          </button>
+          <button
+            type="button"
+            aria-label="Next move"
+            disabled={atLive}
+            onClick={() => onScrub(stepPly(viewedPly, +1, livePly))}
+            className={stepBtnClass}
+          >
+            <span aria-hidden>▶</span>
+          </button>
+          <button
+            type="button"
+            aria-label="Latest move"
+            disabled={atLive}
+            onClick={() => onScrub(null)}
+            className={stepBtnClass}
+          >
+            <span aria-hidden>⏭</span>
+          </button>
+        </div>
         <div className="grid grid-cols-[28px_1fr_1fr] gap-x-1 gap-y-1">
           {pairs.map((pair) => {
             const whitePos = desktopIdx++;
