@@ -1108,7 +1108,7 @@ export function GameClient({
   };
 
   return (
-    <main className="container mx-auto max-w-6xl py-8 px-6 space-y-4">
+    <main className="container mx-auto max-w-6xl py-2 px-3 sm:py-8 sm:px-6 space-y-4">
       {/* Test hook — version-agnostic state probe for e2e specs.
           E2E specs assert against data-ply and data-status; the hook
           stays library-DOM-agnostic so it survives react-chessboard

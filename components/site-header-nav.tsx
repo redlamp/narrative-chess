@@ -20,14 +20,14 @@ export function SiteHeaderNav({ displayName }: Props) {
     { href: "/games", label: "Games" },
   ];
   if (currentGameId) {
-    links.push({ href: `/games/${currentGameId}`, label: "Current game" });
+    links.push({ href: `/games/${currentGameId}`, label: "Current" });
   }
 
   return (
     <header className="border-b border-rule bg-background">
       <nav className="max-w-5xl mx-auto px-4 h-12 flex items-center justify-between gap-4">
         <Link href="/" aria-label="Narrative Chess" className="text-foreground">
-          <Wordmark size="sm" />
+          <Wordmark size="sm" layout="responsive" />
         </Link>
         <div className="flex items-center gap-1">
           {displayName && (

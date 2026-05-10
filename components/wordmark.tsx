@@ -4,7 +4,14 @@ import type { CSSProperties } from "react";
 type Props = {
   className?: string;
   size?: "sm" | "md";
-  layout?: "1-line" | "2-line";
+  /**
+   * `1-line` — horizontal pairing, default for wide chrome (header).
+   * `2-line` — stacked, "Narrative" above boxed CHESS.
+   * `responsive` — stacked at narrow widths (<640px), horizontal at sm+.
+   *   Use this when the wordmark sits in a layout that's tight on small
+   *   screens but has room on desktop (the site header).
+   */
+  layout?: "1-line" | "2-line" | "responsive";
 };
 
 /**
@@ -24,13 +31,23 @@ export function Wordmark({
   layout = "1-line",
 }: Props) {
   const dims = SIZES[size];
-  const isOneLine = layout === "1-line";
+
+  // Responsive layout uses Tailwind to flip flex direction at the `sm`
+  // breakpoint (640px). Below sm we stack (col, items-end); at sm+ we
+  // sit on a single line (row, items-center). Gap is the same in both
+  // axes per the Figma master, so a single `gap` style covers both.
+  const layoutClass =
+    layout === "1-line"
+      ? "flex-row items-center"
+      : layout === "2-line"
+        ? "flex-col items-end"
+        : "flex-col items-end sm:flex-row sm:items-center";
 
   return (
     <span
       className={cn(
         "inline-flex leading-none align-middle",
-        isOneLine ? "flex-row items-center" : "flex-col items-end",
+        layoutClass,
         className,
       )}
       style={{ gap: `${dims.gap}px` }}

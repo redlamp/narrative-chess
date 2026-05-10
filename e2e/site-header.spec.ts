@@ -76,15 +76,15 @@ test("site header navigation across routes", async ({ browser, baseURL }) => {
     "aria-current",
     "page",
   );
-  await expect(header.getByRole("link", { name: /current game/i })).toHaveCount(0);
+  await expect(header.getByRole("link", { name: /^current$/i })).toHaveCount(0);
 
-  // Visit game route — Current game link appears + is active.
+  // Visit game route — Current link appears + is active.
   await page.goto(`${baseURL}/games/${gameId}`);
   await expect(
-    header.getByRole("link", { name: /current game/i }),
+    header.getByRole("link", { name: /^current$/i }),
   ).toBeVisible();
   await expect(
-    header.getByRole("link", { name: /current game/i }),
+    header.getByRole("link", { name: /^current$/i }),
   ).toHaveAttribute("aria-current", "page");
 
   // Brand link still routes home.
