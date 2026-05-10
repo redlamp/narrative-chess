@@ -243,6 +243,22 @@
   animation-delay: var(--cell-delay, 0ms);
 }
 
+/* ============================================
+   Scrub-playback piece easing. react-chessboard sets
+   `style="transition: transform <duration>ms"` inline on every piece;
+   no easing function is specified so it falls to CSS default `ease`,
+   which feels uneven when chained across many quick steps. While the
+   GameClient is mid-scrub-playback it adds .scrub-playback to the
+   board container along with --scrub-piece-duration; the rule below
+   wins via !important and replaces the timing function with quadInOut
+   (easings.net easeInOutQuad). [data-piece] is the attribute
+   react-chessboard puts on each piece DOM node.
+   ============================================ */
+.scrub-playback [data-piece] {
+  transition: transform var(--scrub-piece-duration, 200ms)
+    cubic-bezier(0.45, 0, 0.55, 1) !important;
+}
+
 /* Cells that arrive AFTER the initial baseline lock (own optimistic +
    opponent realtime). The slide-up + stagger reads as "list updates
    after the piece lands"; an opacity-only fade with zero delay starts
