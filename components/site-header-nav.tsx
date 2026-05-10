@@ -63,8 +63,17 @@ export function SiteHeaderNav({ displayName }: Props) {
             <ul className="flex items-baseline gap-0 sm:gap-1">
               {links.map((link) => {
                 const active = pathname === link.href;
+                // Current-game link hides below 380px (after the theme
+                // toggle has already dropped out at 480) so the very
+                // narrowest viewports only carry the brand + Games +
+                // (optional) display-name. 'Games' itself never hides;
+                // it's the canonical entry point.
+                const isCurrent = link.label === "Current";
                 return (
-                  <li key={link.href}>
+                  <li
+                    key={link.href}
+                    className={cn(isCurrent && "max-[380px]:hidden")}
+                  >
                     <Link
                       href={link.href}
                       className={cn(
@@ -82,7 +91,13 @@ export function SiteHeaderNav({ displayName }: Props) {
               })}
             </ul>
           </div>
-          <ThemeToggle />
+          {/* Theme toggle drops out below 480px — first visual element
+              to disappear as the window narrows. Theme stays toggleable
+              via the OS / system preference (next-themes resolvedTheme)
+              and the existing setting persists. */}
+          <div className="max-[480px]:hidden">
+            <ThemeToggle />
+          </div>
         </div>
       </nav>
     </header>
