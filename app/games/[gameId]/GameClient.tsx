@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { Chessboard } from "react-chessboard";
 import type { Piece, PromotionPieceOption, Square } from "@/lib/chess/board-types";
+import { taylorPieces } from "@/lib/chess/piece-set";
 import { toast } from "sonner";
 import { Chess } from "chess.js";
 import {
@@ -868,6 +869,7 @@ export function GameClient({
             isDraggablePiece={isDraggablePiece}
             customSquareStyles={customSquareStyles}
             customBoardStyle={{ borderRadius: 6 }}
+            customPieces={taylorPieces}
           />
         </div>
       </div>
