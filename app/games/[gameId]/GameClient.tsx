@@ -20,13 +20,15 @@ import {
   subscribeToMoves,
   subscribeToGameStatus,
 } from "@/lib/realtime/subscribe";
-import type { GameStatus, TerminationReason } from "@/lib/schemas/game";
+import type { GameStatus, MoveEvent, TerminationReason } from "@/lib/schemas/game";
 import { GameActions } from "./GameActions";
 import { TerminalBanner } from "./TerminalBanner";
 import { ObserverCount } from "./ObserverCount";
 import { Clock } from "./Clock";
 import { useAutoClaim } from "./useAutoClaim";
 import { computeRemaining, type ClockMode } from "@/lib/chess/clock";
+import { viewedFen, type MoveLike } from "@/lib/chess/move-list";
+import { MoveList } from "./MoveList";
 import dynamic from "next/dynamic";
 
 // Dev-only smoke button — dynamic import gated on VERCEL_ENV. We can't
@@ -69,6 +71,7 @@ type Props = {
   initialWhiteRemainingMs: number | null;
   initialBlackRemainingMs: number | null;
   initialTurnStartedAt: string | null;
+  initialMoves: MoveEvent[];
 };
 
 type State = {
@@ -143,6 +146,7 @@ export function GameClient({
   initialWhiteRemainingMs,
   initialBlackRemainingMs,
   initialTurnStartedAt,
+  initialMoves,
 }: Props) {
   const router = useRouter();
   const isObserver = myColor === null;
@@ -156,6 +160,74 @@ export function GameClient({
     blackRemainingMs: initialBlackRemainingMs,
     turnStartedAt: initialTurnStartedAt,
   });
+
+  const [moves, setMoves] = useState<MoveLike[]>(
+    initialMoves.map((m) => ({ ply: m.ply, san: m.san, fen_after: m.fen_after })),
+  );
+  const [viewedPly, setViewedPly] = useState<number | null>(null);
+
+  const livePly = state.ply;
+
+  const displayFen = useMemo(
+    () => viewedFen(moves, viewedPly, state.fen),
+    [moves, viewedPly, state.fen],
+  );
+
+  // Auto-snap to live: when livePly bumps (own optimistic apply or
+  // realtime opponent INSERT), reset viewedPly to null so the viewer
+  // jumps back to the live position. Without this, a player who's
+  // scrubbed back stays scrubbed when their opponent moves — easy to
+  // miss the new position. The ref tracks the last seen livePly so we
+  // only fire when it actually changes (not on unrelated re-renders).
+  const prevLivePlyRef = useRef(livePly);
+  useEffect(() => {
+    if (livePly !== prevLivePlyRef.current) {
+      setViewedPly(null);
+      prevLivePlyRef.current = livePly;
+    }
+  }, [livePly]);
+
+  // Audio cue — wooden thunk on every livePly bump (own + opponent moves).
+  // Asset: public/sounds/move.mp3 (lichess CC-BY 4.0).
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    const a = new Audio("/sounds/move.mp3");
+    a.volume = 0.5;
+    a.preload = "auto";
+    audioRef.current = a;
+  }, []);
+
+  // Cue + Your-turn toast on livePly bump.
+  // Audio plays for every move (own + opponent). Toast only fires when the
+  // new live position is the viewer's turn — so you hear the thunk on your
+  // own move but the toast only appears when the opponent has played and
+  // the clock is now on you.
+  const prevLivePlyForCueRef = useRef(livePly);
+  useEffect(() => {
+    if (livePly === 0) return;
+    if (livePly === prevLivePlyForCueRef.current) return;
+    prevLivePlyForCueRef.current = livePly;
+
+    const a = audioRef.current;
+    if (a) {
+      a.currentTime = 0;
+      // Browser autoplay policy: first call before user interaction may
+      // reject. Subsequent calls unlock once user has interacted with the
+      // page anywhere (clicking sign-in, the board, etc).
+      a.play().catch(() => { /* swallow autoplay rejection */ });
+    }
+
+    // Derive side-to-move from fen — `state.currentTurn` doesn't exist
+    // on the State shape; the canonical turn is fenTurn(state.fen).
+    const currentTurn = fenTurn(state.fen);
+    if (
+      !isObserver &&
+      state.status === "in_progress" &&
+      currentTurn === myColor
+    ) {
+      toast("Your turn.", { duration: 3500 });
+    }
+  }, [livePly, isObserver, state.status, state.fen, myColor]);
 
   const mode: ClockMode = timeControlType ?? "untimed";
 
@@ -261,6 +333,13 @@ export function GameClient({
     let cancelled = false;
     void subscribeToMoves(gameId, (m) => {
       applyMoveLocal({ ply: m.ply, fen: m.fen_after });
+      setMoves((prev) => {
+        if (prev.some((x) => x.ply === m.ply)) return prev;
+        return [
+          ...prev,
+          { ply: m.ply, san: m.san, fen_after: m.fen_after },
+        ].sort((a, b) => a.ply - b.ply);
+      });
     }).then((s) => {
       if (cancelled) s.unsubscribe();
       else sub = s;
@@ -499,6 +578,17 @@ export function GameClient({
             fen: result.data.fen_after,
             status: result.data.status,
             terminationReason: result.data.termination_reason ?? null,
+          });
+          setMoves((prev) => {
+            if (prev.some((x) => x.ply === result.data.ply)) return prev;
+            return [
+              ...prev,
+              {
+                ply: result.data.ply,
+                san: result.data.san,
+                fen_after: result.data.fen_after,
+              },
+            ].sort((a, b) => a.ply - b.ply);
           });
           if (TERMINAL.includes(result.data.status)) {
             toast.success(`Game over: ${statusLabel(result.data.status)}`);
@@ -852,57 +942,79 @@ export function GameClient({
         isObserver={isObserver}
       />
 
-      <div className="flex justify-center">
-        <div className="w-full max-w-xl aspect-square">
-          <Chessboard
-            position={state.fen}
-            boardOrientation={myColor === "b" ? "black" : "white"}
-            onPieceDrop={onPieceDrop}
-            onPieceDragBegin={onPieceDragBegin}
-            onPieceDragEnd={onPieceDragEnd}
-            onPromotionPieceSelect={onPromotionPieceSelect}
-            onSquareClick={onSquareClick}
-            onMouseOverSquare={onSquareMouseOver}
-            onMouseOutSquare={onSquareMouseOut}
-            arePiecesDraggable={inProgress && !isObserver}
-            isDraggablePiece={isDraggablePiece}
-            customSquareStyles={customSquareStyles}
-            customBoardStyle={{ borderRadius: 6 }}
+      {/* Responsive layout via grid-template-areas. Single MoveList instance,
+          repositioned by CSS:
+          - mobile: stacked, list flows below player pills
+          - lg+: 2-column grid, list pinned right of board (sticky on tall pages)
+          MoveList itself renders both display variants (inline ribbon vs grid)
+          and the appropriate one shows per breakpoint. */}
+      <div
+        className={cn(
+          "grid gap-4",
+          "grid-cols-1 [grid-template-areas:'board''pills''list']",
+          "lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8 lg:items-start lg:max-w-5xl lg:mx-auto",
+          "lg:[grid-template-areas:'board_list''pills_list']",
+        )}
+      >
+        <div className="[grid-area:board] flex justify-center">
+          <div className="w-full max-w-xl aspect-square">
+            <Chessboard
+              position={displayFen}
+              boardOrientation={myColor === "b" ? "black" : "white"}
+              onPieceDrop={onPieceDrop}
+              onPieceDragBegin={onPieceDragBegin}
+              onPieceDragEnd={onPieceDragEnd}
+              onPromotionPieceSelect={onPromotionPieceSelect}
+              onSquareClick={onSquareClick}
+              onMouseOverSquare={onSquareMouseOver}
+              onMouseOutSquare={onSquareMouseOut}
+              arePiecesDraggable={
+                inProgress && !isObserver && (viewedPly === null || viewedPly === livePly)
+              }
+              isDraggablePiece={isDraggablePiece}
+              customSquareStyles={customSquareStyles}
+              customBoardStyle={{ borderRadius: 6 }}
+            />
+          </div>
+        </div>
+
+        {/* Player pills — viewer's pill always LEFT. Active side ringed signal. */}
+        <aside className="[grid-area:pills] flex items-stretch gap-2 max-w-xl mx-auto w-full text-sm">
+          {renderPlayerPill(leftSide)}
+
+          <div
+            className={cn(
+              "flex flex-col items-center justify-center rounded border px-3 py-2 min-w-[112px] transition-colors",
+              !inProgress && "bg-bg-soft text-ink-soft border-rule-soft",
+              whiteActive && "bg-white text-black border-rule",
+              blackActive && "bg-black text-white border-black",
+            )}
+          >
+            <span className="font-mono uppercase tracking-wide text-[10px]">{turnText}</span>
+            {inProgress && (
+              <span
+                className="text-base leading-none mt-0.5"
+                aria-hidden="true"
+                title={whiteActive ? "white to move" : "black to move"}
+              >
+                {arrowChar}
+              </span>
+            )}
+            <span className="font-mono text-[10px] tabular-nums opacity-60 mt-0.5">ply {state.ply}</span>
+          </div>
+
+          {renderPlayerPill(rightSide)}
+        </aside>
+
+        <div className="[grid-area:list] lg:sticky lg:top-4 max-w-xl mx-auto w-full lg:max-w-none">
+          <MoveList
+            moves={moves}
+            livePly={livePly}
+            viewedPly={viewedPly}
+            onScrub={setViewedPly}
           />
         </div>
       </div>
-
-      {/* Sidebar — single horizontal row of three pills. Viewer's pill is
-          always on the LEFT regardless of whether they're light or dark.
-          Player pills render in their team's colors (black bg / white bg);
-          the turn pill in the middle adopts the active side's palette and
-          shows an arrow pointing to whichever player is to move. */}
-      <aside className="flex items-stretch gap-2 max-w-xl mx-auto w-full text-sm">
-        {renderPlayerPill(leftSide)}
-
-        <div
-          className={cn(
-            "flex flex-col items-center justify-center rounded border px-3 py-2 min-w-[112px] transition-colors",
-            !inProgress && "bg-bg-soft text-ink-soft border-rule-soft",
-            whiteActive && "bg-white text-black border-rule",
-            blackActive && "bg-black text-white border-black",
-          )}
-        >
-          <span className="font-mono uppercase tracking-wide text-[10px]">{turnText}</span>
-          {inProgress && (
-            <span
-              className="text-base leading-none mt-0.5"
-              aria-hidden="true"
-              title={whiteActive ? "white to move" : "black to move"}
-            >
-              {arrowChar}
-            </span>
-          )}
-          <span className="font-mono text-[10px] tabular-nums opacity-60 mt-0.5">ply {state.ply}</span>
-        </div>
-
-        {renderPlayerPill(rightSide)}
-      </aside>
 
       <ObserverCount
         gameId={gameId}
