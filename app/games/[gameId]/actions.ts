@@ -338,3 +338,177 @@ export async function registerObserver(
   const count = typeof data === "number" ? data : 0;
   return { ok: true, count };
 }
+
+// ----------------------------------------------------------------------------
+// Polish A — draw-by-agreement actions
+// ----------------------------------------------------------------------------
+
+export type OfferDrawErrorCode =
+  | "validation"
+  | "unauthenticated"
+  | "game_not_found"
+  | "not_a_participant"
+  | "not_active"
+  | "pre_game"
+  | "offer_already_outstanding"
+  | "unknown";
+
+export type OfferDrawOutcome =
+  | { ok: true }
+  | { ok: false; code: OfferDrawErrorCode; message: string };
+
+function mapOfferDrawPgError(msg: string): OfferDrawErrorCode {
+  if (msg.includes("offer_already_outstanding")) return "offer_already_outstanding";
+  if (msg.includes("pre_game")) return "pre_game";
+  if (msg.includes("not_a_participant")) return "not_a_participant";
+  if (msg.includes("not_active")) return "not_active";
+  if (msg.includes("game_not_found")) return "game_not_found";
+  if (msg.includes("unauthenticated")) return "unauthenticated";
+  return "unknown";
+}
+
+export async function offerDraw(input: { gameId: string }): Promise<OfferDrawOutcome> {
+  if (typeof input?.gameId !== "string" || input.gameId.length === 0) {
+    return { ok: false, code: "validation", message: "gameId required" };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, code: "unauthenticated", message: "not signed in" };
+  }
+
+  const { error } = await supabase.rpc("offer_draw", { p_game_id: input.gameId });
+  if (error) {
+    return { ok: false, code: mapOfferDrawPgError(error.message), message: error.message };
+  }
+  return { ok: true };
+}
+
+export type WithdrawDrawErrorCode =
+  | "validation"
+  | "unauthenticated"
+  | "game_not_found"
+  | "no_offer"
+  | "not_offerer"
+  | "unknown";
+
+export type WithdrawDrawOutcome =
+  | { ok: true }
+  | { ok: false; code: WithdrawDrawErrorCode; message: string };
+
+function mapWithdrawDrawPgError(msg: string): WithdrawDrawErrorCode {
+  if (msg.includes("not_offerer")) return "not_offerer";
+  if (msg.includes("no_offer")) return "no_offer";
+  if (msg.includes("game_not_found")) return "game_not_found";
+  if (msg.includes("unauthenticated")) return "unauthenticated";
+  return "unknown";
+}
+
+export async function withdrawDraw(input: { gameId: string }): Promise<WithdrawDrawOutcome> {
+  if (typeof input?.gameId !== "string" || input.gameId.length === 0) {
+    return { ok: false, code: "validation", message: "gameId required" };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, code: "unauthenticated", message: "not signed in" };
+  }
+
+  const { error } = await supabase.rpc("withdraw_draw", { p_game_id: input.gameId });
+  if (error) {
+    return { ok: false, code: mapWithdrawDrawPgError(error.message), message: error.message };
+  }
+  return { ok: true };
+}
+
+export type AcceptDrawErrorCode =
+  | "validation"
+  | "unauthenticated"
+  | "game_not_found"
+  | "not_a_participant"
+  | "not_active"
+  | "no_offer"
+  | "cannot_accept_own_offer"
+  | "unknown";
+
+export type AcceptDrawOutcome =
+  | { ok: true }
+  | { ok: false; code: AcceptDrawErrorCode; message: string };
+
+function mapAcceptDrawPgError(msg: string): AcceptDrawErrorCode {
+  if (msg.includes("cannot_accept_own_offer")) return "cannot_accept_own_offer";
+  if (msg.includes("no_offer")) return "no_offer";
+  if (msg.includes("not_active")) return "not_active";
+  if (msg.includes("not_a_participant")) return "not_a_participant";
+  if (msg.includes("game_not_found")) return "game_not_found";
+  if (msg.includes("unauthenticated")) return "unauthenticated";
+  return "unknown";
+}
+
+export async function acceptDraw(input: { gameId: string }): Promise<AcceptDrawOutcome> {
+  if (typeof input?.gameId !== "string" || input.gameId.length === 0) {
+    return { ok: false, code: "validation", message: "gameId required" };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, code: "unauthenticated", message: "not signed in" };
+  }
+
+  const { error } = await supabase.rpc("accept_draw", { p_game_id: input.gameId });
+  if (error) {
+    return { ok: false, code: mapAcceptDrawPgError(error.message), message: error.message };
+  }
+  return { ok: true };
+}
+
+export type DeclineDrawErrorCode =
+  | "validation"
+  | "unauthenticated"
+  | "game_not_found"
+  | "not_a_participant"
+  | "no_offer"
+  | "cannot_decline_own_offer"
+  | "unknown";
+
+export type DeclineDrawOutcome =
+  | { ok: true }
+  | { ok: false; code: DeclineDrawErrorCode; message: string };
+
+function mapDeclineDrawPgError(msg: string): DeclineDrawErrorCode {
+  if (msg.includes("cannot_decline_own_offer")) return "cannot_decline_own_offer";
+  if (msg.includes("no_offer")) return "no_offer";
+  if (msg.includes("not_a_participant")) return "not_a_participant";
+  if (msg.includes("game_not_found")) return "game_not_found";
+  if (msg.includes("unauthenticated")) return "unauthenticated";
+  return "unknown";
+}
+
+export async function declineDraw(input: { gameId: string }): Promise<DeclineDrawOutcome> {
+  if (typeof input?.gameId !== "string" || input.gameId.length === 0) {
+    return { ok: false, code: "validation", message: "gameId required" };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, code: "unauthenticated", message: "not signed in" };
+  }
+
+  const { error } = await supabase.rpc("decline_draw", { p_game_id: input.gameId });
+  if (error) {
+    return { ok: false, code: mapDeclineDrawPgError(error.message), message: error.message };
+  }
+  return { ok: true };
+}
