@@ -22,7 +22,7 @@ export function CapturedStrip({ pieces }: Props) {
           ? "no pieces captured"
           : `captured ${pieces.length} piece${pieces.length === 1 ? "" : "s"}`
       }
-      className="inline-flex items-center min-h-[20px]"
+      className="inline-flex items-center min-h-[32px]"
     >
       {pieces.map((p, i) => (
         // eslint-disable-next-line @next/next/no-img-element -- static SVG, see piece-set.tsx note
@@ -30,12 +30,12 @@ export function CapturedStrip({ pieces }: Props) {
           key={`${p}-${i}`}
           src={`/pieces/taylor/${p[0]}${p[1].toLowerCase()}.svg`}
           alt={p}
-          width={20}
-          height={20}
+          width={32}
+          height={32}
           draggable={false}
           className="block"
           style={{
-            marginLeft: i === 0 ? 0 : -10,
+            marginLeft: i === 0 ? 0 : -8,
             opacity: 0.9,
             pointerEvents: "none",
             userSelect: "none",

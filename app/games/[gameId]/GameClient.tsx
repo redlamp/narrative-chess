@@ -1034,11 +1034,19 @@ export function GameClient({
             onScrub={setViewedPly}
           />
 
+          {/* Resign + abort buttons live alongside the move list so the
+              right column owns all per-game controls. GameActions self-hides
+              for observers and for non-active games. */}
+          <GameActions
+            gameId={gameId}
+            status={state.status}
+            ply={state.ply}
+            isObserver={isObserver}
+          />
+
           {/* Dev-only fool's mate smoke button. Hidden for observers and in
               prod bundles (gated on VERCEL_ENV at build time via the dynamic
-              import above — `SmokeFoolsMate` resolves to null in prod). Sits
-              under the move list so the right column hosts all dev / debug
-              affordances together. */}
+              import above — `SmokeFoolsMate` resolves to null in prod). */}
           {SmokeFoolsMate && !isObserver && myColor && (
             <div className="flex items-center justify-center">
               <SmokeFoolsMate
@@ -1058,19 +1066,6 @@ export function GameClient({
         isObserver={isObserver}
         initialTotal={initialObserverCount}
       />
-
-      {/* Game actions — resign + abort buttons. Self-hides for observers
-          and for non-active games, so this is safe to mount unconditionally.
-          Sits beneath the sidebar so the player-card row stays a clean
-          three-pill identity strip. */}
-      <div className="max-w-xl mx-auto w-full">
-        <GameActions
-          gameId={gameId}
-          status={state.status}
-          ply={state.ply}
-          isObserver={isObserver}
-        />
-      </div>
     </main>
   );
 }

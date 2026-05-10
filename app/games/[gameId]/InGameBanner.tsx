@@ -51,7 +51,7 @@ export function InGameBanner({ status, currentTurn, ply, isObserver }: Props) {
   return (
     <div
       className={cn(
-        "max-w-xl mx-auto w-full rounded border border-foreground bg-foreground text-background p-4",
+        "w-full rounded border border-foreground bg-foreground text-background p-4",
         "flex items-center justify-between gap-4",
       )}
       role="status"
