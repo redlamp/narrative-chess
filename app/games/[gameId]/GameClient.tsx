@@ -1254,15 +1254,17 @@ export function GameClient({
         </div>{/* end left column wrapper (banner/board/pills) */}
 
         {/* List wrapper. At mobile is a normal block centered to
-            max-w-xl matching banner/board/pills width. At 820+ uses
-            w-fit + shrink-0 so the panel snaps to its content's
-            natural width — 1, 2 or 3 columns of pair-units depending
-            on game length. The list's column-major flow caps cols
-            at 3 (driven from pairs.length inside MoveList) so its
-            height stays bounded under the left column's height; no
-            absolute-positioning trick needed. */}
-        <div className="max-w-xl mx-auto w-full min-[820px]:max-w-none min-[820px]:shrink-0 min-[820px]:mx-0">
-        <div className="space-y-2 min-[820px]:space-y-0 min-[820px]:flex min-[820px]:flex-col min-[820px]:gap-2">
+            max-w-xl matching banner/board/pills width. At 820+ is
+            position-relative + fixed 180px wide (snug to the move
+            list panel — list is single-column desktop). The inner
+            flex-col is position-absolute filling this wrapper so
+            (a) the list's natural height contributes 0 to flex-row
+            row sizing — list height is bounded by row height (=
+            banner + board + pills) and never extends past the pills'
+            bottom — and (b) any list content beyond that height
+            scrolls inside the panel. */}
+        <div className="max-w-xl mx-auto w-full min-[820px]:relative min-[820px]:max-w-none min-[820px]:w-[180px] min-[820px]:shrink-0 min-[820px]:mx-0">
+        <div className="space-y-2 min-[820px]:space-y-0 min-[820px]:absolute min-[820px]:inset-0 min-[820px]:flex min-[820px]:flex-col min-[820px]:gap-2">
           <MoveList
             moves={moves}
             livePly={livePly}

@@ -242,7 +242,7 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
           column gets a subtle low-alpha tint matching the side that played
           it (white wash for white moves, black wash for black moves) so the
           eye can scan column-by-column without changing text colour. */}
-      <div className="hidden min-[820px]:flex min-[820px]:flex-col min-[820px]:h-full min-[820px]:w-[180px] min-[820px]:overflow-hidden px-2 py-3 border border-rule-soft rounded-md bg-bg-soft/40">
+      <div className="hidden min-[820px]:flex min-[820px]:flex-col min-[820px]:h-full min-[820px]:overflow-hidden px-2 py-3 border border-rule-soft rounded-md bg-bg-soft/40">
         <div className="flex items-center justify-between mb-1.5 px-1">
           <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-faint font-bold">
             Move list
