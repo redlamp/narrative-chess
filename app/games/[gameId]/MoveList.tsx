@@ -68,6 +68,20 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
   const pairs = useMemo(() => pairsFromMoves(moves), [moves]);
   const activePly = viewedPly ?? livePly;
 
+  // Desktop column-major grid. Pick a column count from the pair
+  // count: ~20 pairs per column, capped at 3. Net effect:
+  //   1-20  pairs -> 1 col   (panel ~180px wide, content-snug)
+  //   21-40 pairs -> 2 cols  (panel ~308px)
+  //   41+   pairs -> 3 cols  (panel ~460px, hard cap)
+  // Rows-per-col follows from ceil(pairs / cols) so columns end up
+  // balanced in length.
+  const desktopColCount =
+    pairs.length === 0
+      ? 1
+      : Math.min(3, Math.max(1, Math.ceil(pairs.length / 20)));
+  const desktopRowCount =
+    pairs.length === 0 ? 1 : Math.ceil(pairs.length / desktopColCount);
+
   // Step-button enabled-state derivations. atStart disables |◀/◀ when
   // we're already at ply 0; atLive disables ▶/▶| and Play when we're
   // already viewing the live position (viewedPly null OR equal to live).
@@ -290,26 +304,22 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
         </div>
         {/* Scroll body: just the moves grid. flex-1 + min-h-0 lets it
             shrink to fit available height inside the flex-col panel
-            while keeping the header above always visible.
+            while keeping the header above always visible. Falls back
+            to overflow-y-auto if a very long game (60+ pairs across
+            3 cols) exceeds the available panel height.
 
-            Inner grid uses column-major flow:
-              - grid-template-rows: repeat(auto-fill, 28px)  → row
-                count = floor(panel-height / 28px)
-              - grid-auto-flow: column                       → items
-                fill col 1 top-to-bottom, then col 2 starts ONLY when
-                col 1 is full (i.e. when there are enough turns to
-                justify a second column).
-              - grid-auto-columns: 140px                     → each
-                column is 140px wide.
-
-            On narrow panels (~180px, 820-1099 viewports) only 1 col
-            fits visually; if a game has more turns than rows, col 2
-            spawns to the right and is reachable via horizontal
-            scroll (overflow-auto). On wider panels (≥1100 viewport,
-            list grows up to 480px) 3 cols fit and most games never
-            need to scroll at all. */}
-        <div className="flex-1 min-h-0 overflow-auto">
-        <div className="grid h-full gap-x-3 gap-y-1 grid-flow-col [grid-template-rows:repeat(auto-fill,28px)] auto-cols-[140px]">
+            Inner grid is column-major with explicit col + row counts
+            derived from pairs.length. Items fill col 1 top-to-bottom
+            for desktopRowCount rows, then col 2 starts, then col 3.
+            Col count caps at 3 so the panel stays snug. */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+        <div
+          className="grid gap-x-3 gap-y-1 grid-flow-col"
+          style={{
+            gridTemplateColumns: `repeat(${desktopColCount}, 140px)`,
+            gridTemplateRows: `repeat(${desktopRowCount}, 28px)`,
+          }}
+        >
           {pairs.map((pair) => {
             const whitePos = desktopIdx++;
             // Cells with cellPos >= baseline arrived AFTER first paint
