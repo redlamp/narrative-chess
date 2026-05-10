@@ -150,9 +150,13 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
   let mobileIdx = 0;
 
   return (
-    <div ref={containerRef} className="w-full" data-testid="move-list">
+    <div
+      ref={containerRef}
+      className="w-full min-[820px]:flex-1 min-[820px]:min-h-0"
+      data-testid="move-list"
+    >
       {/* Mobile: inline PGN ribbon. Wraps naturally. Reads like a score sheet. */}
-      <div className="min-[820px]:hidden font-mono text-[13px] leading-7 px-1 py-2 max-h-48 overflow-y-auto">
+      <div className="min-[820px]:hidden font-mono text-[13px] leading-7 px-1 py-2">
         {pairs.map((pair) => {
           const whitePos = mobileIdx++;
           const whiteFresh = isFreshCell(whitePos);
@@ -193,7 +197,7 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
           column gets a subtle low-alpha tint matching the side that played
           it (white wash for white moves, black wash for black moves) so the
           eye can scan column-by-column without changing text colour. */}
-      <div className="hidden min-[820px]:block px-2 py-3 max-h-[640px] overflow-y-auto border border-rule-soft rounded-md bg-bg-soft/40">
+      <div className="hidden min-[820px]:block min-[820px]:h-full px-2 py-3 border border-rule-soft rounded-md bg-bg-soft/40">
         <div className="flex items-center justify-between mb-1.5 px-1">
           <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-faint font-bold">
             Move list

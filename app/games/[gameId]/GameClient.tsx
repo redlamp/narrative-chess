@@ -1136,12 +1136,15 @@ export function GameClient({
           // to max-w-xl (matching the board) so the banner aligns with
           // the board edges in the 1-col layout.
           "grid-cols-1 [grid-template-areas:'banner''board''pills''list']",
-          // 820px+: banner spans both columns; board+list sit side by
-          // side; pills row hugs board column. 820 chosen over Tailwind's
-          // default lg (1024) so the two-column layout kicks in earlier
-          // on tablets.
-          "min-[820px]:grid-cols-[minmax(0,1fr)_180px] min-[820px]:gap-x-3 min-[820px]:gap-y-2 min-[820px]:items-start min-[820px]:max-w-3xl min-[820px]:mx-auto",
-          "min-[820px]:[grid-template-areas:'banner_banner''board_list''pills_list']",
+          // 820px+: list spans the full right column from banner-top to
+          // pills-bottom so its visible area matches the height of the
+          // stacked left column (banner + board + pills) rather than
+          // capping at board+pills like before. items-stretch (the grid
+          // default — drop items-start) lets each row's row-track
+          // height come from the taller participant; the list's inner
+          // h-full picks up the row total.
+          "min-[820px]:grid-cols-[minmax(0,1fr)_180px] min-[820px]:gap-x-3 min-[820px]:gap-y-2 min-[820px]:max-w-3xl min-[820px]:mx-auto",
+          "min-[820px]:[grid-template-areas:'banner_list''board_list''pills_list']",
         )}
       >
         <div className="[grid-area:banner] max-w-xl mx-auto w-full min-[820px]:max-w-none">
@@ -1212,7 +1215,7 @@ export function GameClient({
           {renderPlayerPill(rightSide)}
         </aside>
 
-        <div className="[grid-area:list] min-[820px]:sticky min-[820px]:top-4 max-w-xl mx-auto w-full min-[820px]:max-w-none space-y-2">
+        <div className="[grid-area:list] max-w-xl mx-auto w-full min-[820px]:max-w-none min-[820px]:flex min-[820px]:flex-col min-[820px]:gap-2 space-y-2 min-[820px]:space-y-0">
           <MoveList
             moves={moves}
             livePly={livePly}
