@@ -1193,21 +1193,29 @@ export function GameClient({
 
           <div
             className={cn(
-              // Fixed width (was min-w-[112px]) so the pill doesn't
-              // resize as turnText cycles through 'Your turn' (9 chars)
-              // → 'Opponent's turn' (15 chars) → 'Check — your move'
-              // (17 chars). The growth was rebalancing the flex row,
-              // jiggling the adjacent player pills at every move flip.
-              // 140px fits 'Check — your move' at 10px mono with the
-              // px-3 padding; longer observer text truncates instead
-              // of growing.
-              "flex flex-col items-center justify-center rounded border px-3 py-2 w-[140px] shrink-0 transition-colors",
+              // Below sm (640): w-auto + tight px-2 — content drives
+              //   width (arrow + ply only, turnText hidden), pill
+              //   collapses to ~50px so the player pills on either
+              //   side keep their breathing room.
+              // sm+ (>=640): w-[140px] fixed so the pill doesn't
+              //   resize as turnText cycles through 'Your turn' (9
+              //   chars) -> 'Opponent's turn' (15) -> 'Check — your
+              //   move' (17). The growth was rebalancing the flex row,
+              //   jiggling the player pills at every move flip; 140px
+              //   fits the longest standard text + truncates longer
+              //   observer strings.
+              // shrink-0 on both: center never compresses below its
+              //   own content; player pills (flex-1) absorb pressure
+              //   first.
+              "flex flex-col items-center justify-center rounded border px-2 sm:px-3 py-2 shrink-0 transition-colors sm:w-[140px]",
               !inProgress && "bg-bg-soft text-ink-soft border-rule-soft",
               whiteActive && "bg-white text-black border-rule",
               blackActive && "bg-black text-white border-black",
             )}
           >
-            <span className="font-mono uppercase tracking-wide text-[10px] truncate max-w-full text-center">
+            {/* Hidden below sm; arrow + ply alone communicate state on
+                very narrow viewports. */}
+            <span className="hidden sm:block font-mono uppercase tracking-wide text-[10px] truncate max-w-full text-center">
               {turnText}
             </span>
             {inProgress && (
