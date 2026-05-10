@@ -1142,15 +1142,19 @@ export function GameClient({
           // Desktop (820+): outer becomes flex-row with two flex
           // items: the inner left wrapper (which switches from
           // display:contents to flex-col grouping banner/board/pills)
-          // and the list wrapper (fixed 180px). Cross-axis stretch
-          // (the flex default) makes the list wrapper match the row
-          // height — but because the list's *inner* scroll area is
+          // and the list wrapper. Cross-axis stretch (the flex
+          // default) makes the list wrapper match the row height —
+          // but because the list's *inner* scroll area is
           // position-absolute at desktop, the list contributes 0 to
           // row height. Row height = left column natural height. List
-          // scrolls internally if its content exceeds. This avoids the
-          // grid-track inflation that used to stretch banner / pills
-          // into tall empty boxes when the move list got long.
-          "min-[820px]:flex-row min-[820px]:items-stretch min-[820px]:gap-x-3 min-[820px]:gap-y-0 min-[820px]:max-w-3xl min-[820px]:mx-auto",
+          // scrolls internally if its content exceeds.
+          //
+          // Container max-w grows past max-w-3xl at wider viewports
+          // so the leftover horizontal beyond the board (which stays
+          // at max-w-xl ~576px) flows into the list column. The list
+          // grid then auto-fills more pair-unit columns and avoids
+          // unnecessary scrolling when the screen has room.
+          "min-[820px]:flex-row min-[820px]:items-stretch min-[820px]:gap-x-3 min-[820px]:gap-y-0 min-[820px]:max-w-3xl min-[820px]:mx-auto min-[1100px]:max-w-5xl min-[1280px]:max-w-6xl",
         )}
       >
         {/* Left column wrapper. display:contents at mobile so the
@@ -1247,11 +1251,14 @@ export function GameClient({
 
         {/* List wrapper. At mobile is a normal block centered to
             max-w-xl matching banner/board/pills width. At 820+ is
-            position-relative + 180px wide; the inner scroll area is
-            position-absolute filling it so the list's natural height
-            doesn't contribute to the flex-row row height. Row height
-            = left column natural height; list scrolls inside. */}
-        <div className="max-w-xl mx-auto w-full min-[820px]:relative min-[820px]:max-w-none min-[820px]:w-[180px] min-[820px]:mx-0 min-[820px]:shrink-0">
+            position-relative; flex-1 absorbs whatever horizontal
+            space is left after the board's max-w-xl, with a 180px
+            floor (so the panel never disappears) and a 480px cap (so
+            ultra-wide screens don't get an absurdly wide list). The
+            inner scroll area is position-absolute filling this
+            wrapper so the list's natural height doesn't contribute
+            to the flex-row row height. */}
+        <div className="max-w-xl mx-auto w-full min-[820px]:relative min-[820px]:max-w-none min-[820px]:flex-1 min-[820px]:min-w-[180px] min-[820px]:max-w-[480px] min-[820px]:mx-0">
         <div className="space-y-2 min-[820px]:space-y-0 min-[820px]:absolute min-[820px]:inset-0 min-[820px]:flex min-[820px]:flex-col min-[820px]:gap-2 min-[820px]:overflow-y-auto">
           <MoveList
             moves={moves}

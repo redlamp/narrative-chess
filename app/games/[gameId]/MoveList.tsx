@@ -290,9 +290,14 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
         </div>
         {/* Scroll body: just the moves grid. flex-1 + min-h-0 lets it
             shrink to fit available height inside the flex-col panel
-            while keeping the header above always visible. */}
+            while keeping the header above always visible.
+
+            Inner grid uses the same auto-fill pattern as mobile so
+            the list packs 1/2/3 pair-units per row depending on the
+            available panel width — wide viewports avoid scrolling
+            entirely on most games by laying out turns in columns. */}
         <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="grid grid-cols-[28px_1fr_1fr] gap-x-1 gap-y-1">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-x-3 gap-y-1">
           {pairs.map((pair) => {
             const whitePos = desktopIdx++;
             // Cells with cellPos >= baseline arrived AFTER first paint
@@ -315,7 +320,7 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
                   ? 0
                   : staggerDelayMs(blackPos);
             return (
-              <div className="contents move-row" data-move-num={pair.moveNum} key={pair.moveNum}>
+              <div className="grid grid-cols-[28px_1fr_1fr] gap-x-1 move-row" data-move-num={pair.moveNum} key={pair.moveNum}>
                 <span className="font-mono text-[11px] text-ink-faint self-center text-right pr-1">
                   {pair.moveNum}.
                 </span>
