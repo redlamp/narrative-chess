@@ -252,11 +252,20 @@ export function GameClient({
       // jumps still fit the 2s budget.
       const perMoveMs =
         paceMs ?? Math.max(20, Math.min(200, Math.round(2000 / steps)));
+      // Tween duration is independent of pace. When paceMs is supplied
+      // (Play button, 1000ms cadence) we want each piece slide to look
+      // like a normal live move (200ms) and the rest of the interval to
+      // be a quiet wait. When paceMs is omitted (curve scrub) tween =
+      // pace so each segment fills its slot rather than ending early
+      // and then snapping mid-pause.
+      const tweenMs = paceMs !== undefined ? 200 : perMoveMs;
 
-      // Freeze the board at the start FEN, switch animationDuration to
-      // the per-move budget, then schedule each intermediate FEN.
+      // Freeze the board at the start FEN, set the chessboard
+      // animationDuration prop to tweenMs (drives each intermediate
+      // position's piece slide), then schedule each intermediate FEN
+      // perMoveMs apart.
       setScrubPlaybackFen(viewedFen(moves, startPly, state.fen));
-      setScrubAnimDuration(perMoveMs);
+      setScrubAnimDuration(tweenMs);
 
       const tl = gsap.timeline({
         onComplete: () => {
