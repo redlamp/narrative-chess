@@ -166,7 +166,17 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
           const blackDelay =
             blackPos === null ? null : blackFresh ? 0 : staggerDelayMs(blackPos);
           return (
-            <span key={pair.moveNum} className="move-row" data-move-num={pair.moveNum}>
+            // inline-block + whitespace-nowrap keeps each [N. white black]
+            // turn-pair together as a single unit. Without this the inline
+            // ribbon was happy to break mid-pair so a black move could land
+            // orphaned at the start of the next line. mr-2 spaces pairs
+            // apart, replacing the ad-hoc trailing space the old layout
+            // used.
+            <span
+              key={pair.moveNum}
+              className="move-row inline-block whitespace-nowrap mr-2"
+              data-move-num={pair.moveNum}
+            >
               <span className="text-ink-faint">{pair.moveNum}.</span>
               <MoveCell
                 ply={pair.white.ply}
@@ -187,7 +197,7 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
                   isFresh={blackFresh}
                   onSelect={onScrub}
                 />
-              ) : null}{" "}
+              ) : null}
             </span>
           );
         })}
