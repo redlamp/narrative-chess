@@ -96,6 +96,9 @@ export const GameStatusUpdateEventSchema = z.object({
   turn_started_at: z.string().nullable().optional(),
   current_turn: z.enum(["w", "b"]).optional(),
   ply: z.number().int().nonnegative().optional(),
+  // Polish A — outstanding draw offer. uuid of offerer, or null when no
+  // offer is live. Optional so older payloads still parse.
+  draw_offered_by: z.guid().nullable().optional(),
 });
 export type GameStatusUpdateEvent = z.infer<typeof GameStatusUpdateEventSchema>;
 

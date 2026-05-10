@@ -44,7 +44,11 @@ export function MoveCell({ ply, san, isActive, inline, side, delayMs, isFresh, o
           : undefined
       }
       className={cn(
-        "move-cell font-mono text-[13px] tabular-nums transition-colors rounded-sm",
+        // No transition-colors on bg/text: scrubbing through plies via
+        // playhead can advance several cells per second, and a fading
+        // highlight blurs which cell is active. Instant on/off lets
+        // the eye lock the playhead position immediately.
+        "move-cell font-mono text-[13px] tabular-nums rounded-sm",
         isFresh && "move-cell-fresh",
         inline
           ? "inline-block px-1.5 py-0.5 mx-0.5 align-baseline"

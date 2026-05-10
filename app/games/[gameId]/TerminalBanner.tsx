@@ -33,7 +33,9 @@ function describe(status: GameStatus, reason: TerminationReason | null): {
             ? "By the fifty-move rule."
             : reason === "insufficient"
               ? "By insufficient material."
-              : "Drawn.";
+              : reason === "draw_agreement"
+                ? "By agreement."
+                : "Drawn.";
     return { title: "Draw", subtitle };
   }
   const winner = status === "white_won" ? "White" : "Black";
@@ -42,7 +44,9 @@ function describe(status: GameStatus, reason: TerminationReason | null): {
       ? "By checkmate."
       : reason === "resignation"
         ? "By resignation."
-        : "Game over.";
+        : reason === "timeout"
+          ? "By timeout."
+          : "Game over.";
   return { title: `${winner} wins`, subtitle };
 }
 

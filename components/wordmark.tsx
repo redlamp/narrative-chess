@@ -4,7 +4,14 @@ import type { CSSProperties } from "react";
 type Props = {
   className?: string;
   size?: "sm" | "md";
-  layout?: "1-line" | "2-line";
+  /**
+   * `1-line` — horizontal pairing, default for wide chrome (header).
+   * `2-line` — stacked, "Narrative" above boxed CHESS.
+   * `responsive` — stacked at narrow widths (<640px), horizontal at sm+.
+   *   Use this when the wordmark sits in a layout that's tight on small
+   *   screens but has room on desktop (the site header).
+   */
+  layout?: "1-line" | "2-line" | "responsive";
 };
 
 /**
@@ -24,13 +31,34 @@ export function Wordmark({
   layout = "1-line",
 }: Props) {
   const dims = SIZES[size];
-  const isOneLine = layout === "1-line";
+
+  // Responsive layout uses Tailwind to flip flex direction at 820px
+  // (the same breakpoint the game page uses to switch from single-
+  // column board+list to two-column board|list). Below 820 we stack
+  // (col, items-end); at 820+ we sit on a single line (row,
+  // items-center). Gap is the same in both axes per the Figma
+  // master, so a single `gap` style covers both.
+  const layoutClass =
+    layout === "1-line"
+      ? "flex-row items-center"
+      : layout === "2-line"
+        ? "flex-col items-end"
+        : "flex-col items-end min-[820px]:flex-row min-[820px]:items-center";
+
+  // Fluid scaling: at narrow viewports (<400px-ish) the logo shrinks via
+  // clamp() down to 75% of its base size; at wider viewports it pins at
+  // base. aspect-ratio handles height so the SVG mask stays proportional.
+  // 25vw is the preferred-value coefficient — at 400px viewport a 99px
+  // mark hits 25vw=99.3, equal to its max; below that vw shrinks until
+  // the floor wins.
+  const fluidWidth = (px: number) =>
+    `clamp(${(px * 0.75).toFixed(2)}px, ${(px * 0.25).toFixed(2)}vw, ${px}px)`;
 
   return (
     <span
       className={cn(
         "inline-flex leading-none align-middle",
-        isOneLine ? "flex-row items-center" : "flex-col items-end",
+        layoutClass,
         className,
       )}
       style={{ gap: `${dims.gap}px` }}
@@ -41,8 +69,8 @@ export function Wordmark({
         aria-hidden="true"
         className="block bg-current shrink-0"
         style={{
-          width: `${dims.narrativeW}px`,
-          height: `${dims.narrativeH}px`,
+          width: fluidWidth(dims.narrativeW),
+          aspectRatio: `${dims.narrativeW} / ${dims.narrativeH}`,
           ...maskStyle("/brand/wordmark-narrative.svg"),
         }}
       />
@@ -50,8 +78,8 @@ export function Wordmark({
         aria-hidden="true"
         className="block bg-current shrink-0"
         style={{
-          width: `${dims.borderW}px`,
-          height: `${dims.borderH}px`,
+          width: fluidWidth(dims.borderW),
+          aspectRatio: `${dims.borderW} / ${dims.borderH}`,
           ...maskStyle("/brand/wordmark-chess-bordered.svg"),
         }}
       />

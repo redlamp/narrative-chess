@@ -37,11 +37,6 @@ export function StageOverlay({ authed }: Props) {
           stories.
         </h1>
 
-        <p className="mt-4 font-body italic font-[320] text-[17px] leading-[1.45] text-ink-soft">
-          Two players sit. A board opens. Somewhere between move 1 and the
-          resignation, a story arrives — and the engine quietly records it.
-        </p>
-
         <StageCtas authed={authed} />
       </div>
     </div>

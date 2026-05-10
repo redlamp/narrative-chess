@@ -14,7 +14,7 @@ export function ThemeToggle() {
       size="icon"
       aria-label="Toggle theme"
       title="Toggle theme"
-      className="h-9 w-9 rounded-none border border-rule"
+      className="h-9 w-9 border border-rule"
       onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
     >
       <SunIcon className="size-4 scale-100 rotate-0 transition-transform dark:scale-0 dark:-rotate-90" />

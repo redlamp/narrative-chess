@@ -32,6 +32,7 @@ const RowSchema = z.object({
   white_remaining_ms: z.number().int().nullable(),
   black_remaining_ms: z.number().int().nullable(),
   turn_started_at: z.string().nullable(),
+  draw_offered_by: z.string().uuid().nullable(),
 });
 
 export default async function GamePage({
@@ -70,6 +71,7 @@ export default async function GamePage({
         white_remaining_ms,
         black_remaining_ms,
         turn_started_at,
+        draw_offered_by,
         white_name:white_id ( display_name ),
         black_name:black_id ( display_name )
       `)
@@ -155,6 +157,7 @@ export default async function GamePage({
       initialBlackRemainingMs={row.black_remaining_ms}
       initialTurnStartedAt={row.turn_started_at}
       initialMoves={initialMoves}
+      initialDrawOfferedBy={row.draw_offered_by}
     />
   );
 }
