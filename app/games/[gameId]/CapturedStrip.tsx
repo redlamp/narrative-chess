@@ -33,18 +33,20 @@ export function CapturedStrip({ pieces }: Props) {
           width={32}
           height={32}
           draggable={false}
-          className="block"
-          style={{
-            // First icon nudges 8px LEFT so the strip aligns with the
-            // player-name baseline above (the SVG's transparent margin
-            // would otherwise push it visually inset). Successors
-            // overlap -12px for a denser ribbon that still reads
-            // piece-by-piece on a long capture list.
-            marginLeft: i === 0 ? -8 : -12,
-            opacity: 0.9,
-            pointerEvents: "none",
-            userSelect: "none",
-          }}
+          // First icon nudges left so the strip aligns with the
+          // player-name baseline above (the SVG's transparent margin
+          // would otherwise push it visually inset). Successors
+          // overlap further to compress a long capture list.
+          // Both negative margins increase as the viewport narrows so
+          // captures fit on a single row inside the player pill on
+          // phones — at sm+ they back off for breathing room.
+          //   first:     -ml-3 (-12) below sm  -> -ml-2 (-8)  at sm+
+          //   successor: -ml-4 (-16) below sm  -> -ml-3 (-12) at sm+
+          className={
+            i === 0
+              ? "block opacity-90 pointer-events-none select-none -ml-3 sm:-ml-2"
+              : "block opacity-90 pointer-events-none select-none -ml-4 sm:-ml-3"
+          }
         />
       ))}
     </span>
