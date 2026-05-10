@@ -1193,13 +1193,23 @@ export function GameClient({
 
           <div
             className={cn(
-              "flex flex-col items-center justify-center rounded border px-3 py-2 min-w-[112px] transition-colors",
+              // Fixed width (was min-w-[112px]) so the pill doesn't
+              // resize as turnText cycles through 'Your turn' (9 chars)
+              // → 'Opponent's turn' (15 chars) → 'Check — your move'
+              // (17 chars). The growth was rebalancing the flex row,
+              // jiggling the adjacent player pills at every move flip.
+              // 140px fits 'Check — your move' at 10px mono with the
+              // px-3 padding; longer observer text truncates instead
+              // of growing.
+              "flex flex-col items-center justify-center rounded border px-3 py-2 w-[140px] shrink-0 transition-colors",
               !inProgress && "bg-bg-soft text-ink-soft border-rule-soft",
               whiteActive && "bg-white text-black border-rule",
               blackActive && "bg-black text-white border-black",
             )}
           >
-            <span className="font-mono uppercase tracking-wide text-[10px]">{turnText}</span>
+            <span className="font-mono uppercase tracking-wide text-[10px] truncate max-w-full text-center">
+              {turnText}
+            </span>
             {inProgress && (
               <span
                 className="text-base leading-none mt-0.5"
