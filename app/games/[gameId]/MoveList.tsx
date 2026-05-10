@@ -58,8 +58,19 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
   }, []);
 
   function staggerIdx(cellPos: number): number {
+    // Pre-mount: every cell gets its raw sequential position so the
+    // SSR'd HTML carries a 0..N-1 stagger that fires from first paint.
     if (baseline === null) return cellPos;
-    return Math.max(0, cellPos - baseline);
+    // Cells that were already present when baseline locked keep their
+    // original idx forever - clamping them to 0 would erase the stagger
+    // on the first post-mount re-render (the effect's setState fires
+    // before paint completes for many cells, so the inline --cell-idx
+    // attribute gets overwritten to 0 and the keyframe re-resolves).
+    if (cellPos < baseline) return cellPos;
+    // Cells that arrived after mount get a small idx so they fade in
+    // promptly without inheriting the long stagger tail of the existing
+    // list. Walks 0, 1, 2... per arrival batch.
+    return cellPos - baseline;
   }
 
   // Auto-scroll latest move into view ONLY when not in review mode.
