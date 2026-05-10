@@ -1149,19 +1149,22 @@ export function GameClient({
           // row height. Row height = left column natural height. List
           // scrolls internally if its content exceeds.
           //
-          // Container max-w grows past max-w-3xl at wider viewports
-          // so the leftover horizontal beyond the board (which stays
-          // at max-w-xl ~576px) flows into the list column. The list
-          // grid then auto-fills more pair-unit columns and avoids
-          // unnecessary scrolling when the screen has room.
-          "min-[820px]:flex-row min-[820px]:items-stretch min-[820px]:gap-x-3 min-[820px]:gap-y-0 min-[820px]:max-w-3xl min-[820px]:mx-auto min-[1100px]:max-w-5xl min-[1280px]:max-w-6xl",
+          // Outer max-w sums board (576) + gap (12) + list cap (480)
+          // = 1068px. Below that the list flex-grows into whatever
+          // horizontal is left over. Board stays 576px the whole way
+          // — left column is basis-[576px] shrink-0 so it never
+          // gives up width.
+          "min-[820px]:flex-row min-[820px]:items-stretch min-[820px]:gap-x-3 min-[820px]:gap-y-0 min-[820px]:max-w-[1068px] min-[820px]:mx-auto",
         )}
       >
         {/* Left column wrapper. display:contents at mobile so the
             children flatten into the outer flex-col; switches to a
             real flex-col at 820+ so banner/board/pills group together
-            as one flex-row item paired with the list wrapper. */}
-        <div className="contents min-[820px]:flex min-[820px]:flex-col min-[820px]:gap-2 min-[820px]:flex-1 min-[820px]:min-w-0">
+            as one flex-row item paired with the list wrapper.
+            basis-[576px] + shrink-0 locks this column to the board's
+            width — the list column gets whatever horizontal is left
+            over, and the board never gets squeezed by it. */}
+        <div className="contents min-[820px]:flex min-[820px]:flex-col min-[820px]:gap-2 min-[820px]:basis-[576px] min-[820px]:shrink-0 min-[820px]:min-w-0">
         <div className="max-w-xl mx-auto w-full min-[820px]:max-w-none">
           <InGameBanner
             status={state.status}

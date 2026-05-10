@@ -292,12 +292,24 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
             shrink to fit available height inside the flex-col panel
             while keeping the header above always visible.
 
-            Inner grid uses the same auto-fill pattern as mobile so
-            the list packs 1/2/3 pair-units per row depending on the
-            available panel width — wide viewports avoid scrolling
-            entirely on most games by laying out turns in columns. */}
-        <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-x-3 gap-y-1">
+            Inner grid uses column-major flow:
+              - grid-template-rows: repeat(auto-fill, 28px)  → row
+                count = floor(panel-height / 28px)
+              - grid-auto-flow: column                       → items
+                fill col 1 top-to-bottom, then col 2 starts ONLY when
+                col 1 is full (i.e. when there are enough turns to
+                justify a second column).
+              - grid-auto-columns: 140px                     → each
+                column is 140px wide.
+
+            On narrow panels (~180px, 820-1099 viewports) only 1 col
+            fits visually; if a game has more turns than rows, col 2
+            spawns to the right and is reachable via horizontal
+            scroll (overflow-auto). On wider panels (≥1100 viewport,
+            list grows up to 480px) 3 cols fit and most games never
+            need to scroll at all. */}
+        <div className="flex-1 min-h-0 overflow-auto">
+        <div className="grid h-full gap-x-3 gap-y-1 grid-flow-col [grid-template-rows:repeat(auto-fill,28px)] auto-cols-[140px]">
           {pairs.map((pair) => {
             const whitePos = desktopIdx++;
             // Cells with cellPos >= baseline arrived AFTER first paint
