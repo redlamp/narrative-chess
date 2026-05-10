@@ -142,10 +142,21 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
   // same path: keep the highlighted cell visible. block: "nearest"
   // means we only scroll when the cell is actually outside the
   // current viewport — no movement when already in view.
+  //
+  // Desktop-only: scoped to the desktop scroll container. The mobile
+  // move list isn't in its own scroll context (it flows in the page),
+  // so calling scrollIntoView on a mobile cell would scroll the
+  // window. We query inside the desktop block directly via the
+  // [data-desktop-list] attribute so the mobile cell is never
+  // selected.
   useEffect(() => {
     const root = containerRef.current;
     if (!root) return;
-    const target = root.querySelector<HTMLElement>(
+    const desktopRoot = root.querySelector<HTMLElement>(
+      "[data-desktop-list]",
+    );
+    if (!desktopRoot) return;
+    const target = desktopRoot.querySelector<HTMLElement>(
       `.move-cell[data-ply="${activePly}"]`,
     );
     if (target) {
@@ -242,7 +253,10 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
           column gets a subtle low-alpha tint matching the side that played
           it (white wash for white moves, black wash for black moves) so the
           eye can scan column-by-column without changing text colour. */}
-      <div className="hidden min-[820px]:flex min-[820px]:flex-col min-[820px]:h-full min-[820px]:overflow-hidden px-2 py-3 border border-rule-soft rounded-md bg-bg-soft/40">
+      <div
+        data-desktop-list
+        className="hidden min-[820px]:flex min-[820px]:flex-col min-[820px]:h-full min-[820px]:overflow-hidden px-2 py-3 border border-rule-soft rounded-md bg-bg-soft/40"
+      >
         <div className="flex items-center justify-between mb-1.5 px-1">
           <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-faint font-bold">
             Move list
