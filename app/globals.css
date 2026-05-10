@@ -20,12 +20,14 @@
   --color-ink: var(--ink);
   --color-ink-soft: var(--ink-soft);
   --color-ink-faint: var(--ink-faint);
+  --color-ink-faint-border: var(--ink-faint-border);
   --color-rule: var(--rule);
   --color-rule-soft: var(--rule-soft);
   --color-bg-soft: var(--bg-soft);
   --color-bg-deep: var(--bg-deep);
   --color-oxblood: var(--oxblood);
   --color-signal: var(--signal);
+  --color-reference: var(--reference);
 
   /* shadcn token mappings */
   --color-sidebar-ring: var(--sidebar-ring);
@@ -69,40 +71,47 @@
 
 /* ============================================
    LIGHT — editorial cream + ink + oxblood
+   Editorial palette values pulled from Figma file
+   ow2paLzok6bnWqwHiHDBuP, "Color Tokens" collection,
+   Light mode. Hex source-of-truth → oklch via culori.
    ============================================ */
 :root {
-  /* Editorial */
-  --ink: oklch(0.18 0.01 60);
-  --ink-soft: oklch(0.42 0.01 60);
-  --ink-faint: oklch(0.62 0.01 60);
+  /* Editorial — Figma "Palette/*" Light mode */
+  --background: oklch(0.946 0.016 79);   /* Palette/bg            #f3ece1 */
+  --foreground: oklch(0.210 0.007 78);   /* Palette/foreground    #1a1815 */
+  --ink: oklch(0.210 0.007 78);          /* alias of foreground */
+  --ink-soft: oklch(0.451 0.016 82);     /* Palette/ink-soft      #5a554c */
+  --ink-faint: oklch(0.615 0.019 85);    /* Palette/ink-faint     #8a8478 */
+  --ink-faint-border: oklch(0.615 0.019 85); /* Palette/ink-faint-border #8a8478 */
+  --oxblood: oklch(0.390 0.125 22);      /* Palette/oxblood       #7a1f25 */
+  --signal: oklch(0.576 0.167 35);       /* Palette/signal        #c84a2a */
+  --reference: oklch(0.569 0.144 252);   /* Palette/reference     #2a79c8 */
+
+  /* Editorial — derived (not in Figma; tuned manually) */
   --rule: oklch(0.21 0.01 60);
   --rule-soft: oklch(0.85 0.02 75);
-  --background: oklch(0.94 0.02 75);
-  --foreground: oklch(0.18 0.01 60);
   --bg-soft: oklch(0.91 0.025 75);
   --bg-deep: oklch(0.86 0.035 75);
-  --oxblood: oklch(0.40 0.13 25);
-  --signal: oklch(0.60 0.16 35);
 
-  /* shadcn — primary swapped from teal to ink */
-  --card: oklch(0.94 0.02 75);
-  --card-foreground: oklch(0.18 0.01 60);
-  --popover: oklch(0.94 0.02 75);
-  --popover-foreground: oklch(0.18 0.01 60);
-  --primary: oklch(0.18 0.01 60);
-  --primary-foreground: oklch(0.94 0.02 75);
-  --secondary: oklch(0.91 0.025 75);
-  --secondary-foreground: oklch(0.18 0.01 60);
-  --muted: oklch(0.91 0.025 75);
-  --muted-foreground: oklch(0.42 0.01 60);
-  --accent: oklch(0.40 0.13 25);
-  --accent-foreground: oklch(0.94 0.02 75);
-  --destructive: oklch(0.60 0.16 35);
-  --border: oklch(0.85 0.02 75);
-  --input: oklch(0.85 0.02 75);
-  --ring: oklch(0.40 0.13 25);
+  /* shadcn — track editorial palette */
+  --card: var(--background);
+  --card-foreground: var(--foreground);
+  --popover: var(--background);
+  --popover-foreground: var(--foreground);
+  --primary: var(--foreground);
+  --primary-foreground: var(--background);
+  --secondary: var(--bg-soft);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--bg-soft);
+  --muted-foreground: var(--ink-soft);
+  --accent: var(--oxblood);
+  --accent-foreground: var(--background);
+  --destructive: var(--signal);
+  --border: var(--rule-soft);
+  --input: var(--rule-soft);
+  --ring: var(--oxblood);
 
-  --chart-1: oklch(0.40 0.13 25);
+  --chart-1: var(--oxblood);
   --chart-2: oklch(0.55 0.10 35);
   --chart-3: oklch(0.42 0.05 60);
   --chart-4: oklch(0.30 0.04 60);
@@ -110,14 +119,14 @@
 
   --radius: 0.45rem;
 
-  --sidebar: oklch(0.94 0.02 75);
-  --sidebar-foreground: oklch(0.18 0.01 60);
-  --sidebar-primary: oklch(0.40 0.13 25);
-  --sidebar-primary-foreground: oklch(0.94 0.02 75);
-  --sidebar-accent: oklch(0.91 0.025 75);
-  --sidebar-accent-foreground: oklch(0.18 0.01 60);
-  --sidebar-border: oklch(0.85 0.02 75);
-  --sidebar-ring: oklch(0.40 0.13 25);
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--oxblood);
+  --sidebar-primary-foreground: var(--background);
+  --sidebar-accent: var(--bg-soft);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--rule-soft);
+  --sidebar-ring: var(--oxblood);
 
   /* 3D scene tokens.
      bg-top/bot are CSS-only (gradient), oklch is fine.
@@ -133,58 +142,69 @@
 
 /* ============================================
    DARK — warm walnut, not zinc
+   Editorial palette values pulled from Figma file
+   ow2paLzok6bnWqwHiHDBuP, "Color Tokens" collection,
+   Dark mode. Hex source-of-truth → oklch via culori.
    ============================================ */
 .dark {
-  --ink: oklch(0.92 0.02 80);
-  --ink-soft: oklch(0.68 0.02 75);
-  --ink-faint: oklch(0.45 0.015 65);
-  --rule: oklch(0.30 0.02 60);
-  --rule-soft: oklch(0.20 0.015 60);
-  --background: oklch(0.16 0.01 60);
-  --foreground: oklch(0.92 0.02 80);
-  --bg-soft: oklch(0.20 0.015 60);
-  --bg-deep: oklch(0.24 0.02 65);
-  --oxblood: oklch(0.62 0.13 22);
-  --signal: oklch(0.68 0.15 35);
+  /* Editorial — Figma "Palette/*" Dark mode */
+  --background: oklch(0.306 0.008 85);   /* Palette/bg            #312f2b */
+  --foreground: oklch(0.920 0.026 87);   /* Palette/foreground    #ece4d2 */
+  --ink: oklch(0.920 0.026 87);          /* alias of foreground */
+  --ink-soft: oklch(0.704 0.031 88);     /* Palette/ink-soft      #a89f8a */
+  --ink-faint: oklch(0.505 0.021 86);    /* Palette/ink-faint     #6a6457 */
+  --ink-faint-border: oklch(0.505 0.021 86); /* Palette/ink-faint-border #6a6457 */
+  --oxblood: oklch(0.603 0.143 19);      /* Palette/oxblood       #c8585e */
+  --signal: oklch(0.662 0.159 38);       /* Palette/signal        #e26a45 */
+  --reference: oklch(0.651 0.141 251);   /* Palette/reference     #4593e2 */
 
-  --card: oklch(0.20 0.015 60);
-  --card-foreground: oklch(0.92 0.02 80);
-  --popover: oklch(0.20 0.015 60);
-  --popover-foreground: oklch(0.92 0.02 80);
-  --primary: oklch(0.92 0.02 80);
-  --primary-foreground: oklch(0.16 0.01 60);
-  --secondary: oklch(0.24 0.02 65);
-  --secondary-foreground: oklch(0.92 0.02 80);
-  --muted: oklch(0.24 0.02 65);
-  --muted-foreground: oklch(0.68 0.02 75);
-  --accent: oklch(0.62 0.13 22);
-  --accent-foreground: oklch(0.92 0.02 80);
-  --destructive: oklch(0.68 0.15 35);
-  --border: oklch(0.30 0.02 60);
-  --input: oklch(0.30 0.02 60);
-  --ring: oklch(0.62 0.13 22);
+  /* Editorial — derived (not in Figma; tuned manually) */
+  --rule: oklch(0.40 0.02 60);
+  --rule-soft: oklch(0.36 0.015 60);
+  --bg-soft: oklch(0.36 0.015 60);
+  --bg-deep: oklch(0.42 0.02 65);
 
-  --chart-1: oklch(0.62 0.13 22);
+  /* shadcn — track editorial palette (same var() refs as :root) */
+  --card: var(--background);
+  --card-foreground: var(--foreground);
+  --popover: var(--background);
+  --popover-foreground: var(--foreground);
+  --primary: var(--foreground);
+  --primary-foreground: var(--background);
+  --secondary: var(--bg-soft);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--bg-soft);
+  --muted-foreground: var(--ink-soft);
+  --accent: var(--oxblood);
+  --accent-foreground: var(--background);
+  --destructive: var(--signal);
+  --border: var(--rule);
+  --input: var(--rule);
+  --ring: var(--oxblood);
+
+  --chart-1: var(--oxblood);
   --chart-2: oklch(0.68 0.10 35);
   --chart-3: oklch(0.55 0.05 70);
   --chart-4: oklch(0.42 0.04 65);
   --chart-5: oklch(0.70 0.06 85);
 
-  --sidebar: oklch(0.20 0.015 60);
-  --sidebar-foreground: oklch(0.92 0.02 80);
-  --sidebar-primary: oklch(0.62 0.13 22);
-  --sidebar-primary-foreground: oklch(0.92 0.02 80);
-  --sidebar-accent: oklch(0.24 0.02 65);
-  --sidebar-accent-foreground: oklch(0.92 0.02 80);
-  --sidebar-border: oklch(0.30 0.02 60);
-  --sidebar-ring: oklch(0.62 0.13 22);
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--oxblood);
+  --sidebar-primary-foreground: var(--background);
+  --sidebar-accent: var(--bg-soft);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--rule);
+  --sidebar-ring: var(--oxblood);
 
   /* Dark scene tokens — floor pushed darker than 0.27L so the cream-toned
      overlay text (Two players sit…) reads against it. Plinth lifted slightly
      above floor so the walnut block separates visually. Hex required for
-     Three.js consumers (oklch on the bg-* gradient is fine). */
-  --scene-bg-top: oklch(0.16 0.01 60);
-  --scene-bg-bot: oklch(0.22 0.025 50);
+     Three.js consumers (oklch on the bg-* gradient is fine).
+     scene-bg-top tracks --background so the 3D pad and surrounding UI share
+     the same backdrop tone. */
+  --scene-bg-top: oklch(0.306 0.008 85);
+  --scene-bg-bot: oklch(0.36 0.015 60);
   --scene-floor: #1f1812;
   --scene-fog: #181210;
   --plinth-color: #3a2a1a;
@@ -199,4 +219,59 @@
     font-feature-settings: "ss01", "kern";
   }
   html { font-family: var(--font-body); }
+}
+
+/* ============================================
+   Move-list entry animation. CSS-driven (not GSAP) so cells fade up from
+   the very first browser paint without waiting for JS hydration. Each
+   cell carries an inline `--cell-delay` in ms (set by MoveList from a
+   quadratic gap-decay curve: early cells stagger lazily, tail compresses).
+   ============================================ */
+@keyframes move-list-entry {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.move-cell {
+  animation: move-list-entry 0.2s ease-out both;
+  animation-delay: var(--cell-delay, 0ms);
+}
+
+/* ============================================
+   Chessboard piece easing override. react-chessboard sets
+   `style="transition: transform <duration>ms"` inline on every piece,
+   which (per the CSS shorthand) implicitly resets the timing function
+   to `ease` (slow-in/slow-out, peak velocity around 30%). Both
+   chess.com and lichess (chessground) use the Material standard curve
+   `cubic-bezier(0.4, 0, 0.2, 1)` — fast-out, slow-in, peak velocity
+   near the start. Override the timing-function via !important so it
+   wins over the inline shorthand without us having to clobber the
+   inline duration. Applies during live moves, click-to-move, and
+   scrub-playback alike for a consistent piece-motion feel.
+   [data-piece] is the attribute react-chessboard puts on each piece.
+   ============================================ */
+[data-piece] {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Cells that arrive AFTER the initial baseline lock (own optimistic +
+   opponent realtime). The slide-up + stagger reads as "list updates
+   after the piece lands"; an opacity-only fade with zero delay starts
+   in lockstep with the chessboard piece animation so they feel
+   synchronous. Higher specificity (.move-cell.move-cell-fresh) wins
+   over the base rule above without needing !important. */
+.move-cell.move-cell-fresh {
+  animation: move-list-fresh 0.2s ease-out both;
+  animation-delay: 0ms;
+}
+
+@keyframes move-list-fresh {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

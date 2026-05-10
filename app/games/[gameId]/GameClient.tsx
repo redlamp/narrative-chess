@@ -4,7 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { Chessboard } from "react-chessboard";
+import gsap from "gsap";
 import type { Piece, PromotionPieceOption, Square } from "@/lib/chess/board-types";
+import { taylorPieces } from "@/lib/chess/piece-set";
+import { capturedFromFen } from "@/lib/chess/captures";
+import { CapturedStrip } from "./CapturedStrip";
 import { toast } from "sonner";
 import { Chess } from "chess.js";
 import {
@@ -23,6 +27,7 @@ import {
 import type { GameStatus, MoveEvent, TerminationReason } from "@/lib/schemas/game";
 import { GameActions } from "./GameActions";
 import { TerminalBanner } from "./TerminalBanner";
+import { InGameBanner } from "./InGameBanner";
 import { ObserverCount } from "./ObserverCount";
 import { Clock } from "./Clock";
 import { useAutoClaim } from "./useAutoClaim";
@@ -168,9 +173,146 @@ export function GameClient({
 
   const livePly = state.ply;
 
+  // Scrub playback state. When the user clicks a non-adjacent ply in the
+  // move list, we run a GSAP timeline that walks the board through every
+  // intermediate FEN at a per-move tween speed. While playback is active
+  // `scrubPlaybackFen` overrides the natural displayFen so the board
+  // renders the timeline's intermediate position rather than snapping to
+  // the target. `scrubAnimDuration` is fed to react-chessboard's
+  // animationDuration prop so each intermediate position eases over the
+  // same per-move budget. `currentScrubPlyRef` tracks the ply currently
+  // shown so a re-click mid-playback resumes from where the eye left off.
+  // `isPlaying` is the higher-level intent flag set when the user clicks
+  // the Play button — drives the move-list Play button's active styling
+  // independently of whether a curve-scrub is running.
+  const [scrubPlaybackFen, setScrubPlaybackFen] = useState<string | null>(null);
+  const [scrubAnimDuration, setScrubAnimDuration] = useState<number | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const scrubTlRef = useRef<gsap.core.Timeline | null>(null);
+  const currentScrubPlyRef = useRef<number | null>(null);
+
+  // Kill in-flight playback on unmount so a navigation away doesn't leave
+  // a dangling timeline firing setState on a stale React tree.
+  useEffect(() => {
+    return () => {
+      scrubTlRef.current?.kill();
+      scrubTlRef.current = null;
+    };
+  }, []);
+
   const displayFen = useMemo(
-    () => viewedFen(moves, viewedPly, state.fen),
-    [moves, viewedPly, state.fen],
+    () => scrubPlaybackFen ?? viewedFen(moves, viewedPly, state.fen),
+    [scrubPlaybackFen, moves, viewedPly, state.fen],
+  );
+
+  /**
+   * Scrub handler — wraps setViewedPly with a GSAP timeline that animates
+   * the chessboard through every intermediate FEN between the current
+   * shown ply and `target`.
+   *
+   * Per-move tween budget (per the design): perMove = clamp(20, 200, 2000/N)
+   * where N is the number of intervening plies. Single-ply scrub plays at
+   * 200ms (snappy). 10-move scrub fills the 2s budget at 200ms each.
+   * Long scrubs floor at 20ms per move; total may exceed 2s past N=100.
+   *
+   * react-chessboard's animationDuration prop drives its internal piece
+   * tween. We set it equal to perMove so each intermediate position eases
+   * over the same window the timeline allots before firing the next
+   * position. (Per chessboard docs: setting position before animation
+   * completes cancels the in-flight tween — equal timing avoids that.)
+   *
+   * Re-click mid-playback: kill the existing timeline, take whatever ply
+   * was last painted (currentScrubPlyRef) as the new start, build a fresh
+   * timeline. Snap-to-live (livePly bump) goes through the auto-snap
+   * effect which clears playback wholesale.
+   */
+  const handleScrub = useCallback(
+    (
+      target: number | null,
+      opts?: { paceMs?: number; isPlay?: boolean },
+    ) => {
+      const paceMs = opts?.paceMs;
+      // Any non-Play scrub clears isPlaying; the Play button passes
+      // isPlay:true to keep the active styling lit through its tl.
+      setIsPlaying(opts?.isPlay ?? false);
+      if (scrubTlRef.current) {
+        scrubTlRef.current.kill();
+        scrubTlRef.current = null;
+      }
+
+      const targetPly = target ?? livePly;
+      const startPly =
+        currentScrubPlyRef.current ?? (viewedPly ?? livePly);
+      currentScrubPlyRef.current = null;
+
+      if (startPly === targetPly) {
+        // Click landed on the same ply we're already showing — sync the
+        // viewedPly state (handles the live<->scrubbed null/livePly
+        // mapping) and bail without playback.
+        setViewedPly(target);
+        setScrubPlaybackFen(null);
+        setScrubAnimDuration(null);
+        return;
+      }
+
+      const direction = targetPly > startPly ? 1 : -1;
+      const steps = Math.abs(targetPly - startPly);
+      // Fixed pace overrides the curve - used by the Play button which
+      // wants a consistent 1s/move regardless of game length. Step
+      // buttons + cell clicks omit paceMs and use the curve so 22-move
+      // jumps still fit the 2s budget.
+      const perMoveMs =
+        paceMs ?? Math.max(20, Math.min(200, Math.round(2000 / steps)));
+      // Tween duration is independent of pace. When paceMs is supplied
+      // (Play button, 1000ms cadence) we want each piece slide to look
+      // like a normal live move (200ms) and the rest of the interval to
+      // be a quiet wait. When paceMs is omitted (curve scrub) tween =
+      // pace so each segment fills its slot rather than ending early
+      // and then snapping mid-pause.
+      const tweenMs = paceMs !== undefined ? 200 : perMoveMs;
+
+      // Freeze the board at the start FEN, set the chessboard
+      // animationDuration prop to tweenMs (drives each intermediate
+      // position's piece slide), then schedule each intermediate FEN
+      // perMoveMs apart.
+      setScrubPlaybackFen(viewedFen(moves, startPly, state.fen));
+      setScrubAnimDuration(tweenMs);
+
+      const tl = gsap.timeline({
+        onComplete: () => {
+          setScrubPlaybackFen(null);
+          setScrubAnimDuration(null);
+          setIsPlaying(false);
+          currentScrubPlyRef.current = null;
+          scrubTlRef.current = null;
+        },
+      });
+
+      for (let i = 1; i <= steps; i++) {
+        const stepPly = startPly + direction * i;
+        // Map the final step to viewedPly=null when target was null, so
+        // we land in the canonical "live" state rather than viewedPly =
+        // livePly (functionally equivalent for the FEN, but auto-snap
+        // and arePiecesDraggable both prefer the explicit null).
+        const stepViewedPly =
+          i === steps && target === null ? null : stepPly;
+        tl.call(
+          () => {
+            // viewedPly walks alongside scrubPlaybackFen so MoveList's
+            // active highlight (activePly = viewedPly ?? livePly) tracks
+            // the cell whose ply matches the currently-painted board.
+            setViewedPly(stepViewedPly);
+            setScrubPlaybackFen(viewedFen(moves, stepPly, state.fen));
+            currentScrubPlyRef.current = stepPly;
+          },
+          undefined,
+          (i * perMoveMs) / 1000,
+        );
+      }
+
+      scrubTlRef.current = tl;
+    },
+    [moves, viewedPly, livePly, state.fen],
   );
 
   // Auto-snap to live: when livePly bumps (own optimistic apply or
@@ -182,7 +324,19 @@ export function GameClient({
   const prevLivePlyRef = useRef(livePly);
   useEffect(() => {
     if (livePly !== prevLivePlyRef.current) {
+      // A new live position landed (own confirm or opponent realtime).
+      // If the user was mid-scrub-playback when this fired, kill the
+      // timeline outright — the auto-snap takes priority over watching
+      // the rest of an old sequence play out.
+      if (scrubTlRef.current) {
+        scrubTlRef.current.kill();
+        scrubTlRef.current = null;
+      }
       setViewedPly(null);
+      setScrubPlaybackFen(null);
+      setScrubAnimDuration(null);
+      setIsPlaying(false);
+      currentScrubPlyRef.current = null;
       prevLivePlyRef.current = livePly;
     }
   }, [livePly]);
@@ -311,8 +465,13 @@ export function GameClient({
   // Tracks the in-flight optimistic fen + the prior fen, so a server
   // rejection can roll back the visual state — but only if no realtime
   // event has already replaced our optimistic fen with an opponent's
-  // move at the next ply.
-  const pendingMoveRef = useRef<{ prevFen: string; optFen: string } | null>(null);
+  // move at the next ply. `optimisticPly` lets rollback also pull the
+  // phantom move-list entry we appended at piece-place time.
+  const pendingMoveRef = useRef<{
+    prevFen: string;
+    optFen: string;
+    optimisticPly: number;
+  } | null>(null);
 
   const rollbackOptimistic = useCallback(() => {
     const m = pendingMoveRef.current;
@@ -325,6 +484,12 @@ export function GameClient({
       if (prev.fen !== m.optFen) return prev;
       return { ...prev, fen: m.prevFen };
     });
+    // Pull the phantom move-list entry. If the server-confirm path or
+    // realtime echo already inserted the canonical version (same ply),
+    // this filter is a no-op for that entry — but our optimistic one
+    // had the same ply, so dedup means at most one entry exists either
+    // way.
+    setMoves((prev) => prev.filter((x) => x.ply !== m.optimisticPly));
   }, []);
 
   // Realtime: opponent's (and our own) move INSERTs.
@@ -403,6 +568,15 @@ export function GameClient({
   // Memoize the chess.js parse — fen.turn() is consulted twice per render
   // (myTurn + isWhitesTurn), and parsing the FEN is the expensive bit.
   const turn = useMemo(() => fenTurn(state.fen), [state.fen]);
+
+  // Captured pieces derived from the live FEN. byWhite holds the BLACK
+  // pieces that white has taken (rendered on white's pill) and vice versa.
+  // Recomputed on every fen change; uses the displayed fen so reviewing
+  // history shows captures up to the viewed ply.
+  const { byWhite: capturedByWhite, byBlack: capturedByBlack } = useMemo(
+    () => capturedFromFen(displayFen),
+    [displayFen],
+  );
 
   // Local clock-tick state — used by the own-clock guard below. Stays null
   // on SSR + first client render so hydration matches; mount effect seeds it
@@ -664,9 +838,22 @@ export function GameClient({
    * fen — which is the right thing.
    */
   const commitOptimisticAndSubmit = useCallback(
-    (uci: string, optFen: string) => {
-      pendingMoveRef.current = { prevFen: state.fen, optFen };
+    (uci: string, optFen: string, san: string) => {
+      // Optimistic ply = state.ply + 1. The server-confirm path uses the
+      // same value as result.data.ply, and the dedup-by-ply guard in
+      // submitMove + the realtime echo callback both skip when the entry
+      // is already present. That keeps the move-list rendering of our
+      // own move tied to piece-place time, not server-round-trip time.
+      const optimisticPly = state.ply + 1;
+      pendingMoveRef.current = { prevFen: state.fen, optFen, optimisticPly };
       setState((prev) => ({ ...prev, fen: optFen, pending: true }));
+      setMoves((prev) => {
+        if (prev.some((x) => x.ply === optimisticPly)) return prev;
+        return [
+          ...prev,
+          { ply: optimisticPly, san, fen_after: optFen },
+        ].sort((a, b) => a.ply - b.ply);
+      });
       void submitMove(uci, state.ply);
     },
     [state.fen, state.ply, submitMove],
@@ -734,7 +921,7 @@ export function GameClient({
       const local = validateMove(state.fen, uci);
       if (!local.ok) return false;
 
-      commitOptimisticAndSubmit(uci, local.fenAfter);
+      commitOptimisticAndSubmit(uci, local.fenAfter, local.san);
       return true;
     },
     [myTurn, state.status, state.fen, commitOptimisticAndSubmit],
@@ -761,7 +948,7 @@ export function GameClient({
       const local = validateMove(state.fen, uci);
       if (!local.ok) return false;
 
-      commitOptimisticAndSubmit(uci, local.fenAfter);
+      commitOptimisticAndSubmit(uci, local.fenAfter, local.san);
       return true;
     },
     [myTurn, state.status, state.fen, commitOptimisticAndSubmit],
@@ -797,7 +984,7 @@ export function GameClient({
           const uci = `${selected}${square}${promo}`;
           const local = validateMove(state.fen, uci);
           setSelected(null);
-          if (local.ok) commitOptimisticAndSubmit(uci, local.fenAfter);
+          if (local.ok) commitOptimisticAndSubmit(uci, local.fenAfter, local.san);
           return;
         }
         // Reselect another own piece.
@@ -881,6 +1068,7 @@ export function GameClient({
     const overlay = checkOverlay(side);
     const remainingMs =
       side === "w" ? state.whiteRemainingMs : state.blackRemainingMs;
+    const captured = side === "w" ? capturedByWhite : capturedByBlack;
     return (
       <div
         className={cn(
@@ -904,6 +1092,7 @@ export function GameClient({
             {isYou && <span>(you)</span>}
           </p>
           <p className="font-display truncate">{name}</p>
+          <CapturedStrip pieces={captured} />
           {mode !== "untimed" && (
             <Clock
               side={side === "w" ? "white" : "black"}
@@ -932,30 +1121,34 @@ export function GameClient({
         className="sr-only"
       />
 
-      {/* Terminal banner — renders only on terminal status (returns null
-          otherwise). Mounted above the board so the result is the first
-          thing the eye lands on after a game ends. Width matches the
-          sidebar/board column for visual alignment. */}
-      <TerminalBanner
-        status={state.status}
-        terminationReason={state.terminationReason}
-        isObserver={isObserver}
-      />
-
-      {/* Responsive layout via grid-template-areas. Single MoveList instance,
-          repositioned by CSS:
-          - mobile: stacked, list flows below player pills
-          - lg+: 2-column grid, list pinned right of board (sticky on tall pages)
-          MoveList itself renders both display variants (inline ribbon vs grid)
-          and the appropriate one shows per breakpoint. */}
+      {/* Responsive layout via grid-template-areas. The status banner sits
+          in a dedicated 'banner' row that spans both columns at lg+ so the
+          stripe stretches across the board + move-list span. Single MoveList
+          instance, repositioned by CSS:
+          - mobile: stacked banner / board / pills / list
+          - lg+: 2-column grid, banner spans full width, list pinned right of
+            board (sticky on tall pages). */}
       <div
         className={cn(
-          "grid gap-4",
-          "grid-cols-1 [grid-template-areas:'board''pills''list']",
-          "lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8 lg:items-start lg:max-w-5xl lg:mx-auto",
-          "lg:[grid-template-areas:'board_list''pills_list']",
+          "grid gap-2",
+          "grid-cols-1 [grid-template-areas:'banner''board''pills''list']",
+          "lg:grid-cols-[minmax(0,1fr)_180px] lg:gap-x-3 lg:gap-y-2 lg:items-start lg:max-w-3xl lg:mx-auto",
+          "lg:[grid-template-areas:'banner_banner''board_list''pills_list']",
         )}
       >
+        <div className="[grid-area:banner]">
+          <InGameBanner
+            status={state.status}
+            currentTurn={turn ?? "w"}
+            ply={state.ply}
+            isObserver={isObserver}
+          />
+          <TerminalBanner
+            status={state.status}
+            terminationReason={state.terminationReason}
+            isObserver={isObserver}
+          />
+        </div>
         <div className="[grid-area:board] flex justify-center">
           <div className="w-full max-w-xl aspect-square">
             <Chessboard
@@ -969,11 +1162,16 @@ export function GameClient({
               onMouseOverSquare={onSquareMouseOver}
               onMouseOutSquare={onSquareMouseOut}
               arePiecesDraggable={
-                inProgress && !isObserver && (viewedPly === null || viewedPly === livePly)
+                inProgress &&
+                !isObserver &&
+                scrubAnimDuration === null &&
+                (viewedPly === null || viewedPly === livePly)
               }
               isDraggablePiece={isDraggablePiece}
               customSquareStyles={customSquareStyles}
               customBoardStyle={{ borderRadius: 6 }}
+              customPieces={taylorPieces}
+              animationDuration={scrubAnimDuration ?? 200}
             />
           </div>
         </div>
@@ -1006,13 +1204,39 @@ export function GameClient({
           {renderPlayerPill(rightSide)}
         </aside>
 
-        <div className="[grid-area:list] lg:sticky lg:top-4 max-w-xl mx-auto w-full lg:max-w-none">
+        <div className="[grid-area:list] lg:sticky lg:top-4 max-w-xl mx-auto w-full lg:max-w-none space-y-2">
           <MoveList
             moves={moves}
             livePly={livePly}
             viewedPly={viewedPly}
-            onScrub={setViewedPly}
+            onScrub={handleScrub}
+            onPlay={() => handleScrub(null, { paceMs: 1000, isPlay: true })}
+            isPlaying={isPlaying}
           />
+
+          {/* Resign + abort buttons live alongside the move list so the
+              right column owns all per-game controls. GameActions self-hides
+              for observers and for non-active games. */}
+          <GameActions
+            gameId={gameId}
+            status={state.status}
+            ply={state.ply}
+            isObserver={isObserver}
+          />
+
+          {/* Dev-only fool's mate smoke button. Hidden for observers and in
+              prod bundles (gated on VERCEL_ENV at build time via the dynamic
+              import above — `SmokeFoolsMate` resolves to null in prod). */}
+          {SmokeFoolsMate && !isObserver && myColor && (
+            <div className="flex items-center justify-center">
+              <SmokeFoolsMate
+                gameId={gameId}
+                myColor={myColor}
+                ply={state.ply}
+                status={state.status}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -1022,36 +1246,6 @@ export function GameClient({
         isObserver={isObserver}
         initialTotal={initialObserverCount}
       />
-
-      {/* Game actions — resign + abort buttons. Self-hides for observers
-          and for non-active games, so this is safe to mount unconditionally.
-          Sits beneath the sidebar so the player-card row stays a clean
-          three-pill identity strip. */}
-      <div className="max-w-xl mx-auto w-full">
-        <GameActions
-          gameId={gameId}
-          status={state.status}
-          ply={state.ply}
-          isObserver={isObserver}
-        />
-      </div>
-
-      {/* Dev-only fool's mate smoke button. Hidden for observers and in
-          prod bundles (gated on NODE_ENV at build time via the dynamic
-          import above — `SmokeFoolsMate` resolves to null in prod, so
-          this whole block tree-shakes). Sits alongside the resign /
-          abort controls so it's discoverable but obviously a debug
-          affordance. */}
-      {SmokeFoolsMate && !isObserver && myColor && (
-        <div className="max-w-xl mx-auto w-full flex items-center justify-center">
-          <SmokeFoolsMate
-            gameId={gameId}
-            myColor={myColor}
-            ply={state.ply}
-            status={state.status}
-          />
-        </div>
-      )}
     </main>
   );
 }
