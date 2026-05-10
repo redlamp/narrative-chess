@@ -1,14 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowLeft,
+  ArrowLeftToLine,
+  ArrowRight,
+  ArrowRightToLine,
+  Play,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { pairsFromMoves, stepPly, type MoveLike } from "@/lib/chess/move-list";
 import { MoveCell } from "./MoveCell";
 
-// Shared classes for the |◀ ◀ ▶ ▶| step buttons. Editorial mono micro-
-// button style: thin rule, subtle hover, ink-faint when disabled.
+// Shared classes for the step buttons. Editorial mono micro-button
+// style: thin rule, subtle hover, ink-faint when disabled.
 const stepBtnClass = cn(
-  "h-6 grid place-items-center rounded text-[12px] leading-none",
+  "h-6 grid place-items-center rounded leading-none",
   "border border-rule-soft hover:bg-bg-soft transition-colors",
   "disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent",
 );
@@ -183,20 +190,16 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
             aria-label="Play through to current position"
             disabled={atLive}
             onClick={() => onScrub(null)}
-            className={cn(
-              "h-6 w-6 grid place-items-center rounded text-[12px]",
-              "border border-rule-soft hover:bg-bg-soft transition-colors",
-              "disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent",
-              "leading-none",
-            )}
+            className={cn("w-6", stepBtnClass)}
           >
-            <span aria-hidden>▶</span>
+            <Play aria-hidden className="h-3 w-3" />
           </button>
         </div>
-        {/* Step controls. |◀ first move, ◀ prev, ▶ next, ▶| live. All
-            route through the same onScrub callback the cells use, so
-            multi-ply jumps (|◀ from late-game) ride the same GSAP
-            timeline + per-move tween budget. */}
+        {/* Step controls — ArrowLeftToLine (first), ArrowLeft (prev),
+            ArrowRight (next), ArrowRightToLine (last). All route through
+            the same onScrub callback the cells use, so multi-ply jumps
+            (first/last from late-game) ride the same GSAP timeline +
+            per-move tween budget. */}
         <div className="grid grid-cols-4 gap-1 mb-2 px-1">
           <button
             type="button"
@@ -205,7 +208,7 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
             onClick={() => onScrub(0)}
             className={stepBtnClass}
           >
-            <span aria-hidden>⏮</span>
+            <ArrowLeftToLine aria-hidden className="h-3 w-3" />
           </button>
           <button
             type="button"
@@ -214,7 +217,7 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
             onClick={() => onScrub(stepPly(viewedPly, -1, livePly))}
             className={stepBtnClass}
           >
-            <span aria-hidden>◀</span>
+            <ArrowLeft aria-hidden className="h-3 w-3" />
           </button>
           <button
             type="button"
@@ -223,7 +226,7 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
             onClick={() => onScrub(stepPly(viewedPly, +1, livePly))}
             className={stepBtnClass}
           >
-            <span aria-hidden>▶</span>
+            <ArrowRight aria-hidden className="h-3 w-3" />
           </button>
           <button
             type="button"
@@ -232,7 +235,7 @@ export function MoveList({ moves, livePly, viewedPly, onScrub }: Props) {
             onClick={() => onScrub(null)}
             className={stepBtnClass}
           >
-            <span aria-hidden>⏭</span>
+            <ArrowRightToLine aria-hidden className="h-3 w-3" />
           </button>
         </div>
         <div className="grid grid-cols-[28px_1fr_1fr] gap-x-1 gap-y-1">
