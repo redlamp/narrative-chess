@@ -121,15 +121,15 @@ function statusHeadline(
 function terminationFlavor(reason: string | null): string | null {
   switch (reason) {
     case "checkmate":
-      return "by checkmate";
+      return "checkmate";
     case "resignation":
-      return "by resignation";
+      return "resignation";
     case "stalemate":
-      return "by stalemate";
+      return "stalemate";
     case "draw_agreement":
-      return "by agreement";
+      return "agreement";
     case "timeout":
-      return "by timeout";
+      return "timeout";
     case "abort_pre_first_move":
     case "abort_after_first_move":
       return "abandoned";
@@ -327,10 +327,10 @@ export function GameBook({ row, viewer, variant }: Props) {
         }}
       >
         <div
-          className={`book-page relative ${isFeature ? "p-6" : "p-4"} flex flex-col h-full rounded-[2px]`}
+          className={`book-page relative ${isFeature ? "pt-4 px-6 pb-6" : "pt-3 px-4 pb-4"} flex flex-col h-full rounded-[2px]`}
           style={{
-            background:
-              "linear-gradient(160deg, var(--background) 0%, var(--bg-soft) 100%)",
+            // Background gradient + dark-mode grain live in globals.css so
+            // the page can theme-switch cleanly without inline overrides.
             boxShadow:
               "0 1px 0 rgba(255,255,255,0.5) inset, 0 -1px 0 rgba(0,0,0,0.06) inset, 0 2px 4px -2px rgba(0,0,0,0.18)",
           }}
@@ -343,7 +343,7 @@ export function GameBook({ row, viewer, variant }: Props) {
               the side they're on. */}
           {!isOpenInvite && (
             <div
-              className={`md:hidden absolute right-3 pointer-events-none ${isFeature ? "top-6" : "top-4"}`}
+              className={`md:hidden absolute right-3 pointer-events-none ${isFeature ? "top-4" : "top-3"}`}
             >
               <StaticBoard fen={row.current_fen} size={14} />
             </div>
@@ -365,15 +365,24 @@ export function GameBook({ row, viewer, variant }: Props) {
               />
             </div>
 
-            {/* Eyebrow — just the state/outcome line, no volume prefix */}
-            <p
-              className={`font-mono uppercase tracking-[0.22em] ${isFeature ? "text-[11px]" : "text-[10px]"} mb-1`}
-              style={{
-                color: oxbloodEyebrow ? "var(--oxblood)" : "var(--ink-soft)",
-              }}
-            >
-              {eyebrow}
-            </p>
+            {/* Eyebrow row — state/outcome on the left, win condition on the
+                right (desktop only; mobile keeps it in the footer's centre
+                column). */}
+            <div className="flex items-baseline justify-between gap-3 mb-1">
+              <p
+                className={`font-mono uppercase tracking-[0.22em] ${isFeature ? "text-[11px]" : "text-[10px]"} truncate`}
+                style={{
+                  color: oxbloodEyebrow ? "var(--oxblood)" : "var(--ink-soft)",
+                }}
+              >
+                {eyebrow}
+              </p>
+              {termination && (
+                <p className="hidden md:block font-mono uppercase tracking-[0.16em] text-[10px] text-ink-faint shrink-0">
+                  {termination}
+                </p>
+              )}
+            </div>
 
             {/* Title — opponent block. Piece icons appear on open
                 invitations (pawn marking inviter's side) and on archive
@@ -427,16 +436,22 @@ export function GameBook({ row, viewer, variant }: Props) {
                   "linear-gradient(90deg, transparent 0%, var(--ink-faint-border) 30%, var(--ink-faint-border) 70%, transparent 100%)",
               }}
             />
-            <div className="grid grid-cols-3 items-baseline gap-2 font-mono uppercase tracking-[0.16em] text-[10px] text-ink-faint">
-              <span className="text-left truncate">{tcLabel}</span>
-              <span className="text-center truncate">
-                {termination
-                  ? termination
-                  : row.status === "in_progress"
-                    ? `ply ${row.ply}`
-                    : ""}
+            <div className="grid grid-cols-[auto_1fr_auto] items-baseline gap-2 font-mono uppercase tracking-[0.16em] text-[10px] text-ink-faint">
+              <span className="text-left whitespace-nowrap">{tcLabel}</span>
+              {/* Centre column is fluid (1fr) — termination can stretch on
+                  mobile beyond the outer auto-sized cells. In-progress
+                  always shows ply; everything else shows termination on
+                  mobile only (desktop has it in the eyebrow row already). */}
+              <span className="text-center truncate min-w-0">
+                {row.status === "in_progress" ? (
+                  <span className="tabular-nums">ply {row.ply}</span>
+                ) : termination ? (
+                  <span className="md:hidden">{termination}</span>
+                ) : null}
               </span>
-              <span className="text-right tabular-nums">{year}</span>
+              <span className="text-right tabular-nums whitespace-nowrap">
+                {year}
+              </span>
             </div>
           </div>
         </div>

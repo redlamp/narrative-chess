@@ -311,6 +311,17 @@
      is at rest, so the cover still reads as dimensional. */
   --book-light-x: 30%;
   --book-light-y: 14%;
+
+  /* Page tokens — parchment in light mode, aged-paper taupe in dark.
+     Pinned slightly lighter than --background in dark mode so the page
+     reads as a lit surface sitting on the leather cover rather than
+     merging into the surrounding ambient. */
+  --book-page-top: var(--background);
+  --book-page-bot: var(--bg-soft);
+}
+.dark {
+  --book-page-top: #3d3830;
+  --book-page-bot: #2e2a23;
 }
 .dark {
   --mini-board-light: oklch(0.72 0.03 85);
@@ -528,6 +539,37 @@
   );
   pointer-events: none;
   opacity: 0.85;
+}
+
+/* --- Book page (parchment / aged paper) -------- */
+
+/* The page background is theme-aware via --book-page-top / --book-page-bot.
+   In dark mode an extra layered grain reads as aged paper rather than a
+   solid dark rectangle, so the book metaphor survives the theme switch. */
+.book-page {
+  background: linear-gradient(
+    160deg,
+    var(--book-page-top) 0%,
+    var(--book-page-bot) 100%
+  );
+}
+.dark .book-page {
+  background:
+    repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.018) 0 1px,
+      transparent 1px 3px
+    ),
+    repeating-linear-gradient(
+      -35deg,
+      rgba(0, 0, 0, 0.03) 0 1px,
+      transparent 1px 4px
+    ),
+    linear-gradient(
+      160deg,
+      var(--book-page-top) 0%,
+      var(--book-page-bot) 100%
+    );
 }
 
 /* --- Cursor-pinned floating preview ------------ */
