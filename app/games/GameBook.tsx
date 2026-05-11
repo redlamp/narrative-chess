@@ -22,6 +22,7 @@ import Link from "next/link";
 import { formatTimeControlLabel } from "@/lib/chess/time-controls";
 import { useHover } from "./hover-context";
 import { ColorPawn } from "./ColorPawn";
+import { StaticBoard } from "./StaticBoard";
 
 export type GameRow = {
   id: string;
@@ -341,7 +342,7 @@ export function GameBook({ row, viewer, variant, index }: Props) {
         }}
       >
         <div
-          className={`book-page relative ${isFeature ? "p-6" : "p-4"} flex flex-col h-full rounded-[2px]`}
+          className={`book-page relative ${isFeature ? "p-6" : "p-4"} max-md:pr-[96px] flex flex-col h-full rounded-[2px]`}
           style={{
             background:
               "linear-gradient(160deg, var(--background) 0%, var(--bg-soft) 100%)",
@@ -349,6 +350,15 @@ export function GameBook({ row, viewer, variant, index }: Props) {
               "0 1px 0 rgba(255,255,255,0.5) inset, 0 -1px 0 rgba(0,0,0,0.06) inset, 0 2px 4px -2px rgba(0,0,0,0.18)",
           }}
         >
+          {/* Mobile-only static board on the right of the page. Replaces the
+              cursor preview (no hover on touch). Open invitations skip it —
+              every invite is the starting position and the ColorPawn beside
+              the inviter already tells the side they're on. */}
+          {!isOpenInvite && (
+            <div className="md:hidden absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+              <StaticBoard fen={row.current_fen} size={10} />
+            </div>
+          )}
           {/* Top decorative rule */}
           <div className="flex items-center gap-3 mb-4">
             <span
