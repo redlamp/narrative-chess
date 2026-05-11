@@ -91,7 +91,10 @@ function statusHeadline(
     case "open":
       if (viewerIsWhite || viewerIsBlack)
         return { eyebrow: "Awaiting challenger", oxbloodEyebrow: false };
-      return { eyebrow: "Open invitation", oxbloodEyebrow: true };
+      // Open invitation: let the eyebrow inherit the (navy) cover colour
+      // rather than the oxblood signal — the cover is already saying
+      // 'in flight' in blue, the eyebrow should restate that hue.
+      return { eyebrow: "Open invitation", oxbloodEyebrow: false };
     case "white_won":
     case "black_won": {
       // Format: "[Color] [Won|Lost]" — Color is the viewer's side when the
@@ -367,18 +370,16 @@ export function GameBook({ row, viewer, variant }: Props) {
 
             {/* Eyebrow row — state/outcome on the left, win condition on the
                 right (desktop only; mobile keeps it in the footer's centre
-                column). Archive eyebrows pick up the cover-variant ink so
-                'White Won' / 'Black Lost' / 'Drawn' / 'Aborted' restate the
-                colour of the book cover. */}
+                column). Eyebrow ink mirrors the cover-variant colour
+                (--book-eyebrow); the lone exception is 'Your move' which
+                stays the oxblood signal regardless of cover hue. */}
             <div className="flex items-baseline justify-between gap-3 mb-1">
               <p
                 className={`font-mono uppercase tracking-[0.22em] ${isFeature ? "text-[11px]" : "text-[10px]"} truncate`}
                 style={{
-                  color: isArchive
-                    ? "var(--book-eyebrow)"
-                    : oxbloodEyebrow
-                      ? "var(--oxblood)"
-                      : "var(--ink-soft)",
+                  color: oxbloodEyebrow
+                    ? "var(--oxblood)"
+                    : "var(--book-eyebrow)",
                 }}
               >
                 {eyebrow}
