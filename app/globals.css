@@ -418,19 +418,25 @@
   outline-offset: 4px;
   border-radius: 4px;
 }
-.book-card:hover {
-  /* scale 1.04 from card centre — ~6px of grow per 150px-wide card on each
-     side, which sits inside the 20px grid-gap so adjacent books never get
-     covered. */
-  transform: translateY(-2px) scale(1.04);
-  z-index: 20;
+/* Hover effects (scale + lifted shadow) guarded to hover-capable pointers
+   so touch devices don't 'stick' the hover state after a tap. */
+@media (hover: hover) {
+  .book-card:hover {
+    /* scale 1.04 from card centre — ~6px of grow per 150px-wide card on
+       each side, which sits inside the 20px grid-gap so adjacent books
+       never get covered. */
+    transform: translateY(-2px) scale(1.04);
+    z-index: 20;
+  }
 }
-.book-card:hover .book-cover {
-  box-shadow:
-    0 1px 0 rgba(0, 0, 0, 0.18) inset,
-    0 -1px 0 rgba(0, 0, 0, 0.30) inset,
-    0 22px 36px -18px rgba(0, 0, 0, 0.55),
-    0 6px 14px -6px rgba(0, 0, 0, 0.30) !important;
+@media (hover: hover) {
+  .book-card:hover .book-cover {
+    box-shadow:
+      0 1px 0 rgba(0, 0, 0, 0.18) inset,
+      0 -1px 0 rgba(0, 0, 0, 0.30) inset,
+      0 22px 36px -18px rgba(0, 0, 0, 0.55),
+      0 6px 14px -6px rgba(0, 0, 0, 0.30) !important;
+  }
 }
 
 /* @property declarations let the mouse-light variables animate when the

@@ -327,7 +327,7 @@ export function GameBook({ row, viewer, variant }: Props) {
         }}
       >
         <div
-          className={`book-page relative ${isFeature ? "p-6" : "p-4"} max-md:pr-[96px] flex flex-col h-full rounded-[2px]`}
+          className={`book-page relative ${isFeature ? "p-6" : "p-4"} flex flex-col h-full rounded-[2px]`}
           style={{
             background:
               "linear-gradient(160deg, var(--background) 0%, var(--bg-soft) 100%)",
@@ -336,80 +336,88 @@ export function GameBook({ row, viewer, variant }: Props) {
           }}
         >
           {/* Mobile-only static board on the right of the page. Top-anchored
-              so it sits flush with the eyebrow line; the result + player
-              detail text on the left fills the area beside it. Open
-              invitations skip it — every invite is the starting position
-              and the ColorPawn beside the inviter already tells the side
-              they're on. */}
+              so it sits flush with the eyebrow; sized to fill down to where
+              the HR sits (via min-height on the content wrapper below).
+              Open invitations skip it — every invite is the starting
+              position and the ColorPawn beside the inviter already tells
+              the side they're on. */}
           {!isOpenInvite && (
             <div
               className={`md:hidden absolute right-3 pointer-events-none ${isFeature ? "top-6" : "top-4"}`}
             >
-              <StaticBoard fen={row.current_fen} size={10} />
+              <StaticBoard fen={row.current_fen} size={14} />
             </div>
           )}
-          {/* Top decorative rule */}
-          <div className="flex items-center gap-3 mb-4">
-            <span
-              aria-hidden
-              className="h-px flex-1"
+
+          {/* Top content area — reserves right gutter for the mobile board
+              and a min-height so the HR settles below the bottom of the
+              board. Desktop has no gutter and no min-height. */}
+          <div className="max-md:pr-[128px] max-md:min-h-[120px] flex flex-col">
+            {/* Top decorative rule */}
+            <div className="flex items-center gap-3 mb-4">
+              <span
+                aria-hidden
+                className="h-px flex-1"
+                style={{
+                  background:
+                    "linear-gradient(90deg, transparent 0%, var(--ink-faint-border) 30%, var(--ink-faint-border) 70%, transparent 100%)",
+                }}
+              />
+            </div>
+
+            {/* Eyebrow — just the state/outcome line, no volume prefix */}
+            <p
+              className={`font-mono uppercase tracking-[0.22em] ${isFeature ? "text-[11px]" : "text-[10px]"} mb-1`}
               style={{
-                background:
-                  "linear-gradient(90deg, transparent 0%, var(--ink-faint-border) 30%, var(--ink-faint-border) 70%, transparent 100%)",
+                color: oxbloodEyebrow ? "var(--oxblood)" : "var(--ink-soft)",
               }}
-            />
+            >
+              {eyebrow}
+            </p>
+
+            {/* Title — opponent block. Piece icons appear on open
+                invitations (pawn marking inviter's side) and on archive
+                cards (pawn for loser / king for winner). */}
+            <div className={`${isFeature ? "mt-3 mb-6" : "mt-2 mb-4"}`}>
+              <p
+                className={`font-display ${isFeature ? "text-3xl" : "text-xl"} leading-[1.05] text-foreground tracking-tight flex items-center gap-2`}
+              >
+                {isOpenInvite && inviterC && (
+                  <ColorPawn color={inviterC} size={isFeature ? 28 : 22} />
+                )}
+                {isArchive && (
+                  <ColorPawn
+                    color={lineAColor}
+                    type={lineAPieceType}
+                    size={isFeature ? 28 : 22}
+                  />
+                )}
+                <span className="truncate">{titleLineA}</span>
+              </p>
+              <p
+                className={`font-display italic ${isFeature ? "text-xl mt-0.5" : "text-base mt-0.5"} text-ink-soft flex items-baseline gap-2`}
+              >
+                {isOpenInvite && (viewerIsWhite || viewerIsBlack)
+                  ? ""
+                  : "vs."}{" "}
+                {isArchive && (
+                  <ColorPawn
+                    color={lineBColor}
+                    type={lineBPieceType}
+                    size={isFeature ? 24 : 20}
+                    className="self-center"
+                  />
+                )}
+                <span className="not-italic font-display text-foreground">
+                  {titleLineB}
+                </span>
+              </p>
+            </div>
           </div>
 
-          {/* Eyebrow — just the state/outcome line, no volume prefix */}
-          <p
-            className={`font-mono uppercase tracking-[0.22em] ${isFeature ? "text-[11px]" : "text-[10px]"} mb-1`}
-            style={{
-              color: oxbloodEyebrow ? "var(--oxblood)" : "var(--ink-soft)",
-            }}
-          >
-            {eyebrow}
-          </p>
-
-          {/* Title — opponent block. Piece icons appear on open invitations
-              (pawn marking inviter's side) and on archive cards (pawn for
-              loser / king for winner). */}
-          <div className={`${isFeature ? "mt-3 mb-6" : "mt-2 mb-4"}`}>
-            <p
-              className={`font-display ${isFeature ? "text-3xl" : "text-xl"} leading-[1.05] text-foreground tracking-tight flex items-center gap-2`}
-            >
-              {isOpenInvite && inviterC && (
-                <ColorPawn color={inviterC} size={isFeature ? 28 : 22} />
-              )}
-              {isArchive && (
-                <ColorPawn
-                  color={lineAColor}
-                  type={lineAPieceType}
-                  size={isFeature ? 28 : 22}
-                />
-              )}
-              <span className="truncate">{titleLineA}</span>
-            </p>
-            <p
-              className={`font-display italic ${isFeature ? "text-xl mt-0.5" : "text-base mt-0.5"} text-ink-soft flex items-baseline gap-2`}
-            >
-              {isOpenInvite && (viewerIsWhite || viewerIsBlack)
-                ? ""
-                : "vs."}{" "}
-              {isArchive && (
-                <ColorPawn
-                  color={lineBColor}
-                  type={lineBPieceType}
-                  size={isFeature ? 24 : 20}
-                  className="self-center"
-                />
-              )}
-              <span className="not-italic font-display text-foreground">
-                {titleLineB}
-              </span>
-            </p>
-          </div>
-
-          {/* Footer rule + meta — single row, time · termination · year */}
+          {/* Footer rule + meta — HR spans the full page width (no right
+              gutter), meta is a three-column row: left time mode, centre
+              win condition, right year. */}
           <div className="mt-auto">
             <span
               aria-hidden
@@ -419,27 +427,17 @@ export function GameBook({ row, viewer, variant }: Props) {
                   "linear-gradient(90deg, transparent 0%, var(--ink-faint-border) 30%, var(--ink-faint-border) 70%, transparent 100%)",
               }}
             />
-            <p className="font-mono uppercase tracking-[0.16em] text-[10px] text-ink-faint truncate">
-              {tcLabel}
-              {row.status === "in_progress" && (
-                <>
-                  <span className="opacity-50"> · </span>
-                  <span className="tabular-nums">ply {row.ply}</span>
-                </>
-              )}
-              {termination && (
-                <>
-                  <span className="opacity-50"> · </span>
-                  <span>{termination}</span>
-                </>
-              )}
-              {year && (
-                <>
-                  <span className="opacity-50"> · </span>
-                  <span className="tabular-nums">{year}</span>
-                </>
-              )}
-            </p>
+            <div className="grid grid-cols-3 items-baseline gap-2 font-mono uppercase tracking-[0.16em] text-[10px] text-ink-faint">
+              <span className="text-left truncate">{tcLabel}</span>
+              <span className="text-center truncate">
+                {termination
+                  ? termination
+                  : row.status === "in_progress"
+                    ? `ply ${row.ply}`
+                    : ""}
+              </span>
+              <span className="text-right tabular-nums">{year}</span>
+            </div>
           </div>
         </div>
       </article>
