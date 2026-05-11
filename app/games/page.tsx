@@ -2,24 +2,17 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
-import { formatTimeControlLabel } from "@/lib/chess/time-controls";
 import { GamesRealtime } from "./GamesRealtime";
+import { GamesLibrary } from "./GamesLibrary";
+import type { GameRow } from "./GameBook";
 
-type GameRow = {
-  id: string;
-  status: string;
-  ply: number;
-  white_id: string | null;
-  black_id: string | null;
-  created_at: string;
-  white_name: string | null;
-  black_name: string | null;
-  time_control_type: string | null;
-  time_initial_seconds: number | null;
-  time_increment_seconds: number | null;
-  time_per_move_seconds: number | null;
-};
-
+/**
+ * Library — listing of every game involving the viewer, plus open invitations
+ * on the wall. Rendered as an editorial "catalogue room" with tabs for
+ * Now Playing / Archive. The server component is responsible only for the
+ * four parallel reads and the page chrome; tab state, entrance animation, and
+ * hover previews live in `<GamesLibrary>` and its children.
+ */
 export default async function GamesPage() {
   const supabase = await createClient();
   const {
@@ -30,6 +23,7 @@ export default async function GamesPage() {
   const uid = user.id;
   const baseSelect = `
     id, status, ply, white_id, black_id, created_at,
+    current_fen, termination_reason,
     time_control_type, time_initial_seconds, time_increment_seconds, time_per_move_seconds,
     white_name:white_id ( display_name ),
     black_name:black_id ( display_name )
@@ -74,7 +68,7 @@ export default async function GamesPage() {
       .in("status", ["white_won", "black_won", "draw", "aborted"])
       .or(`white_id.eq.${uid},black_id.eq.${uid}`)
       .order("created_at", { ascending: false })
-      .limit(20),
+      .limit(40),
   ]);
 
   function flatten(rows: unknown[] | null): GameRow[] {
@@ -99,134 +93,56 @@ export default async function GamesPage() {
   const myCompleted = flatten(myCompletedRaw);
 
   return (
-    <main className="container mx-auto max-w-4xl py-12 px-6 space-y-10">
+    <main className="library-page relative">
       <GamesRealtime viewerUserId={uid} />
-      <header className="flex items-center justify-between">
-        <h1 className="font-display text-3xl tracking-tight text-foreground">
-          Your{" "}
-          <em
-            className="font-display italic"
-            style={{ color: "var(--oxblood)" }}
-          >
-            games
-          </em>
-        </h1>
-        <Button asChild>
-          <Link href="/games/new">Start new game</Link>
-        </Button>
-      </header>
 
-      <Section
-        title="Your active games"
-        rows={myActive}
-        viewer={uid}
-        emptyHint="No games in progress."
-      />
-      <Section
-        title="Your open challenges"
-        rows={myOpen}
-        viewer={uid}
-        emptyHint="None — start one above."
-      />
-      <Section
-        title="Other players' open challenges"
-        rows={otherOpen}
-        viewer={uid}
-        emptyHint="No open challenges right now."
-      />
-      <Section
-        title="Your completed games"
-        rows={myCompleted}
-        viewer={uid}
-        emptyHint="No completed games yet."
-      />
+      {/* Atmospheric backdrop. Layered via three pseudo-effects:
+            1. Outer paper-grain SVG noise (very low opacity)
+            2. Radial vignette pulling toward bg-deep at edges
+            3. Hairline gilt rule framing the central column
+          All decorative, pointer-events-none, rendered behind content. */}
+      <div className="library-backdrop pointer-events-none absolute inset-0 z-0" aria-hidden />
+
+      <div className="relative z-10 mx-auto max-w-[1180px] px-6 lg:px-14 pt-12 pb-24">
+        {/* Title block — editorial masthead style */}
+        <header className="library-masthead mb-12">
+          <p className="font-mono uppercase tracking-[0.32em] text-[11px] text-ink-faint mb-3">
+            The Catalogue
+          </p>
+          <div className="flex items-end justify-between gap-6 flex-wrap">
+            <h1 className="font-display text-5xl lg:text-6xl leading-[0.95] tracking-tight text-foreground">
+              Your{" "}
+              <em
+                className="font-display italic"
+                style={{ color: "var(--oxblood)" }}
+              >
+                library
+              </em>
+              <span
+                className="font-display italic text-ink-faint"
+                style={{ fontSize: "0.5em" }}
+              >
+                .
+              </span>
+            </h1>
+            <Button asChild size="lg" className="shrink-0">
+              <Link href="/games/new">Begin a game</Link>
+            </Button>
+          </div>
+          <p className="font-display italic text-ink-soft text-lg mt-4 max-w-prose">
+            A reading room for every match — those underway, those open on the
+            wall, and the bound volumes of games already finished.
+          </p>
+        </header>
+
+        <GamesLibrary
+          viewer={uid}
+          myActive={myActive}
+          myOpen={myOpen}
+          otherOpen={otherOpen}
+          myCompleted={myCompleted}
+        />
+      </div>
     </main>
   );
-}
-
-function Section({
-  title,
-  rows,
-  viewer,
-  emptyHint,
-}: {
-  title: string;
-  rows: GameRow[];
-  viewer: string;
-  emptyHint: string;
-}) {
-  return (
-    <section>
-      <h2 className="font-mono uppercase tracking-wide text-[10px] text-ink-faint mb-3">
-        {title}
-      </h2>
-      {rows.length === 0 ? (
-        <p className="font-body text-sm text-ink-soft">{emptyHint}</p>
-      ) : (
-        <ul className="space-y-2">
-          {rows.map((g) => (
-            <li key={g.id}>
-              <Link
-                href={`/games/${g.id}`}
-                className="block rounded border p-3 hover:bg-muted/40 transition-colors"
-              >
-                <GameRowRender row={g} viewer={viewer} />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
-function GameRowRender({ row, viewer }: { row: GameRow; viewer: string }) {
-  const youWhite = row.white_id === viewer;
-  const youBlack = row.black_id === viewer;
-  const opponentName = youWhite
-    ? row.black_name ?? "(open)"
-    : youBlack
-      ? row.white_name ?? "(open)"
-      : `${row.white_name ?? "(open)"} vs ${row.black_name ?? "(open)"}`;
-  const youColor = youWhite ? "white" : youBlack ? "black" : null;
-  const tcLabel = formatTimeControlLabel(row);
-
-  return (
-    <div className="flex items-center justify-between gap-4">
-      <div className="min-w-0">
-        <p className="font-display text-base text-foreground truncate">{opponentName}</p>
-        <p className="font-mono text-[11px] text-ink-faint tabular-nums">
-          {statusLabel(row.status)} · ply {row.ply}
-          {youColor ? ` · you play ${youColor}` : ""}
-        </p>
-      </div>
-      <div className="flex items-center gap-3 shrink-0">
-        <span className="font-mono text-[11px] px-2 py-0.5 rounded border border-rule-soft text-ink-soft">
-          {tcLabel}
-        </span>
-        <span className="font-mono text-[11px] text-ink-faint tabular-nums">
-          {new Date(row.created_at).toLocaleString()}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function statusLabel(status: string): string {
-  switch (status) {
-    case "in_progress":
-      return "In progress";
-    case "open":
-      return "Open";
-    case "white_won":
-      return "White won";
-    case "black_won":
-      return "Black won";
-    case "draw":
-      return "Draw";
-    case "aborted":
-      return "Aborted";
-    default:
-      return status;
-  }
 }
