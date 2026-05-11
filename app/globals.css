@@ -275,3 +275,342 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* ============================================
+   LIBRARY — /games page editorial styling.
+
+   Three concerns:
+     1. Atmospheric backdrop (paper grain + vignette + gilt frame)
+     2. Book-card hover state (lift + fly-out preview slide)
+     3. Mini-board palette tokens (warm parchment-tinted board)
+
+   The page-load entrance animation is GSAP-driven from
+   GamesLibrary.tsx; the hover state is CSS-only so it doesn't pay a
+   JS tick per pointer move.
+   ============================================ */
+
+:root {
+  /* MiniBoard square colours — light/dark themed. Light mode reads as
+     antique cream + walnut; dark mode shifts to ivory + oak. */
+  --mini-board-light: oklch(0.86 0.04 80);
+  --mini-board-dark: oklch(0.45 0.06 55);
+
+  /* Book-cover tokens. Pinned across themes so a library card always
+     reads as leather regardless of ambient page mode. */
+  --book-bg: #5c1820;          /* deep oxblood — default + 'lost' variant */
+  --book-bg-vignette: #340c11; /* corner shadow */
+  --book-spine: #2c0a0e;       /* hinge stripe — darker still */
+  --book-ink: #ecdcbb;         /* warm cream */
+  --book-ink-soft: rgba(236, 220, 187, 0.70);
+  --book-ink-faint: rgba(236, 220, 187, 0.42);
+  --book-gilt: #c8a26b;        /* brass for foil rules + accents */
+  --book-gilt-soft: rgba(200, 162, 107, 0.55);
+
+  /* Mouse-followed highlight position — set by GameBook's onMouseMove.
+     Default values keep an off-centre upper-left highlight when the card
+     is at rest, so the cover still reads as dimensional. */
+  --book-light-x: 30%;
+  --book-light-y: 14%;
+
+  /* Page tokens — parchment in light mode, aged-paper taupe in dark.
+     Pinned slightly lighter than --background in dark mode so the page
+     reads as a lit surface sitting on the leather cover rather than
+     merging into the surrounding ambient. */
+  --book-page-top: var(--background);
+  --book-page-bot: var(--bg-soft);
+}
+.dark {
+  --book-page-top: #3d3830;
+  --book-page-bot: #2e2a23;
+}
+.dark {
+  --mini-board-light: oklch(0.72 0.03 85);
+  --mini-board-dark: oklch(0.32 0.03 50);
+}
+
+/* --- Backdrop ----------------------------------- */
+
+.library-page {
+  min-height: calc(100vh - 4rem);
+  isolation: isolate;
+}
+
+.library-backdrop {
+  /* Three stacked layers:
+       1. Paper-grain SVG noise (turbulence). Very low opacity so it reads as
+          texture, not pattern.
+       2. Radial vignette pulling outward toward bg-deep so the center column
+          sits in a soft pool of light.
+       3. A thin hairline frame in oxblood at the page edges — barely visible
+          but reads as bound-volume framing. */
+  background:
+    radial-gradient(
+      ellipse 90% 70% at center 45%,
+      transparent 0%,
+      transparent 55%,
+      color-mix(in oklch, var(--bg-deep) 60%, transparent) 100%
+    ),
+    repeating-linear-gradient(
+      35deg,
+      rgba(0, 0, 0, 0.014) 0 1px,
+      transparent 1px 3px
+    ),
+    repeating-linear-gradient(
+      -25deg,
+      rgba(0, 0, 0, 0.01) 0 1px,
+      transparent 1px 4px
+    );
+}
+.library-backdrop::before {
+  /* Faint gilt rule framing the column — top/bottom only. */
+  content: "";
+  position: absolute;
+  inset: 1.25rem 1.25rem auto 1.25rem;
+  height: 1px;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in oklch, var(--oxblood) 35%, transparent) 12%,
+      color-mix(in oklch, var(--oxblood) 35%, transparent) 88%,
+      transparent 100%
+    );
+  pointer-events: none;
+}
+.library-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: auto 1.25rem 1.25rem 1.25rem;
+  height: 1px;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in oklch, var(--oxblood) 25%, transparent) 12%,
+      color-mix(in oklch, var(--oxblood) 25%, transparent) 88%,
+      transparent 100%
+    );
+  pointer-events: none;
+}
+
+/* SVG noise overlay sits as a fragment inside the backdrop via background-image
+   instead of a child <img>. Encoded inline to avoid an extra request. */
+.library-backdrop {
+  background-blend-mode: normal;
+}
+
+/* --- Tabs -------------------------------------- */
+
+.library-tab {
+  cursor: pointer;
+  background: transparent;
+  border: none;
+}
+.library-tab:focus-visible {
+  outline: 2px solid var(--oxblood);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+/* --- Book card --------------------------------- */
+
+.book-card {
+  /* GSAP sets initial opacity/y. Once it lands, this transition handles hover. */
+  transition:
+    transform 280ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    box-shadow 280ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  transform-origin: center center;
+  will-change: transform;
+  text-decoration: none;
+  color: inherit;
+}
+.book-card:focus-visible {
+  outline: 2px solid var(--book-gilt);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+/* Hover effects (scale + lifted shadow) guarded to hover-capable pointers
+   so touch devices don't 'stick' the hover state after a tap. */
+@media (hover: hover) {
+  .book-card:hover {
+    /* scale 1.04 from card centre — ~6px of grow per 150px-wide card on
+       each side, which sits inside the 20px grid-gap so adjacent books
+       never get covered. */
+    transform: translateY(-2px) scale(1.04);
+    z-index: 20;
+  }
+}
+@media (hover: hover) {
+  .book-card:hover .book-cover {
+    box-shadow:
+      0 1px 0 rgba(0, 0, 0, 0.18) inset,
+      0 -1px 0 rgba(0, 0, 0, 0.30) inset,
+      0 22px 36px -18px rgba(0, 0, 0, 0.55),
+      0 6px 14px -6px rgba(0, 0, 0, 0.30) !important;
+  }
+}
+
+/* @property declarations let the mouse-light variables animate when the
+   cursor leaves and they snap back to defaults. Without these, the
+   transition rule below is a no-op on custom props. */
+@property --book-light-x {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 30%;
+}
+@property --book-light-y {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 14%;
+}
+
+/* Leather cover — full-bleed coloured leather with a cursor-followed
+   highlight layered over a top-to-bottom gradient that includes a
+   distinct brighter peak near the top (sells the impression of light
+   falling on the leather from above). Grain noise stays underneath. The
+   mouse-light vars are written by GameBook on pointermove; on
+   pointerleave they reset to defaults and CSS transitions ease them
+   back. */
+.book-cover {
+  background:
+    radial-gradient(
+      circle 480px at var(--book-light-x) var(--book-light-y),
+      rgba(255, 238, 210, 0.55) 0%,
+      rgba(255, 238, 210, 0.22) 26%,
+      transparent 65%
+    ),
+    linear-gradient(
+      180deg,
+      oklch(from var(--book-bg) calc(l + 0.10) calc(c * 1.25) h) 0%,
+      oklch(from var(--book-bg) calc(l + 0.22) calc(c * 1.75) h) 16%,
+      var(--book-bg) 50%,
+      var(--book-bg-vignette) 100%
+    ),
+    repeating-linear-gradient(
+      45deg,
+      rgba(0, 0, 0, 0.07) 0 1px,
+      transparent 1px 3px
+    ),
+    repeating-linear-gradient(
+      -35deg,
+      rgba(255, 255, 255, 0.03) 0 1px,
+      transparent 1px 4px
+    ) !important;
+  /* No transition on --book-light-x/y — a global rAF tracker in
+     GamesLibrary updates the vars at frame rate; any transition here adds
+     visible lag rather than smoothing. */
+}
+
+/* Outcome-coloured covers. Default cover (no attr) stays oxblood — the
+   'lost' state for the viewer. Active + open volumes get navy leather so
+   "in flight" reads at a glance against the more conclusive colours. */
+.book-cover[data-cover="won"] {
+  --book-bg: #2f4a32;          /* deep forest leather */
+  --book-bg-vignette: #142a18;
+  --book-spine: #0e1e12;
+}
+.book-cover[data-cover="draw"] {
+  --book-bg: #4a4943;          /* warm-tinted slate */
+  --book-bg-vignette: #2a2925;
+  --book-spine: #1c1b19;
+}
+.book-cover[data-cover="playing"] {
+  --book-bg: #1e3a55;          /* deep reference-blue leather */
+  --book-bg-vignette: #0e2032;
+  --book-spine: #08121e;
+}
+
+/* Eyebrow ink — mirrors the cover tone so a card's eyebrow text restates
+   the cover's colour. Both modes lighten + saturate the raw cover colour
+   via relative oklch so the text doesn't read as near-black on the page.
+   Dark mode lightens harder so the taupe page still reads. */
+.book-cover {
+  --book-eyebrow: oklch(from var(--book-bg) calc(l + 0.14) calc(c * 1.35) h);
+}
+.dark .book-cover {
+  --book-eyebrow: oklch(from var(--book-bg) calc(l + 0.36) calc(c * 1.3) h);
+}
+
+/* Hinge — darker vertical band on the left edge of the OXBLOOD frame.
+   Sits in the 6px gap between the cover edge and the inset page, so a
+   sliver of darker leather is visible suggesting where the spine joins
+   the cover. */
+.book-cover::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--book-spine) 0%,
+    color-mix(in srgb, var(--book-spine) 60%, transparent) 70%,
+    transparent 100%
+  );
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+/* --- Book page (parchment / aged paper) -------- */
+
+/* The page background is theme-aware via --book-page-top / --book-page-bot.
+   In dark mode an extra layered grain reads as aged paper rather than a
+   solid dark rectangle, so the book metaphor survives the theme switch. */
+.book-page {
+  background: linear-gradient(
+    160deg,
+    var(--book-page-top) 0%,
+    var(--book-page-bot) 100%
+  );
+}
+.dark .book-page {
+  background:
+    repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.018) 0 1px,
+      transparent 1px 3px
+    ),
+    repeating-linear-gradient(
+      -35deg,
+      rgba(0, 0, 0, 0.03) 0 1px,
+      transparent 1px 4px
+    ),
+    linear-gradient(
+      160deg,
+      var(--book-page-top) 0%,
+      var(--book-page-bot) 100%
+    );
+}
+
+/* --- Cursor-pinned floating preview ------------ */
+
+.cursor-preview {
+  /* Position handled by JS via ref. Just makes sure the layer can never
+     intercept pointer events while it tracks. */
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .book-card,
+  .cursor-preview,
+  .cursor-preview-offset,
+  .board-piece {
+    transition: none !important;
+  }
+  .book-card:hover {
+    transform: none;
+  }
+  .cursor-preview-tilt {
+    transform: none !important;
+  }
+}
+
+/* --- AnimatedBoard piece tween ----------------- */
+
+.board-piece {
+  transition:
+    transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 220ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, opacity;
+}

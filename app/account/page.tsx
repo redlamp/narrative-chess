@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function AccountPage() {
   const supabase = await createClient();
@@ -49,6 +50,21 @@ export default async function AccountPage() {
           <Field label="Username" value={profile.username} />
         )}
         {memberSince && <Field label="Member since" value={memberSince} />}
+      </section>
+
+      {/* Theme toggle lives here too — the site header hides its toggle
+          below ~480px (mobile), so the account page is the reliable place
+          to switch themes on a phone. */}
+      <section className="flex items-center justify-between gap-4 rounded border p-4">
+        <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            Theme
+          </p>
+          <p className="font-display italic text-sm text-ink-soft">
+            Light room or candlelit reading.
+          </p>
+        </div>
+        <ThemeToggle />
       </section>
 
       <section className="flex items-center gap-3">

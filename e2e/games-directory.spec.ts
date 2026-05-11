@@ -20,7 +20,10 @@ const BOB = {
   password: "phase7-pw-bob-dir",
 };
 
-test("games directory groups games by state", async ({ browser, baseURL }) => {
+test("library groups games into Now-playing shelves + Archive tab", async ({
+  browser,
+  baseURL,
+}) => {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
   });
@@ -71,19 +74,28 @@ test("games directory groups games by state", async ({ browser, baseURL }) => {
   await loginAs(ctx, page, ALICE.email, ALICE.password, baseURL!);
   await page.goto(`${baseURL}/games`);
 
-  await expect(
-    page.getByRole("heading", { name: /your active games/i }),
-  ).toBeVisible();
+  // Now-playing tab is default — three shelves visible.
   await expect(
     page.getByRole("heading", { name: /your open challenges/i }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: /your completed games/i }),
+    page.getByRole("heading", { name: /^active games/i }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /open invitations/i }),
   ).toBeVisible();
 
-  // Each section should have at least one row that's clickable.
-  const links = page.locator("a[href^='/games/']");
-  expect(await links.count()).toBeGreaterThanOrEqual(3);
+  // Now-playing has the open + active games as clickable book cards.
+  const nowLinks = page.locator("a[href^='/games/']");
+  expect(await nowLinks.count()).toBeGreaterThanOrEqual(2);
+
+  // Flip to Archive — completed game shows up there.
+  await page.getByRole("button", { name: /archive/i }).click();
+  await expect(
+    page.getByRole("heading", { name: /^archive/i }),
+  ).toBeVisible();
+  const archiveLinks = page.locator("a[href^='/games/']");
+  expect(await archiveLinks.count()).toBeGreaterThanOrEqual(1);
 
   // Cleanup.
   await admin.from("games").delete().in("id", insertedIds);
