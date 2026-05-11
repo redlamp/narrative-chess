@@ -454,16 +454,16 @@
 .book-cover {
   background:
     radial-gradient(
-      circle 240px at var(--book-light-x) var(--book-light-y),
-      rgba(255, 232, 200, 0.34) 0%,
-      rgba(255, 232, 200, 0.14) 28%,
+      circle 260px at var(--book-light-x) var(--book-light-y),
+      rgba(255, 238, 210, 0.55) 0%,
+      rgba(255, 238, 210, 0.22) 26%,
       transparent 65%
     ),
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--book-bg) 100%, white 6%) 0%,
-      color-mix(in srgb, var(--book-bg) 100%, white 26%) 16%,
-      var(--book-bg) 52%,
+      color-mix(in srgb, var(--book-bg) 100%, white 12%) 0%,
+      color-mix(in srgb, var(--book-bg) 100%, white 46%) 16%,
+      var(--book-bg) 50%,
       var(--book-bg-vignette) 100%
     ),
     repeating-linear-gradient(
