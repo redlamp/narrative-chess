@@ -243,10 +243,13 @@ export function GameBook({ row, viewer, variant, index }: Props) {
   const lineBPieceType: "p" | "k" =
     isArchive && lineBColor === winnerSide ? "k" : "p";
 
-  // Outcome-driven cover colour. Wins for the viewer get forest green;
-  // draws + aborted games get warm slate; everything else (in-progress,
-  // open, losses, observer-mode archives) stays default oxblood.
-  const coverVariant: "default" | "won" | "draw" = (() => {
+  // Outcome-driven cover colour. Active + open volumes get navy ("in
+  // flight"); wins for the viewer get forest green; draws + aborted games
+  // get warm slate; everything else (losses, observer-mode decisive
+  // games) stays default oxblood.
+  const coverVariant: "default" | "won" | "draw" | "playing" = (() => {
+    if (row.status === "in_progress" || row.status === "open")
+      return "playing";
     if (row.status === "draw" || row.status === "aborted") return "draw";
     if (row.status === "white_won" && viewerIsWhite) return "won";
     if (row.status === "black_won" && viewerIsBlack) return "won";

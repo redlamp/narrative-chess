@@ -481,8 +481,9 @@
      visible lag rather than smoothing. */
 }
 
-/* Outcome-coloured covers. Default cover (no attr) stays oxblood — same
-   palette as the 'lost' state, matching the project palette. */
+/* Outcome-coloured covers. Default cover (no attr) stays oxblood — the
+   'lost' state for the viewer. Active + open volumes get navy leather so
+   "in flight" reads at a glance against the more conclusive colours. */
 .book-cover[data-cover="won"] {
   --book-bg: #2f4a32;          /* deep forest leather */
   --book-bg-vignette: #142a18;
@@ -492,6 +493,11 @@
   --book-bg: #4a4943;          /* warm-tinted slate */
   --book-bg-vignette: #2a2925;
   --book-spine: #1c1b19;
+}
+.book-cover[data-cover="playing"] {
+  --book-bg: #1e3a55;          /* deep reference-blue leather */
+  --book-bg-vignette: #0e2032;
+  --book-spine: #08121e;
 }
 
 /* Hinge — darker vertical band on the left edge of the OXBLOOD frame.
