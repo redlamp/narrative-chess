@@ -62,6 +62,44 @@ export function GamesLibrary({
     );
   }, [tab]);
 
+  // Global cover lighting. Each .book-cover element reads its own
+  // --book-light-x / --book-light-y custom properties; this effect drives
+  // those properties for every visible cover at once based on the cursor's
+  // position relative to each cover's bounding rect. The result reads as a
+  // single light source — the cursor — illuminating every book on the
+  // shelf simultaneously, so the lighting is visible on every card,
+  // hovered or not. rAF-throttled so updates run at most once per frame.
+  useEffect(() => {
+    let frame: number | null = null;
+    let cx = 0;
+    let cy = 0;
+
+    function tick() {
+      frame = null;
+      const covers = document.querySelectorAll<HTMLElement>(".book-cover");
+      covers.forEach((cover) => {
+        const rect = cover.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return;
+        const x = ((cx - rect.left) / rect.width) * 100;
+        const y = ((cy - rect.top) / rect.height) * 100;
+        cover.style.setProperty("--book-light-x", `${x}%`);
+        cover.style.setProperty("--book-light-y", `${y}%`);
+      });
+    }
+
+    function onMove(e: MouseEvent) {
+      cx = e.clientX;
+      cy = e.clientY;
+      if (frame === null) frame = requestAnimationFrame(tick);
+    }
+
+    window.addEventListener("mousemove", onMove, { passive: true });
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
+  }, []);
+
   const nowCount = myActive.length + myOpen.length + otherOpen.length;
   const archiveCount = myCompleted.length;
 

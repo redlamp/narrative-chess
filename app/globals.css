@@ -476,15 +476,9 @@
       rgba(255, 255, 255, 0.03) 0 1px,
       transparent 1px 4px
     ) !important;
-  transition:
-    --book-light-x 320ms ease,
-    --book-light-y 320ms ease;
-}
-.book-card:hover .book-cover {
-  /* During hover, the mouse-light vars are driven continuously by
-     pointermove; defeat the transition so the highlight tracks the
-     cursor without easing lag. */
-  transition: none;
+  /* No transition on --book-light-x/y — a global rAF tracker in
+     GamesLibrary updates the vars at frame rate; any transition here adds
+     visible lag rather than smoothing. */
 }
 
 /* Outcome-coloured covers. Default cover (no attr) stays oxblood — same

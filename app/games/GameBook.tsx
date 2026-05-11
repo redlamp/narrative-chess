@@ -253,21 +253,10 @@ export function GameBook({ row, viewer, variant, index }: Props) {
     return "default";
   })();
 
-  // Mouse-followed highlight on the leather cover. Writes two CSS custom
-  // properties on the article element so the radial-gradient defined in
-  // globals.css repositions per pointer location. Reset on leave so the
-  // CSS transition eases the highlight back to its rest position.
-  function onCoverMouseMove(e: React.MouseEvent<HTMLElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    e.currentTarget.style.setProperty("--book-light-x", `${x}%`);
-    e.currentTarget.style.setProperty("--book-light-y", `${y}%`);
-  }
-  function onCoverMouseLeave(e: React.MouseEvent<HTMLElement>) {
-    e.currentTarget.style.removeProperty("--book-light-x");
-    e.currentTarget.style.removeProperty("--book-light-y");
-  }
+  // Per-card mouse handlers used to drive the cover light here; lighting is
+  // now applied globally by <GamesLibrary>'s window-level rAF tracker so
+  // every cover reacts to the same cursor at once — visible whether or not
+  // a given book is being hovered.
 
   // Pre-compute caption + plyLabel for the hover preview.
   const previewCaption = (() => {
@@ -339,8 +328,6 @@ export function GameBook({ row, viewer, variant, index }: Props) {
       <article
         className="book-cover relative h-full rounded-[4px] overflow-hidden"
         data-cover={coverVariant === "default" ? undefined : coverVariant}
-        onMouseMove={onCoverMouseMove}
-        onMouseLeave={onCoverMouseLeave}
         style={{
           // Padding (not page-margin) creates the leather frame so the
           // 2px top + 4px bottom + 6px sides are guaranteed regardless of
