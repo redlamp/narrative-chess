@@ -461,8 +461,8 @@
     ),
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--book-bg) 100%, white 12%) 0%,
-      color-mix(in srgb, var(--book-bg) 100%, white 46%) 16%,
+      oklch(from var(--book-bg) calc(l + 0.10) calc(c * 1.25) h) 0%,
+      oklch(from var(--book-bg) calc(l + 0.22) calc(c * 1.75) h) 16%,
       var(--book-bg) 50%,
       var(--book-bg-vignette) 100%
     ),
