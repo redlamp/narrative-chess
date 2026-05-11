@@ -316,24 +316,25 @@ export function GameBook({ row, viewer, variant, index }: Props) {
             "0 1px 0 rgba(0,0,0,0.18) inset, 0 -1px 0 rgba(0,0,0,0.30) inset, 0 10px 22px -12px rgba(0,0,0,0.45), 0 2px 4px -2px rgba(0,0,0,0.20)",
         }}
       >
-        {/* Gilt corner rules sit on the OXBLOOD frame, just inside the cover
-            edge, so they read as brass corner stamps on the leather. */}
+        {/* Tiny gilt corner stamps on the oxblood frame — the leather-trim
+            equivalent of a foil hot-stamp. Sized to fit inside the 6px
+            frame; any larger reads cluttered against a thin red trim. */}
         <span
           aria-hidden
-          className="absolute top-[6px] left-[6px] w-5 h-5 pointer-events-none"
+          className="absolute top-[1px] left-[1px] w-[8px] h-[8px] pointer-events-none"
           style={{
-            borderTop: "1.5px solid var(--book-gilt)",
-            borderLeft: "1.5px solid var(--book-gilt)",
-            opacity: 0.85,
+            borderTop: "1px solid var(--book-gilt)",
+            borderLeft: "1px solid var(--book-gilt)",
+            opacity: 0.8,
           }}
         />
         <span
           aria-hidden
-          className="absolute bottom-[6px] right-[6px] w-5 h-5 pointer-events-none"
+          className="absolute bottom-[1px] right-[1px] w-[8px] h-[8px] pointer-events-none"
           style={{
-            borderBottom: "1.5px solid var(--book-gilt)",
-            borderRight: "1.5px solid var(--book-gilt)",
-            opacity: 0.6,
+            borderBottom: "1px solid var(--book-gilt)",
+            borderRight: "1px solid var(--book-gilt)",
+            opacity: 0.55,
           }}
         />
 
@@ -342,7 +343,7 @@ export function GameBook({ row, viewer, variant, index }: Props) {
           style={{
             background:
               "linear-gradient(160deg, var(--background) 0%, var(--bg-soft) 100%)",
-            margin: "14px",
+            margin: "6px",
             boxShadow:
               "0 1px 0 rgba(255,255,255,0.5) inset, 0 -1px 0 rgba(0,0,0,0.06) inset, 0 2px 4px -2px rgba(0,0,0,0.18)",
           }}
