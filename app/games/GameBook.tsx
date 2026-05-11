@@ -316,25 +316,17 @@ export function GameBook({ row, viewer, variant, index }: Props) {
             "0 1px 0 rgba(0,0,0,0.18) inset, 0 -1px 0 rgba(0,0,0,0.30) inset, 0 10px 22px -12px rgba(0,0,0,0.45), 0 2px 4px -2px rgba(0,0,0,0.20)",
         }}
       >
-        {/* Tiny gilt corner stamps on the oxblood frame — the leather-trim
-            equivalent of a foil hot-stamp. Sized to fit inside the 6px
-            frame; any larger reads cluttered against a thin red trim. */}
+        {/* Single gilt corner stamp on the bottom-right of the cover. The
+            top edge has only a 2px hairline of leather, no room for a stamp;
+            the bottom carries all of the visible cover, so the brass corner
+            lives there. */}
         <span
           aria-hidden
-          className="absolute top-[1px] left-[1px] w-[8px] h-[8px] pointer-events-none"
-          style={{
-            borderTop: "1px solid var(--book-gilt)",
-            borderLeft: "1px solid var(--book-gilt)",
-            opacity: 0.8,
-          }}
-        />
-        <span
-          aria-hidden
-          className="absolute bottom-[1px] right-[1px] w-[8px] h-[8px] pointer-events-none"
+          className="absolute bottom-[2px] right-[2px] w-[10px] h-[10px] pointer-events-none"
           style={{
             borderBottom: "1px solid var(--book-gilt)",
             borderRight: "1px solid var(--book-gilt)",
-            opacity: 0.55,
+            opacity: 0.6,
           }}
         />
 
@@ -343,7 +335,11 @@ export function GameBook({ row, viewer, variant, index }: Props) {
           style={{
             background:
               "linear-gradient(160deg, var(--background) 0%, var(--bg-soft) 100%)",
-            margin: "6px",
+            // Asymmetric inset — page rides high on the cover. Top edge
+            // shows only a hairline of leather (2px); the bottom leaves a
+            // deeper margin so the oxblood reads as base/foundation, not
+            // border. Left + right at 6px keep the side trim tight.
+            margin: "2px 6px 16px 6px",
             boxShadow:
               "0 1px 0 rgba(255,255,255,0.5) inset, 0 -1px 0 rgba(0,0,0,0.06) inset, 0 2px 4px -2px rgba(0,0,0,0.18)",
           }}
