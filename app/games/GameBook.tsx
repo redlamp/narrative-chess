@@ -392,13 +392,13 @@ export function GameBook({ row, viewer, variant }: Props) {
                 className={`font-display ${isFeature ? "text-3xl" : "text-xl"} leading-[1.05] text-foreground tracking-tight flex items-center gap-2`}
               >
                 {isOpenInvite && inviterC && (
-                  <ColorPawn color={inviterC} size={isFeature ? 28 : 22} />
+                  <ColorPawn color={inviterC} size={isFeature ? 36 : 30} />
                 )}
                 {isArchive && (
                   <ColorPawn
                     color={lineAColor}
                     type={lineAPieceType}
-                    size={isFeature ? 28 : 22}
+                    size={isFeature ? 36 : 30}
                   />
                 )}
                 <span className="truncate">{titleLineA}</span>
@@ -413,7 +413,7 @@ export function GameBook({ row, viewer, variant }: Props) {
                   <ColorPawn
                     color={lineBColor}
                     type={lineBPieceType}
-                    size={isFeature ? 24 : 20}
+                    size={isFeature ? 32 : 26}
                     className="self-center"
                   />
                 )}
