@@ -121,13 +121,12 @@ export function GamesLibrary({
               featured
               empty="No games in progress. Press 'Begin a game' to lay one out."
             >
-              {myActive.map((row, i) => (
+              {myActive.map((row) => (
                 <GameBook
                   key={row.id}
                   row={row}
                   viewer={viewer}
                   variant="feature"
-                  index={i + 1}
                 />
               ))}
             </Shelf>
@@ -138,13 +137,12 @@ export function GamesLibrary({
               subtitle="posted, awaiting a hand"
               empty="You haven't posted any open challenges."
             >
-              {myOpen.map((row, i) => (
+              {myOpen.map((row) => (
                 <GameBook
                   key={row.id}
                   row={row}
                   viewer={viewer}
                   variant="compact"
-                  index={i + 1}
                 />
               ))}
             </Shelf>
@@ -155,13 +153,12 @@ export function GamesLibrary({
               subtitle="left by other players"
               empty="No open invitations on the wall right now."
             >
-              {otherOpen.map((row, i) => (
+              {otherOpen.map((row) => (
                 <GameBook
                   key={row.id}
                   row={row}
                   viewer={viewer}
                   variant="compact"
-                  index={i + 1}
                 />
               ))}
             </Shelf>
@@ -173,13 +170,12 @@ export function GamesLibrary({
             subtitle="completed volumes"
             empty="No games to bind into the archive yet."
           >
-            {myCompleted.map((row, i) => (
+            {myCompleted.map((row) => (
               <GameBook
                 key={row.id}
                 row={row}
                 viewer={viewer}
                 variant="compact"
-                index={i + 1}
               />
             ))}
           </Shelf>

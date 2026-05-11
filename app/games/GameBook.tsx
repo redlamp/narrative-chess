@@ -47,51 +47,23 @@ type Props = {
   row: GameRow;
   viewer: string;
   variant: Variant;
-  /** 1-based index within section — drives the volume roman numeral. */
-  index: number;
 };
-
-function romanize(n: number): string {
-  if (n <= 0) return "";
-  const map: ReadonlyArray<readonly [number, string]> = [
-    [1000, "M"],
-    [900, "CM"],
-    [500, "D"],
-    [400, "CD"],
-    [100, "C"],
-    [90, "XC"],
-    [50, "L"],
-    [40, "XL"],
-    [10, "X"],
-    [9, "IX"],
-    [5, "V"],
-    [4, "IV"],
-    [1, "I"],
-  ];
-  let out = "";
-  let rem = n;
-  for (const [v, s] of map) {
-    while (rem >= v) {
-      out += s;
-      rem -= v;
-    }
-  }
-  return out;
-}
 
 function activeColorFromFen(fen: string): "white" | "black" {
   const parts = fen.split(/\s+/);
   return parts[1] === "b" ? "black" : "white";
 }
 
-function formatEditorialDate(iso: string): string {
+function yearOf(iso: string): string {
   try {
-    const d = new Date(iso);
-    const month = d.toLocaleString("en-US", { month: "short" });
-    return `${month} ${romanize(d.getDate())} · ${romanize(d.getFullYear())}`;
+    return String(new Date(iso).getFullYear());
   } catch {
     return "";
   }
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function statusHeadline(
@@ -112,7 +84,7 @@ function statusHeadline(
       if (viewerIsWhite || viewerIsBlack)
         return { eyebrow: "Awaiting reply", oxbloodEyebrow: false };
       return {
-        eyebrow: `${active === "white" ? "White" : "Black"} to move`,
+        eyebrow: `${capitalize(active)} to move`,
         oxbloodEyebrow: false,
       };
     }
@@ -121,9 +93,22 @@ function statusHeadline(
         return { eyebrow: "Awaiting challenger", oxbloodEyebrow: false };
       return { eyebrow: "Open invitation", oxbloodEyebrow: true };
     case "white_won":
-      return { eyebrow: "White victorious", oxbloodEyebrow: false };
-    case "black_won":
-      return { eyebrow: "Black victorious", oxbloodEyebrow: false };
+    case "black_won": {
+      // Format: "[Color] [Won|Lost]" — Color is the viewer's side when the
+      // viewer is a participant, else the winner's. Result is from the
+      // viewer's perspective.
+      const winner: "white" | "black" =
+        row.status === "white_won" ? "white" : "black";
+      if (viewerIsWhite || viewerIsBlack) {
+        const yourColor = viewerIsWhite ? "white" : "black";
+        const youWon = yourColor === winner;
+        return {
+          eyebrow: `${capitalize(yourColor)} ${youWon ? "Won" : "Lost"}`,
+          oxbloodEyebrow: false,
+        };
+      }
+      return { eyebrow: `${capitalize(winner)} Won`, oxbloodEyebrow: false };
+    }
     case "draw":
       return { eyebrow: "Drawn", oxbloodEyebrow: false };
     case "aborted":
@@ -164,7 +149,7 @@ function inviterColor(row: GameRow): "w" | "b" | null {
   return null;
 }
 
-export function GameBook({ row, viewer, variant, index }: Props) {
+export function GameBook({ row, viewer, variant }: Props) {
   const { setActive, clear } = useHover();
 
   const viewerIsWhite = row.white_id === viewer;
@@ -182,7 +167,7 @@ export function GameBook({ row, viewer, variant, index }: Props) {
   );
   const termination = terminationFlavor(row.termination_reason);
   const tcLabel = formatTimeControlLabel(row);
-  const editorialDate = formatEditorialDate(row.created_at);
+  const year = yearOf(row.created_at);
 
   // Title resolution. Open challenges where viewer is on a side render the
   // taken side + "(seat open)" so the card reads as their unfilled invite.
@@ -350,12 +335,16 @@ export function GameBook({ row, viewer, variant, index }: Props) {
               "0 1px 0 rgba(255,255,255,0.5) inset, 0 -1px 0 rgba(0,0,0,0.06) inset, 0 2px 4px -2px rgba(0,0,0,0.18)",
           }}
         >
-          {/* Mobile-only static board on the right of the page. Replaces the
-              cursor preview (no hover on touch). Open invitations skip it —
-              every invite is the starting position and the ColorPawn beside
-              the inviter already tells the side they're on. */}
+          {/* Mobile-only static board on the right of the page. Top-anchored
+              so it sits flush with the eyebrow line; the result + player
+              detail text on the left fills the area beside it. Open
+              invitations skip it — every invite is the starting position
+              and the ColorPawn beside the inviter already tells the side
+              they're on. */}
           {!isOpenInvite && (
-            <div className="md:hidden absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+            <div
+              className={`md:hidden absolute right-3 pointer-events-none ${isFeature ? "top-6" : "top-4"}`}
+            >
               <StaticBoard fen={row.current_fen} size={10} />
             </div>
           )}
@@ -371,17 +360,14 @@ export function GameBook({ row, viewer, variant, index }: Props) {
             />
           </div>
 
-          {/* Eyebrow */}
+          {/* Eyebrow — just the state/outcome line, no volume prefix */}
           <p
             className={`font-mono uppercase tracking-[0.22em] ${isFeature ? "text-[11px]" : "text-[10px]"} mb-1`}
             style={{
               color: oxbloodEyebrow ? "var(--oxblood)" : "var(--ink-soft)",
             }}
           >
-            <span className="opacity-70">Vol.&nbsp;</span>
-            <span>{romanize(index)}</span>
-            <span className="opacity-50"> · </span>
-            <span>{eyebrow}</span>
+            {eyebrow}
           </p>
 
           {/* Title — opponent block. Piece icons appear on open invitations
@@ -423,7 +409,7 @@ export function GameBook({ row, viewer, variant, index }: Props) {
             </p>
           </div>
 
-          {/* Footer rule + meta */}
+          {/* Footer rule + meta — single row, time · termination · year */}
           <div className="mt-auto">
             <span
               aria-hidden
@@ -433,26 +419,27 @@ export function GameBook({ row, viewer, variant, index }: Props) {
                   "linear-gradient(90deg, transparent 0%, var(--ink-faint-border) 30%, var(--ink-faint-border) 70%, transparent 100%)",
               }}
             />
-            <div className="flex items-baseline justify-between gap-3">
-              <p className="font-mono uppercase tracking-[0.16em] text-[10px] text-ink-faint">
-                {tcLabel}
-                {row.status === "in_progress" && (
-                  <>
-                    <span className="opacity-50"> · </span>
-                    <span className="tabular-nums">ply {row.ply}</span>
-                  </>
-                )}
-                {termination && (
-                  <>
-                    <span className="opacity-50"> · </span>
-                    <span>{termination}</span>
-                  </>
-                )}
-              </p>
-              <p className="font-mono text-[10px] text-ink-faint tracking-[0.14em]">
-                {editorialDate}
-              </p>
-            </div>
+            <p className="font-mono uppercase tracking-[0.16em] text-[10px] text-ink-faint truncate">
+              {tcLabel}
+              {row.status === "in_progress" && (
+                <>
+                  <span className="opacity-50"> · </span>
+                  <span className="tabular-nums">ply {row.ply}</span>
+                </>
+              )}
+              {termination && (
+                <>
+                  <span className="opacity-50"> · </span>
+                  <span>{termination}</span>
+                </>
+              )}
+              {year && (
+                <>
+                  <span className="opacity-50"> · </span>
+                  <span className="tabular-nums">{year}</span>
+                </>
+              )}
+            </p>
           </div>
         </div>
       </article>
