@@ -185,19 +185,21 @@ function nextPieces(prev: Piece[], targets: Target[]): Piece[] {
       usedIds.add(prevPiece.id);
     }
 
-    // Unmatched prev → fade out as captured (if it was on the board).
+    // Unmatched prev → drift to the captured strip on the piece's *own*
+    // starting side, so a captured white pawn lands near the bottom (where
+    // white started) and a captured black pawn near the top. Minimises the
+    // tween distance off the board: a piece that's about to be captured was
+    // by definition still on the board, but rarely far from its starting
+    // half. Real slot index is assigned below once cohort sizes are known.
     for (let pi = 0; pi < prevs.length; pi++) {
       if (matchedPrev.has(pi)) continue;
       const p = prevs[pi];
       if (p.loc.kind !== "board") continue;
-      // Assign a captured slot — opposite side did the capturing.
-      // We don't know the slot index yet; placeholder, real slot is
-      // assigned below once we know the cohort sizes.
       out.push({
         id: p.id,
         color: p.color,
         type: p.type,
-        loc: { kind: "captured", side: p.color === "w" ? "b" : "w", slot: -1 },
+        loc: { kind: "captured", side: p.color, slot: -1 },
         opacity: 1,
       });
       usedIds.add(p.id);
@@ -303,8 +305,12 @@ function nextPieces(prev: Piece[], targets: Target[]): Piece[] {
     }
   }
 
-  assignSlots("w", whiteCaptures);
-  assignSlots("b", blackCaptures);
+  // capturedSide here = the COLOR of the captured pieces (= the side they
+  // started on), not the side that captured them. whiteCaptures is the list
+  // of pieces white has taken (i.e. black pieces) → those sit on black's
+  // strip (top) so they barely move from their starting half.
+  assignSlots("b", whiteCaptures);
+  assignSlots("w", blackCaptures);
 
   // Any leftover captured pieces in `out` with slot === -1 (unmatched in the
   // new lists — only happens if the new FEN has MORE of a piece type than
