@@ -28,8 +28,12 @@ import { AnimatedBoard } from "./AnimatedBoard";
 
 const OFFSET_X = 22;
 const OFFSET_Y = 22;
-const PANEL_WIDTH_GUESS = 304;
-const PANEL_HEIGHT_GUESS = 360;
+const PANEL_WIDTH_GUESS = 336;
+const PANEL_HEIGHT_GUESS = 408;
+// Board square dimension. 38 × 8 = 304, leaving ~16px breathing inside the
+// 336-wide panel after p-4 padding (32px), so the board sits centred and
+// fills the frame without crowding the eyebrow + caption rows.
+const BOARD_SQUARE_PX = 38;
 // Tilt magnitudes tuned to read as depth without becoming a parlour trick.
 // Horizontal axis is more pronounced than the vertical because eye-level
 // cursor motion is mostly side-to-side; up/down tilt earns less emphasis.
@@ -165,7 +169,7 @@ export function CursorPreview() {
                 "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
               }
               orientation={null}
-              size={32}
+              size={BOARD_SQUARE_PX}
             />
             <div className="mt-3 flex items-baseline justify-between gap-3">
               <span
