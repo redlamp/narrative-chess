@@ -367,12 +367,18 @@ export function GameBook({ row, viewer, variant }: Props) {
 
             {/* Eyebrow row — state/outcome on the left, win condition on the
                 right (desktop only; mobile keeps it in the footer's centre
-                column). */}
+                column). Archive eyebrows pick up the cover-variant ink so
+                'White Won' / 'Black Lost' / 'Drawn' / 'Aborted' restate the
+                colour of the book cover. */}
             <div className="flex items-baseline justify-between gap-3 mb-1">
               <p
                 className={`font-mono uppercase tracking-[0.22em] ${isFeature ? "text-[11px]" : "text-[10px]"} truncate`}
                 style={{
-                  color: oxbloodEyebrow ? "var(--oxblood)" : "var(--ink-soft)",
+                  color: isArchive
+                    ? "var(--book-eyebrow)"
+                    : oxbloodEyebrow
+                      ? "var(--oxblood)"
+                      : "var(--ink-soft)",
                 }}
               >
                 {eyebrow}

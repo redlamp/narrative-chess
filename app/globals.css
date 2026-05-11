@@ -520,6 +520,18 @@
   --book-spine: #08121e;
 }
 
+/* Eyebrow ink — mirrors the cover tone so an archive card's '[Color]
+   [Won|Lost]' text re-states the cover's colour. Light mode uses the
+   leather tone directly (dark on cream reads at high contrast); dark mode
+   lightens + saturates it via relative oklch so it stays legible on the
+   taupe page. */
+.book-cover {
+  --book-eyebrow: var(--book-bg);
+}
+.dark .book-cover {
+  --book-eyebrow: oklch(from var(--book-bg) calc(l + 0.32) calc(c * 1.3) h);
+}
+
 /* Hinge — darker vertical band on the left edge of the OXBLOOD frame.
    Sits in the 6px gap between the cover edge and the inset page, so a
    sliver of darker leather is visible suggesting where the spine joins
