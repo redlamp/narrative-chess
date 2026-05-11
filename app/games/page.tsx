@@ -129,10 +129,6 @@ export default async function GamesPage() {
               <Link href="/games/new">Begin a game</Link>
             </Button>
           </div>
-          <p className="font-display italic text-ink-soft text-lg mt-4 max-w-prose">
-            A reading room for every match — those underway, those open on the
-            wall, and the bound volumes of games already finished.
-          </p>
         </header>
 
         <GamesLibrary

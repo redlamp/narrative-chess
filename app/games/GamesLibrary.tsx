@@ -7,16 +7,19 @@
  *     the parent server component re-renders both lists each time.
  *   - Page-load GSAP entrance for book cards: subtle rise + fade staggered
  *     across each visible section. Plays once per tab switch, then idles.
+ *   - The hover context + a single floating <CursorPreview> mounted at the
+ *     root of the library. Per-card hover events go through context.
  *   - Empty-state copy for each section.
  *
- * Realtime refresh is mounted in GamesRealtime; on router.refresh() this
- * component remounts the section it's currently displaying and the GSAP
- * entrance re-fires, which reads as "the new book settling onto the shelf".
+ * Shelf order on Now playing: Active games (the most relevant), then your
+ * open challenges (your own posts on the wall), then others' invitations.
  */
 
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { GameBook, type GameRow } from "./GameBook";
+import { HoverProvider } from "./hover-context";
+import { CursorPreview } from "./CursorPreview";
 
 type Tab = "now" | "archive";
 
@@ -38,8 +41,8 @@ export function GamesLibrary({
   const [tab, setTab] = useState<Tab>("now");
   const stageRef = useRef<HTMLDivElement | null>(null);
 
-  // Entrance animation. Targets every .book-card inside the active tab, then
-  // staggers them up with a small per-card delay. Runs on tab change.
+  // Entrance animation. Targets every .book-card inside the active tab and
+  // staggers them up with a small per-card delay.
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -63,23 +66,76 @@ export function GamesLibrary({
   const archiveCount = myCompleted.length;
 
   return (
-    <div ref={stageRef} className="space-y-12">
-      <TabBar
-        tab={tab}
-        onChange={setTab}
-        nowCount={nowCount}
-        archiveCount={archiveCount}
-      />
+    <HoverProvider>
+      <div ref={stageRef} className="space-y-12">
+        <TabBar
+          tab={tab}
+          onChange={setTab}
+          nowCount={nowCount}
+          archiveCount={archiveCount}
+        />
 
-      {tab === "now" ? (
-        <>
+        {tab === "now" ? (
+          <>
+            <Shelf
+              label="Active games"
+              count={myActive.length}
+              featured
+              empty="No games in progress. Press 'Begin a game' to lay one out."
+            >
+              {myActive.map((row, i) => (
+                <GameBook
+                  key={row.id}
+                  row={row}
+                  viewer={viewer}
+                  variant="feature"
+                  index={i + 1}
+                />
+              ))}
+            </Shelf>
+
+            <Shelf
+              label="Your open challenges"
+              count={myOpen.length}
+              subtitle="posted, awaiting a hand"
+              empty="You haven't posted any open challenges."
+            >
+              {myOpen.map((row, i) => (
+                <GameBook
+                  key={row.id}
+                  row={row}
+                  viewer={viewer}
+                  variant="compact"
+                  index={i + 1}
+                />
+              ))}
+            </Shelf>
+
+            <Shelf
+              label="Open invitations"
+              count={otherOpen.length}
+              subtitle="left by other players"
+              empty="No open invitations on the wall right now."
+            >
+              {otherOpen.map((row, i) => (
+                <GameBook
+                  key={row.id}
+                  row={row}
+                  viewer={viewer}
+                  variant="compact"
+                  index={i + 1}
+                />
+              ))}
+            </Shelf>
+          </>
+        ) : (
           <Shelf
-            label="Your open challenges"
-            count={myOpen.length}
-            emphasis
-            empty="You haven't started any open challenges. Press 'Begin a game' to lay one out."
+            label="Archive"
+            count={myCompleted.length}
+            subtitle="completed volumes"
+            empty="No games to bind into the archive yet."
           >
-            {myOpen.map((row, i) => (
+            {myCompleted.map((row, i) => (
               <GameBook
                 key={row.id}
                 row={row}
@@ -89,60 +145,10 @@ export function GamesLibrary({
               />
             ))}
           </Shelf>
-
-          <Shelf
-            label="Active games"
-            count={myActive.length}
-            featured
-            empty="No games in progress. Open invitations on the lower shelf are waiting for a hand."
-          >
-            {myActive.map((row, i) => (
-              <GameBook
-                key={row.id}
-                row={row}
-                viewer={viewer}
-                variant="feature"
-                index={i + 1}
-              />
-            ))}
-          </Shelf>
-
-          <Shelf
-            label="Open invitations"
-            count={otherOpen.length}
-            subtitle="left by other players"
-            empty="No open invitations on the wall right now. Check back, or post one of your own."
-          >
-            {otherOpen.map((row, i) => (
-              <GameBook
-                key={row.id}
-                row={row}
-                viewer={viewer}
-                variant="compact"
-                index={i + 1}
-              />
-            ))}
-          </Shelf>
-        </>
-      ) : (
-        <Shelf
-          label="Archive"
-          count={myCompleted.length}
-          subtitle="completed volumes"
-          empty="No games to bind into the archive yet. Finish one and it'll appear here."
-        >
-          {myCompleted.map((row, i) => (
-            <GameBook
-              key={row.id}
-              row={row}
-              viewer={viewer}
-              variant="compact"
-              index={i + 1}
-            />
-          ))}
-        </Shelf>
-      )}
-    </div>
+        )}
+      </div>
+      <CursorPreview />
+    </HoverProvider>
   );
 }
 
@@ -225,7 +231,6 @@ function Shelf({
   label,
   count,
   subtitle,
-  emphasis,
   featured,
   empty,
   children,
@@ -233,7 +238,6 @@ function Shelf({
   label: string;
   count: number;
   subtitle?: string;
-  emphasis?: boolean;
   featured?: boolean;
   empty: string;
   children: React.ReactNode;
@@ -249,11 +253,7 @@ function Shelf({
             </span>
           )}
         </h2>
-        <span
-          className={`font-mono uppercase tracking-[0.22em] text-[11px] tabular-nums ${
-            emphasis ? "text-[var(--oxblood)]" : "text-ink-faint"
-          }`}
-        >
+        <span className="font-mono uppercase tracking-[0.22em] text-[11px] tabular-nums text-ink-faint">
           {count.toString().padStart(2, "0")} {count === 1 ? "vol." : "vols."}
         </span>
       </header>

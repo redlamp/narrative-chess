@@ -3,24 +3,25 @@
 /**
  * A single game rendered as a "book" — editorial card with gilt rules, an
  * eyebrow line, a display title (the opponent or open-challenge headline), and
- * a footer of metadata. Hover lifts the card and slides a "page" out from the
- * right edge holding a MiniBoard preview of the current FEN.
+ * a footer of metadata. Hover on the card publishes the card's FEN +
+ * metadata to the hover context; a single floating <CursorPreview> at the
+ * library root renders the preview pinned to the cursor.
+ *
+ * Open-invitation cards opt out of the preview entirely (every invite is the
+ * starting position; the board adds nothing). Instead, those cards render an
+ * inline coloured pawn beside the inviter's name so a player browsing the
+ * shelf can read at a glance which side they'd be taking.
  *
  * Two variants:
  *   - `feature`: large card for in-progress games. Generous padding, big
  *     opponent title in Fraunces, full metadata footer.
- *   - `compact`: shorter card for open challenges and archived games.
- *
- * The hover preview is rendered conditionally (only when the card has been
- * hovered at least once) so unhovered cards don't pay the cost of mounting a
- * MiniBoard. Once mounted, opacity/translate is driven by CSS hover state for
- * cheap re-show on subsequent hovers.
+ *   - `compact`: shorter card for archived games and open invitations.
  */
 
 import Link from "next/link";
-import { useState } from "react";
-import { HoverPreview } from "./HoverPreview";
 import { formatTimeControlLabel } from "@/lib/chess/time-controls";
+import { useHover } from "./hover-context";
+import { ColorPawn } from "./ColorPawn";
 
 export type GameRow = {
   id: string;
@@ -83,8 +84,6 @@ function activeColorFromFen(fen: string): "white" | "black" {
 }
 
 function formatEditorialDate(iso: string): string {
-  // "May XI · MMXXVI" — editorial-ish flourish; falls back gracefully if the
-  // date is undefined.
   try {
     const d = new Date(iso);
     const month = d.toLocaleString("en-US", { month: "short" });
@@ -94,7 +93,11 @@ function formatEditorialDate(iso: string): string {
   }
 }
 
-function statusHeadline(row: GameRow, viewerIsWhite: boolean, viewerIsBlack: boolean): {
+function statusHeadline(
+  row: GameRow,
+  viewerIsWhite: boolean,
+  viewerIsBlack: boolean,
+): {
   eyebrow: string;
   oxbloodEyebrow: boolean;
 } {
@@ -107,7 +110,10 @@ function statusHeadline(row: GameRow, viewerIsWhite: boolean, viewerIsBlack: boo
       if (yourTurn) return { eyebrow: "Your move", oxbloodEyebrow: true };
       if (viewerIsWhite || viewerIsBlack)
         return { eyebrow: "Awaiting reply", oxbloodEyebrow: false };
-      return { eyebrow: `${active === "white" ? "White" : "Black"} to move`, oxbloodEyebrow: false };
+      return {
+        eyebrow: `${active === "white" ? "White" : "Black"} to move`,
+        oxbloodEyebrow: false,
+      };
     }
     case "open":
       if (viewerIsWhite || viewerIsBlack)
@@ -146,8 +152,20 @@ function terminationFlavor(reason: string | null): string | null {
   }
 }
 
+/**
+ * Which side is the inviter playing on an open-invitation card?
+ * Returns null if both sides are still null (shouldn't happen) or both are
+ * set (also shouldn't happen for status='open').
+ */
+function inviterColor(row: GameRow): "w" | "b" | null {
+  if (row.white_id && !row.black_id) return "w";
+  if (row.black_id && !row.white_id) return "b";
+  return null;
+}
+
 export function GameBook({ row, viewer, variant, index }: Props) {
-  const [hoveredOnce, setHoveredOnce] = useState(false);
+  const { setActive, clear } = useHover();
+
   const viewerIsWhite = row.white_id === viewer;
   const viewerIsBlack = row.black_id === viewer;
   const youColor: "white" | "black" | null = viewerIsWhite
@@ -156,7 +174,11 @@ export function GameBook({ row, viewer, variant, index }: Props) {
       ? "black"
       : null;
 
-  const { eyebrow, oxbloodEyebrow } = statusHeadline(row, viewerIsWhite, viewerIsBlack);
+  const { eyebrow, oxbloodEyebrow } = statusHeadline(
+    row,
+    viewerIsWhite,
+    viewerIsBlack,
+  );
   const termination = terminationFlavor(row.termination_reason);
   const tcLabel = formatTimeControlLabel(row);
   const editorialDate = formatEditorialDate(row.created_at);
@@ -192,63 +214,114 @@ export function GameBook({ row, viewer, variant, index }: Props) {
   }
 
   const isFeature = variant === "feature";
+  const inviterC = isOpenInvite ? inviterColor(row) : null;
+
+  // Pre-compute caption + plyLabel for the hover preview.
+  const previewCaption = (() => {
+    if (row.status === "in_progress") {
+      if (youColor) {
+        return `you · ${youColor === "white" ? row.black_name ?? "—" : row.white_name ?? "—"}`;
+      }
+      return `${row.white_name ?? "—"} · ${row.black_name ?? "—"}`;
+    }
+    if (row.status === "white_won" || row.status === "black_won") {
+      return `${row.white_name ?? "white"} · ${row.black_name ?? "black"}`;
+    }
+    if (row.status === "draw") return "drawn";
+    if (row.status === "aborted") return "abandoned";
+    return "";
+  })();
+
+  const previewEyebrow = (() => {
+    if (row.status === "in_progress") {
+      return `${activeColorFromFen(row.current_fen) === "white" ? "White" : "Black"} to move`;
+    }
+    if (row.status === "white_won") return "White victorious";
+    if (row.status === "black_won") return "Black victorious";
+    if (row.status === "draw") return "Drawn";
+    if (row.status === "aborted") return "Abandoned";
+    return "Position";
+  })();
+
+  // Open-invite cards do not trigger the hover preview (all starting position;
+  // useful info is the inviter's side, conveyed by the ColorPawn).
+  const handlersForPreview = isOpenInvite
+    ? {}
+    : {
+        onMouseEnter: () =>
+          setActive({
+            id: row.id,
+            fen: row.current_fen,
+            orientation: youColor,
+            eyebrow: previewEyebrow,
+            caption: previewCaption,
+            plyLabel: row.ply > 0 ? `ply ${row.ply}` : null,
+          }),
+        onMouseLeave: clear,
+        onFocus: () =>
+          setActive({
+            id: row.id,
+            fen: row.current_fen,
+            orientation: youColor,
+            eyebrow: previewEyebrow,
+            caption: previewCaption,
+            plyLabel: row.ply > 0 ? `ply ${row.ply}` : null,
+          }),
+        onBlur: clear,
+      };
 
   return (
     <Link
       href={`/games/${row.id}`}
-      onMouseEnter={() => setHoveredOnce(true)}
-      onFocus={() => setHoveredOnce(true)}
+      {...handlersForPreview}
       className={`book-card relative block ${isFeature ? "book-card--feature" : "book-card--compact"}`}
       data-variant={variant}
     >
       <article
         className="book-cover relative h-full rounded-[3px] overflow-visible"
         style={{
-          background:
-            "linear-gradient(160deg, var(--background) 0%, var(--bg-soft) 100%)",
           boxShadow:
-            "0 1px 0 rgba(255,255,255,0.5) inset, 0 -1px 0 rgba(0,0,0,0.04) inset, 0 8px 18px -10px rgba(0,0,0,0.30), 0 2px 4px -2px rgba(0,0,0,0.12)",
+            "0 1px 0 rgba(0,0,0,0.18) inset, 0 -1px 0 rgba(0,0,0,0.30) inset, 0 10px 22px -12px rgba(0,0,0,0.45), 0 2px 4px -2px rgba(0,0,0,0.20)",
         }}
       >
-        {/* Gilt corner rule — purely decorative, marks the card as a book cover */}
+        {/* Gilt corner rules — brass on oxblood reads as embossed foil */}
         <span
           aria-hidden
-          className="absolute top-0 left-0 w-6 h-6 pointer-events-none"
+          className="absolute top-0 left-0 w-7 h-7 pointer-events-none"
           style={{
-            borderTop: "2px solid var(--oxblood)",
-            borderLeft: "2px solid var(--oxblood)",
-            opacity: 0.85,
+            borderTop: "1.5px solid var(--book-gilt)",
+            borderLeft: "1.5px solid var(--book-gilt)",
+            opacity: 0.75,
           }}
         />
         <span
           aria-hidden
-          className="absolute bottom-0 right-0 w-6 h-6 pointer-events-none"
+          className="absolute bottom-0 right-0 w-7 h-7 pointer-events-none"
           style={{
-            borderBottom: "2px solid var(--oxblood)",
-            borderRight: "2px solid var(--oxblood)",
+            borderBottom: "1.5px solid var(--book-gilt)",
+            borderRight: "1.5px solid var(--book-gilt)",
             opacity: 0.55,
           }}
         />
 
-        <div
-          className={`relative ${isFeature ? "p-7" : "p-5"} flex flex-col h-full`}
-        >
-          {/* Top rule + eyebrow */}
+        <div className={`relative ${isFeature ? "p-7 pl-9" : "p-5 pl-7"} flex flex-col h-full`}>
+          {/* Top decorative gilt rule */}
           <div className="flex items-center gap-3 mb-4">
             <span
               aria-hidden
               className="h-px flex-1"
               style={{
                 background:
-                  "linear-gradient(90deg, transparent 0%, var(--ink-faint-border) 30%, var(--ink-faint-border) 70%, transparent 100%)",
+                  "linear-gradient(90deg, transparent 0%, var(--book-gilt-soft) 30%, var(--book-gilt-soft) 70%, transparent 100%)",
               }}
             />
           </div>
 
+          {/* Eyebrow — gilt for highlight states, soft cream otherwise */}
           <p
             className={`font-mono uppercase tracking-[0.22em] ${isFeature ? "text-[11px]" : "text-[10px]"} mb-1`}
             style={{
-              color: oxbloodEyebrow ? "var(--oxblood)" : "var(--ink-soft)",
+              color: oxbloodEyebrow ? "var(--book-gilt)" : "var(--book-ink-soft)",
             }}
           >
             <span className="opacity-70">Vol.&nbsp;</span>
@@ -257,20 +330,31 @@ export function GameBook({ row, viewer, variant, index }: Props) {
             <span>{eyebrow}</span>
           </p>
 
-          {/* Title — opponent block */}
+          {/* Title — opponent block, cream on oxblood */}
           <div className={`${isFeature ? "mt-3 mb-6" : "mt-2 mb-4"}`}>
             <p
-              className={`font-display ${isFeature ? "text-3xl" : "text-xl"} leading-[1.05] text-foreground tracking-tight`}
+              className={`font-display ${isFeature ? "text-3xl" : "text-xl"} leading-[1.05] tracking-tight flex items-center gap-2`}
+              style={{ color: "var(--book-ink)" }}
             >
-              {titleLineA}
+              {/* Open-invite cards: pawn icon stands in for the board
+                  preview. Sits beside the inviter's name so the side they're
+                  playing reads at a glance. */}
+              {isOpenInvite && inviterC && (
+                <ColorPawn color={inviterC} size={isFeature ? 28 : 22} />
+              )}
+              <span className="truncate">{titleLineA}</span>
             </p>
             <p
-              className={`font-display italic ${isFeature ? "text-xl mt-0.5" : "text-base mt-0.5"} text-ink-soft`}
+              className={`font-display italic ${isFeature ? "text-xl mt-0.5" : "text-base mt-0.5"}`}
+              style={{ color: "var(--book-ink-soft)" }}
             >
               {isOpenInvite && (viewerIsWhite || viewerIsBlack)
                 ? ""
                 : "vs."}{" "}
-              <span className="not-italic font-display text-foreground">
+              <span
+                className="not-italic font-display"
+                style={{ color: "var(--book-ink)" }}
+              >
                 {titleLineB}
               </span>
             </p>
@@ -283,11 +367,14 @@ export function GameBook({ row, viewer, variant, index }: Props) {
               className="block h-px mb-3"
               style={{
                 background:
-                  "linear-gradient(90deg, transparent 0%, var(--ink-faint-border) 30%, var(--ink-faint-border) 70%, transparent 100%)",
+                  "linear-gradient(90deg, transparent 0%, var(--book-gilt-soft) 30%, var(--book-gilt-soft) 70%, transparent 100%)",
               }}
             />
             <div className="flex items-baseline justify-between gap-3">
-              <p className="font-mono uppercase tracking-[0.16em] text-[10px] text-ink-faint">
+              <p
+                className="font-mono uppercase tracking-[0.16em] text-[10px]"
+                style={{ color: "var(--book-ink-faint)" }}
+              >
                 {tcLabel}
                 {row.status === "in_progress" && (
                   <>
@@ -302,30 +389,16 @@ export function GameBook({ row, viewer, variant, index }: Props) {
                   </>
                 )}
               </p>
-              <p className="font-mono text-[10px] text-ink-faint tracking-[0.14em]">
+              <p
+                className="font-mono text-[10px] tracking-[0.14em]"
+                style={{ color: "var(--book-ink-faint)" }}
+              >
                 {editorialDate}
               </p>
             </div>
           </div>
         </div>
       </article>
-
-      {/* Fly-out page preview — mounts on first hover. CSS hover state on the
-          parent .book-card drives opacity + translate transition. */}
-      {hoveredOnce && (
-        <HoverPreview
-          fen={row.current_fen}
-          orientation={youColor}
-          eyebrow={
-            row.status === "in_progress"
-              ? `${activeColorFromFen(row.current_fen) === "white" ? "White" : "Black"} to move`
-              : row.status === "open"
-                ? "Awaiting first move"
-                : "Final position"
-          }
-          plyLabel={row.ply > 0 ? `ply ${row.ply}` : undefined}
-        />
-      )}
     </Link>
   );
 }

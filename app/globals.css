@@ -294,6 +294,17 @@
      antique cream + walnut; dark mode shifts to ivory + oak. */
   --mini-board-light: oklch(0.86 0.04 80);
   --mini-board-dark: oklch(0.45 0.06 55);
+
+  /* Book-cover tokens. Pinned across themes so a library card always
+     reads as oxblood leather regardless of ambient page mode. */
+  --book-bg: #5c1820;          /* deep leather oxblood */
+  --book-bg-vignette: #340c11; /* corner shadow */
+  --book-spine: #2c0a0e;       /* hinge stripe — darker still */
+  --book-ink: #ecdcbb;         /* warm cream */
+  --book-ink-soft: rgba(236, 220, 187, 0.70);
+  --book-ink-faint: rgba(236, 220, 187, 0.42);
+  --book-gilt: #c8a26b;        /* brass for foil rules + accents */
+  --book-gilt-soft: rgba(200, 162, 107, 0.55);
 }
 .dark {
   --mini-board-light: oklch(0.72 0.03 85);
@@ -397,126 +408,110 @@
   color: inherit;
 }
 .book-card:focus-visible {
-  outline: 2px solid var(--oxblood);
+  outline: 2px solid var(--book-gilt);
   outline-offset: 4px;
   border-radius: 4px;
 }
 .book-card:hover {
-  transform: translateY(-2px) rotate(-0.25deg);
+  transform: translateY(-2px) rotate(-0.2deg);
   z-index: 20;
 }
 .book-card:hover .book-cover {
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.5) inset,
-    0 -1px 0 rgba(0, 0, 0, 0.04) inset,
-    0 18px 32px -16px rgba(0, 0, 0, 0.45),
-    0 6px 12px -4px rgba(0, 0, 0, 0.18) !important;
+    0 1px 0 rgba(0, 0, 0, 0.18) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.30) inset,
+    0 22px 36px -18px rgba(0, 0, 0, 0.55),
+    0 6px 14px -6px rgba(0, 0, 0, 0.30) !important;
 }
 
-/* Spine — vertical strip on the left edge of the cover */
+/* Leather cover — full-bleed oxblood with a soft radial vignette toward the
+   corners so it reads as a hand-bound book, not a flat tile. The
+   repeating-linear-gradient noise is set very low to suggest grain. */
+.book-cover {
+  background:
+    radial-gradient(
+      ellipse 110% 80% at 35% 25%,
+      color-mix(in srgb, var(--book-bg) 100%, white 6%) 0%,
+      var(--book-bg) 55%,
+      var(--book-bg-vignette) 100%
+    ),
+    repeating-linear-gradient(
+      45deg,
+      rgba(0, 0, 0, 0.06) 0 1px,
+      transparent 1px 3px
+    ),
+    repeating-linear-gradient(
+      -35deg,
+      rgba(255, 255, 255, 0.025) 0 1px,
+      transparent 1px 4px
+    ) !important;
+}
+
+/* Hinge — darker vertical band on the left edge suggests where the cover
+   meets the spine. Subtle: ~16px wide, ~30% darker than the cover. */
 .book-cover::before {
   content: "";
   position: absolute;
   top: 0;
   bottom: 0;
   left: 0;
-  width: 6px;
+  width: 18px;
   background: linear-gradient(
-    180deg,
-    color-mix(in oklch, var(--oxblood) 88%, var(--background)) 0%,
-    var(--oxblood) 50%,
-    color-mix(in oklch, var(--oxblood) 65%, black) 100%
+    90deg,
+    var(--book-spine) 0%,
+    color-mix(in srgb, var(--book-spine) 60%, transparent) 60%,
+    transparent 100%
   );
   border-radius: 3px 0 0 3px;
-  box-shadow:
-    inset -1px 0 0 rgba(0, 0, 0, 0.18),
-    1px 0 0 rgba(255, 255, 255, 0.08);
   pointer-events: none;
+  opacity: 0.85;
 }
+
+/* Right edge — faux gilt page-edge gleam */
 .book-cover::after {
-  /* Hairline page-edge gleam on the right side — faux gilt edge */
   content: "";
   position: absolute;
-  top: 6px;
-  bottom: 6px;
-  right: -2px;
+  top: 8px;
+  bottom: 8px;
+  right: -1px;
   width: 2px;
   background: linear-gradient(
     180deg,
     transparent 0%,
-    color-mix(in oklch, var(--oxblood) 45%, transparent) 8%,
-    color-mix(in oklch, var(--oxblood) 60%, transparent) 50%,
-    color-mix(in oklch, var(--oxblood) 45%, transparent) 92%,
+    var(--book-gilt-soft) 12%,
+    var(--book-gilt) 50%,
+    var(--book-gilt-soft) 88%,
     transparent 100%
   );
   border-radius: 1px;
   pointer-events: none;
-  opacity: 0.7;
+  opacity: 0.55;
 }
 
-/* --- Fly-out hover preview --------------------- */
+/* --- Cursor-pinned floating preview ------------ */
 
-.book-preview {
-  opacity: 0;
-  transform: translateX(-12px) rotateY(-12deg);
-  transition:
-    opacity 220ms cubic-bezier(0.2, 0.7, 0.2, 1),
-    transform 260ms cubic-bezier(0.2, 0.7, 0.2, 1);
-  transition-delay: 80ms;
-}
-.book-card:hover .book-preview,
-.book-card:focus-visible .book-preview {
-  opacity: 1;
-  transform: translateX(0) rotateY(0deg);
-}
-
-.book-preview-page {
-  width: 256px;
-  /* Page-curl shadow on the underside reads as a real piece of paper
-     lifted off the cover. */
-  position: relative;
-}
-.book-preview-page::after {
-  content: "";
-  position: absolute;
-  inset: auto 12px -8px 12px;
-  height: 12px;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(0, 0, 0, 0.22) 0%,
-    transparent 70%
-  );
-  filter: blur(2px);
+.cursor-preview {
+  /* Position handled by JS via ref. Just makes sure the layer can never
+     intercept pointer events while it tracks. */
   pointer-events: none;
-}
-
-/* Right-edge cards: their fly-out would clip off the viewport. The
-   :nth-child(3n) trick only works for known column counts, so instead we
-   fall back to placing the preview on the LEFT for the last column. The
-   media query targets viewport widths where a 3-up grid is in effect. */
-@media (min-width: 1100px) {
-  /* If a book card sits inside a 3-col grid AND is the last child of its
-     row, flip the preview to its left side. We approximate "last column"
-     by targeting the 3rd / 6th / 9th / etc cards in feature grids. */
-  .library-shelf .grid > .book-card:nth-child(3n) .book-preview {
-    left: auto;
-    right: 100%;
-    margin-left: 0;
-    margin-right: 0.75rem;
-    transform-origin: right center;
-    transform: translateX(12px) rotateY(12deg);
-  }
-  .library-shelf .grid > .book-card:nth-child(3n):hover .book-preview {
-    transform: translateX(0) rotateY(0deg);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .book-card,
-  .book-preview {
+  .cursor-preview,
+  .board-piece {
     transition: none !important;
   }
   .book-card:hover {
     transform: none;
   }
+}
+
+/* --- AnimatedBoard piece tween ----------------- */
+
+.board-piece {
+  transition:
+    transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 220ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, opacity;
 }
