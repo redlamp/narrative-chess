@@ -42,15 +42,23 @@ export function HoverProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(clearTimeoutRef.current);
       clearTimeoutRef.current = null;
     }
-    setActiveState(c);
+    // Skip the state update when the same card is re-hovered — avoids
+    // unnecessary re-renders of the preview while the cursor moves within
+    // a single card.
+    setActiveState((curr) => (curr && curr.id === c.id ? curr : c));
   }, []);
 
   const clear = useCallback(() => {
     if (clearTimeoutRef.current) clearTimeout(clearTimeoutRef.current);
+    // Long-ish debounce (220ms) so the cursor crossing the gap between two
+    // cards in the grid (~20px gap at typical cursor speed = 60–120ms travel)
+    // never lets the preview blink off in between. A new card's mouseenter
+    // cancels this timeout, so flicker is impossible as long as the cursor
+    // lands on the next card within the window.
     clearTimeoutRef.current = setTimeout(() => {
       setActiveState(null);
       clearTimeoutRef.current = null;
-    }, 80);
+    }, 220);
   }, []);
 
   useEffect(() => {

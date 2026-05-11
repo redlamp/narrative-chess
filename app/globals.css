@@ -479,11 +479,15 @@
 @media (prefers-reduced-motion: reduce) {
   .book-card,
   .cursor-preview,
+  .cursor-preview-offset,
   .board-piece {
     transition: none !important;
   }
   .book-card:hover {
     transform: none;
+  }
+  .cursor-preview-tilt {
+    transform: none !important;
   }
 }
 

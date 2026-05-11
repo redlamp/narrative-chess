@@ -1,16 +1,25 @@
 "use client";
 
 /**
- * Floating, fixed-positioned preview panel that follows the cursor. Mounts
- * once at the library root; subscribes to the hover context to know which
- * game's FEN to render. Cursor tracking is decoupled from React state — the
- * positioning layer is a ref whose transform is mutated directly on each
- * mousemove, while the contents (active card, board pieces) are driven by
- * normal React state at a much lower update frequency.
+ * Floating, fixed-positioned preview panel that follows the cursor.
  *
- * Edge handling: if the cursor sits near the right or bottom edge of the
- * viewport, the panel flips to the opposite side of the cursor so it always
- * stays in view.
+ * Three transform layers, all driven directly by ref.style.transform on
+ * mousemove (decoupled from React state):
+ *
+ *   1. posRef — `translate(cursorX, cursorY)`. Pinned to the cursor with no
+ *      transition, so the panel never lags behind the pointer.
+ *   2. offsetRef — `translate(±OFFSET_X ± width?, ±OFFSET_Y ± height?)`.
+ *      Places the card to one of four quadrants around the cursor. Only
+ *      updates when the quadrant actually changes; CSS transitions tween the
+ *      flip over 320ms so the panel never *pops* when it switches sides near
+ *      a viewport edge.
+ *   3. tiltRef — `perspective(900px) rotateX rotateY`. Subtle screen-position
+ *      driven tilt: when the cursor sits at the left side of the screen the
+ *      card faces slightly right, when at the bottom it tilts to face up,
+ *      etc. Limits to ±5° on each axis. Instant per mousemove.
+ *
+ * The `active` state from the hover context controls opacity (whether the
+ * panel is shown) and the card's contents (FEN, caption, eyebrow).
  */
 
 import { useEffect, useRef } from "react";
@@ -19,29 +28,67 @@ import { AnimatedBoard } from "./AnimatedBoard";
 
 const OFFSET_X = 22;
 const OFFSET_Y = 22;
-const PANEL_WIDTH_GUESS = 304; // matches the styled width below
+const PANEL_WIDTH_GUESS = 304;
 const PANEL_HEIGHT_GUESS = 360;
+const MAX_TILT_Y = 5; // ° rotation around vertical axis (cursor x → rotateY)
+const MAX_TILT_X = 4; // ° rotation around horizontal axis (cursor y → rotateX)
+
+type Quadrant = "br" | "bl" | "tr" | "tl";
+
+function offsetFor(q: Quadrant): { x: number; y: number } {
+  return {
+    x: q[1] === "l" ? -OFFSET_X - PANEL_WIDTH_GUESS : OFFSET_X,
+    y: q[0] === "t" ? -OFFSET_Y - PANEL_HEIGHT_GUESS : OFFSET_Y,
+  };
+}
 
 export function CursorPreview() {
   const { active } = useHover();
-  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const posRef = useRef<HTMLDivElement | null>(null);
+  const offsetRef = useRef<HTMLDivElement | null>(null);
+  const tiltRef = useRef<HTMLDivElement | null>(null);
+  const quadrantRef = useRef<Quadrant>("br");
 
   useEffect(() => {
+    // Seed the offset layer so the panel doesn't start at translate(0,0).
+    const seed = offsetFor("br");
+    if (offsetRef.current) {
+      offsetRef.current.style.transform = `translate(${seed.x}px, ${seed.y}px)`;
+    }
+
     function onMove(e: MouseEvent) {
-      const el = wrapRef.current;
-      if (!el) return;
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      // Default: bottom-right of cursor. Flip on each axis near edges.
-      const flipX = e.clientX + OFFSET_X + PANEL_WIDTH_GUESS > vw - 12;
-      const flipY = e.clientY + OFFSET_Y + PANEL_HEIGHT_GUESS > vh - 12;
-      const x = flipX
-        ? e.clientX - OFFSET_X - PANEL_WIDTH_GUESS
-        : e.clientX + OFFSET_X;
-      const y = flipY
-        ? e.clientY - OFFSET_Y - PANEL_HEIGHT_GUESS
-        : e.clientY + OFFSET_Y;
-      el.style.transform = `translate(${x}px, ${y}px)`;
+
+      // 1. Position — instant.
+      if (posRef.current) {
+        posRef.current.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+      }
+
+      // 2. Quadrant — animate only on flip.
+      const wantFlipX =
+        e.clientX + OFFSET_X + PANEL_WIDTH_GUESS > vw - 12;
+      const wantFlipY =
+        e.clientY + OFFSET_Y + PANEL_HEIGHT_GUESS > vh - 12;
+      const next: Quadrant = `${wantFlipY ? "t" : "b"}${wantFlipX ? "l" : "r"}`;
+      if (next !== quadrantRef.current) {
+        quadrantRef.current = next;
+        const { x, y } = offsetFor(next);
+        if (offsetRef.current) {
+          offsetRef.current.style.transform = `translate(${x}px, ${y}px)`;
+        }
+      }
+
+      // 3. Tilt — instant. Map cursor to a soft 3D rotation. Card faces
+      // toward the centre of the viewport: cursor at left → card tilts to
+      // face right; cursor at top → card tilts down.
+      if (tiltRef.current) {
+        const normX = Math.max(-1, Math.min(1, (e.clientX / vw) * 2 - 1));
+        const normY = Math.max(-1, Math.min(1, (e.clientY / vh) * 2 - 1));
+        const rotY = -normX * MAX_TILT_Y;
+        const rotX = normY * MAX_TILT_X;
+        tiltRef.current.style.transform = `perspective(900px) rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+      }
     }
     window.addEventListener("mousemove", onMove, { passive: true });
     return () => window.removeEventListener("mousemove", onMove);
@@ -49,7 +96,7 @@ export function CursorPreview() {
 
   return (
     <div
-      ref={wrapRef}
+      ref={posRef}
       aria-hidden
       className="cursor-preview fixed left-0 top-0 z-50 pointer-events-none"
       style={{
@@ -59,52 +106,70 @@ export function CursorPreview() {
       }}
     >
       <div
-        className="cursor-preview-card rounded-[3px] p-4"
+        ref={offsetRef}
+        className="cursor-preview-offset"
         style={{
-          width: PANEL_WIDTH_GUESS,
-          background:
-            "linear-gradient(180deg, var(--background) 0%, var(--bg-soft) 100%)",
-          boxShadow:
-            "0 24px 48px -16px rgba(0,0,0,0.45), 0 6px 12px -6px rgba(0,0,0,0.22), inset 1px 0 0 rgba(255,255,255,0.4)",
-          borderTop: "1px solid var(--rule-soft)",
-          borderRight: "1px solid var(--rule-soft)",
-          borderBottom: "1px solid var(--rule-soft)",
-          borderLeft: "1px solid var(--oxblood)",
+          transition: "transform 320ms cubic-bezier(0.2, 0.7, 0.2, 1)",
+          willChange: "transform",
         }}
       >
-        <p
-          className="font-mono uppercase tracking-[0.22em] text-[10px] mb-3"
-          style={{ color: "var(--oxblood)", minHeight: 14 }}
+        <div
+          ref={tiltRef}
+          className="cursor-preview-tilt"
+          style={{
+            transformStyle: "preserve-3d",
+            willChange: "transform",
+          }}
         >
-          {active?.eyebrow ?? ""}
-        </p>
-        {/* AnimatedBoard renders even before any card is active — once it
-            mounts it tracks subsequent FENs, so the first card hover has
-            something to tween *from* (the starting position by default).
-            Orientation is forced to white-bottom regardless of the viewer's
-            side in the underlying game: flipping mid-hover would force every
-            piece to teleport across the board (a black rook becomes a white
-            rook visually), which defeats the cross-FEN tween. */}
-        <AnimatedBoard
-          fen={
-            active?.fen ??
-            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-          }
-          orientation={null}
-          size={32}
-        />
-        <div className="mt-3 flex items-baseline justify-between gap-3">
-          <span
-            className="font-display italic text-sm text-foreground truncate"
-            style={{ maxWidth: "70%" }}
+          <div
+            className="cursor-preview-card rounded-[3px] p-4"
+            style={{
+              width: PANEL_WIDTH_GUESS,
+              background:
+                "linear-gradient(180deg, var(--background) 0%, var(--bg-soft) 100%)",
+              boxShadow:
+                "0 28px 56px -18px rgba(0,0,0,0.5), 0 8px 16px -8px rgba(0,0,0,0.25), inset 1px 0 0 rgba(255,255,255,0.4)",
+              borderTop: "1px solid var(--rule-soft)",
+              borderRight: "1px solid var(--rule-soft)",
+              borderBottom: "1px solid var(--rule-soft)",
+              borderLeft: "1px solid var(--oxblood)",
+              backfaceVisibility: "hidden",
+            }}
           >
-            {active?.caption ?? ""}
-          </span>
-          {active?.plyLabel && (
-            <span className="font-mono text-[10px] text-ink-faint tracking-[0.14em] tabular-nums">
-              {active.plyLabel}
-            </span>
-          )}
+            <p
+              className="font-mono uppercase tracking-[0.22em] text-[10px] mb-3"
+              style={{ color: "var(--oxblood)", minHeight: 14 }}
+            >
+              {active?.eyebrow ?? ""}
+            </p>
+            {/* AnimatedBoard renders even before any card is active — once
+                mounted it tracks subsequent FENs so the first hover has a
+                position to tween *from*. Orientation pinned to white-bottom
+                regardless of viewer side: flipping the board mid-hover would
+                teleport every piece across (white-pieces-on-bottom becomes
+                black-pieces-on-bottom) and defeat the cross-FEN tween. */}
+            <AnimatedBoard
+              fen={
+                active?.fen ??
+                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+              }
+              orientation={null}
+              size={32}
+            />
+            <div className="mt-3 flex items-baseline justify-between gap-3">
+              <span
+                className="font-display italic text-sm text-foreground truncate"
+                style={{ maxWidth: "70%" }}
+              >
+                {active?.caption ?? ""}
+              </span>
+              {active?.plyLabel && (
+                <span className="font-mono text-[10px] text-ink-faint tracking-[0.14em] tabular-nums">
+                  {active.plyLabel}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
