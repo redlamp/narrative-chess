@@ -58,6 +58,11 @@ export function GamesLibrary({
         duration: 0.55,
         ease: "power3.out",
         stagger: { each: 0.045, from: "start" },
+        // Clear the inline transform GSAP writes on every tick. Otherwise
+        // the final `transform: translate3d(0,0,0) rotate(0)` sticks as an
+        // inline style and blocks the CSS :hover scale rule (inline beats
+        // selector specificity).
+        onComplete: () => gsap.set(cards, { clearProps: "transform" }),
       },
     );
   }, [tab]);
