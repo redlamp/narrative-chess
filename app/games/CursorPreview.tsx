@@ -80,13 +80,17 @@ export function CursorPreview() {
         </p>
         {/* AnimatedBoard renders even before any card is active — once it
             mounts it tracks subsequent FENs, so the first card hover has
-            something to tween *from* (the starting position by default). */}
+            something to tween *from* (the starting position by default).
+            Orientation is forced to white-bottom regardless of the viewer's
+            side in the underlying game: flipping mid-hover would force every
+            piece to teleport across the board (a black rook becomes a white
+            rook visually), which defeats the cross-FEN tween. */}
         <AnimatedBoard
           fen={
             active?.fen ??
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
           }
-          orientation={active?.orientation ?? null}
+          orientation={null}
           size={32}
         />
         <div className="mt-3 flex items-baseline justify-between gap-3">
