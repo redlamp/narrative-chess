@@ -339,7 +339,7 @@ export function GameBook({ row, viewer, variant, index }: Props) {
             // shows only a hairline of leather (2px); the bottom leaves a
             // deeper margin so the oxblood reads as base/foundation, not
             // border. Left + right at 6px keep the side trim tight.
-            margin: "2px 6px 16px 6px",
+            margin: "2px 6px 22px 6px",
             boxShadow:
               "0 1px 0 rgba(255,255,255,0.5) inset, 0 -1px 0 rgba(0,0,0,0.06) inset, 0 2px 4px -2px rgba(0,0,0,0.18)",
           }}

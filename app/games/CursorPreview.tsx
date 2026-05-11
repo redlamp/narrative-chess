@@ -30,12 +30,11 @@ const OFFSET_X = 22;
 const OFFSET_Y = 22;
 const PANEL_WIDTH_GUESS = 304;
 const PANEL_HEIGHT_GUESS = 360;
-// Tilt magnitudes are intentionally loud-ish because the cursor sits inside
-// the panel area; the panel's local centroid is much closer to the cursor's
-// normalised screen position than to the screen centre, so what reads as
-// "subtle" needs to be ±12° to actually feel like depth.
-const MAX_TILT_Y = 14; // ° rotation around vertical axis (cursor x → rotateY)
-const MAX_TILT_X = 10; // ° rotation around horizontal axis (cursor y → rotateX)
+// Tilt magnitudes tuned to read as depth without becoming a parlour trick.
+// Horizontal axis is more pronounced than the vertical because eye-level
+// cursor motion is mostly side-to-side; up/down tilt earns less emphasis.
+const MAX_TILT_Y = 10; // ° rotation around vertical axis (cursor x → rotateY)
+const MAX_TILT_X = 4; // ° rotation around horizontal axis (cursor y → rotateX)
 const PERSPECTIVE_PX = 600;
 
 type Quadrant = "br" | "bl" | "tr" | "tl";
