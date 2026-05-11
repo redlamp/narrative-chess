@@ -37,7 +37,9 @@ test("AuthDialog sign-in closes dialog and lands on /games", async ({
   await dialog.getByLabel(/password/i).fill(USER.password);
   await dialog.getByRole("button", { name: /log in/i }).click();
 
-  // Dialog should close and the router should push /games.
-  await page.waitForURL(`${baseURL}/games`, { timeout: 10_000 });
+  // Dialog should close and the router should push /games. Generous
+  // timeout because free-tier CI runners can be slow on cold sign-in +
+  // first-render of the games page.
+  await page.waitForURL(`${baseURL}/games`, { timeout: 30_000 });
   await expect(dialog).not.toBeVisible();
 });
