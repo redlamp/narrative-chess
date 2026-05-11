@@ -243,6 +243,32 @@ export function GameBook({ row, viewer, variant, index }: Props) {
   const lineBPieceType: "p" | "k" =
     isArchive && lineBColor === winnerSide ? "k" : "p";
 
+  // Outcome-driven cover colour. Wins for the viewer get forest green;
+  // draws + aborted games get warm slate; everything else (in-progress,
+  // open, losses, observer-mode archives) stays default oxblood.
+  const coverVariant: "default" | "won" | "draw" = (() => {
+    if (row.status === "draw" || row.status === "aborted") return "draw";
+    if (row.status === "white_won" && viewerIsWhite) return "won";
+    if (row.status === "black_won" && viewerIsBlack) return "won";
+    return "default";
+  })();
+
+  // Mouse-followed highlight on the leather cover. Writes two CSS custom
+  // properties on the article element so the radial-gradient defined in
+  // globals.css repositions per pointer location. Reset on leave so the
+  // CSS transition eases the highlight back to its rest position.
+  function onCoverMouseMove(e: React.MouseEvent<HTMLElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    e.currentTarget.style.setProperty("--book-light-x", `${x}%`);
+    e.currentTarget.style.setProperty("--book-light-y", `${y}%`);
+  }
+  function onCoverMouseLeave(e: React.MouseEvent<HTMLElement>) {
+    e.currentTarget.style.removeProperty("--book-light-x");
+    e.currentTarget.style.removeProperty("--book-light-y");
+  }
+
   // Pre-compute caption + plyLabel for the hover preview.
   const previewCaption = (() => {
     if (row.status === "in_progress") {
@@ -304,42 +330,31 @@ export function GameBook({ row, viewer, variant, index }: Props) {
       className={`book-card relative block ${isFeature ? "book-card--feature" : "book-card--compact"}`}
       data-variant={variant}
     >
-      {/* Card composition is two layers stacked: a full-bleed oxblood
+      {/* Card composition is two layers stacked: a full-bleed coloured
           leather cover (.book-cover) and a slightly inset parchment page
-          (.book-page) that holds the actual content. The cover shows as a
-          uniform red frame around the page on all four sides — the book
-          aesthetic without losing the editorial cream face. */}
+          (.book-page) that holds the actual content. The cover colour
+          varies by outcome (default oxblood / forest green for wins / warm
+          slate for draws + aborts); the page stays the same parchment
+          across all variants. */}
       <article
         className="book-cover relative h-full rounded-[4px] overflow-hidden"
+        data-cover={coverVariant === "default" ? undefined : coverVariant}
+        onMouseMove={onCoverMouseMove}
+        onMouseLeave={onCoverMouseLeave}
         style={{
           boxShadow:
             "0 1px 0 rgba(0,0,0,0.18) inset, 0 -1px 0 rgba(0,0,0,0.30) inset, 0 10px 22px -12px rgba(0,0,0,0.45), 0 2px 4px -2px rgba(0,0,0,0.20)",
         }}
       >
-        {/* Single gilt corner stamp on the bottom-right of the cover. The
-            top edge has only a 2px hairline of leather, no room for a stamp;
-            the bottom carries all of the visible cover, so the brass corner
-            lives there. */}
-        <span
-          aria-hidden
-          className="absolute bottom-[2px] right-[2px] w-[10px] h-[10px] pointer-events-none"
-          style={{
-            borderBottom: "1px solid var(--book-gilt)",
-            borderRight: "1px solid var(--book-gilt)",
-            opacity: 0.6,
-          }}
-        />
-
         <div
-          className={`book-page relative ${isFeature ? "p-7" : "p-5"} flex flex-col h-full rounded-[2px]`}
+          className={`book-page relative ${isFeature ? "p-6" : "p-4"} flex flex-col h-full rounded-[2px]`}
           style={{
             background:
               "linear-gradient(160deg, var(--background) 0%, var(--bg-soft) 100%)",
-            // Asymmetric inset — page rides high but a 2px hairline of
-            // leather shows at the top and a deeper 28px pool below where
-            // the gilt corner stamp lives. Left + right at 6px keep the
-            // side trim tight.
-            margin: "2px 6px 28px 6px",
+            // Asymmetric inset — page rides high. 2px hairline of leather
+            // at the top, deeper 4px pool below. Left + right at 6px keep
+            // the side trim tight.
+            margin: "2px 6px 4px 6px",
             boxShadow:
               "0 1px 0 rgba(255,255,255,0.5) inset, 0 -1px 0 rgba(0,0,0,0.06) inset, 0 2px 4px -2px rgba(0,0,0,0.18)",
           }}

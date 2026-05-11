@@ -296,8 +296,8 @@
   --mini-board-dark: oklch(0.45 0.06 55);
 
   /* Book-cover tokens. Pinned across themes so a library card always
-     reads as oxblood leather regardless of ambient page mode. */
-  --book-bg: #5c1820;          /* deep leather oxblood */
+     reads as leather regardless of ambient page mode. */
+  --book-bg: #5c1820;          /* deep oxblood — default + 'lost' variant */
   --book-bg-vignette: #340c11; /* corner shadow */
   --book-spine: #2c0a0e;       /* hinge stripe — darker still */
   --book-ink: #ecdcbb;         /* warm cream */
@@ -305,6 +305,12 @@
   --book-ink-faint: rgba(236, 220, 187, 0.42);
   --book-gilt: #c8a26b;        /* brass for foil rules + accents */
   --book-gilt-soft: rgba(200, 162, 107, 0.55);
+
+  /* Mouse-followed highlight position — set by GameBook's onMouseMove.
+     Default values keep an off-centre upper-left highlight when the card
+     is at rest, so the cover still reads as dimensional. */
+  --book-light-x: 30%;
+  --book-light-y: 14%;
 }
 .dark {
   --mini-board-light: oklch(0.72 0.03 85);
@@ -424,15 +430,37 @@
     0 6px 14px -6px rgba(0, 0, 0, 0.30) !important;
 }
 
-/* Leather cover — full-bleed oxblood with a soft radial vignette toward the
-   corners so it reads as a hand-bound book, not a flat tile. The
-   repeating-linear-gradient noise is set very low to suggest grain. */
+/* @property declarations let the mouse-light variables animate when the
+   cursor leaves and they snap back to defaults. Without these, the
+   transition rule below is a no-op on custom props. */
+@property --book-light-x {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 30%;
+}
+@property --book-light-y {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 14%;
+}
+
+/* Leather cover — full-bleed coloured leather with a cursor-followed
+   highlight layered over a top-to-bottom darkening gradient. Grain noise
+   stays underneath. The mouse-light vars are written by GameBook on
+   pointermove; on pointerleave they reset to defaults and CSS transitions
+   ease them back. */
 .book-cover {
   background:
     radial-gradient(
-      ellipse 110% 80% at 35% 25%,
-      color-mix(in srgb, var(--book-bg) 100%, white 6%) 0%,
-      var(--book-bg) 55%,
+      circle 220px at var(--book-light-x) var(--book-light-y),
+      rgba(255, 230, 200, 0.16) 0%,
+      rgba(255, 230, 200, 0.06) 30%,
+      transparent 70%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--book-bg) 100%, white 12%) 0%,
+      var(--book-bg) 38%,
       var(--book-bg-vignette) 100%
     ),
     repeating-linear-gradient(
@@ -445,6 +473,28 @@
       rgba(255, 255, 255, 0.025) 0 1px,
       transparent 1px 4px
     ) !important;
+  transition:
+    --book-light-x 320ms ease,
+    --book-light-y 320ms ease;
+}
+.book-card:hover .book-cover {
+  /* During hover, the mouse-light vars are driven continuously by
+     pointermove; defeat the transition so the highlight tracks the
+     cursor without easing lag. */
+  transition: none;
+}
+
+/* Outcome-coloured covers. Default cover (no attr) stays oxblood — same
+   palette as the 'lost' state, matching the project palette. */
+.book-cover[data-cover="won"] {
+  --book-bg: #2f4a32;          /* deep forest leather */
+  --book-bg-vignette: #142a18;
+  --book-spine: #0e1e12;
+}
+.book-cover[data-cover="draw"] {
+  --book-bg: #4a4943;          /* warm-tinted slate */
+  --book-bg-vignette: #2a2925;
+  --book-spine: #1c1b19;
 }
 
 /* Hinge — darker vertical band on the left edge of the OXBLOOD frame.
