@@ -30,8 +30,13 @@ const OFFSET_X = 22;
 const OFFSET_Y = 22;
 const PANEL_WIDTH_GUESS = 304;
 const PANEL_HEIGHT_GUESS = 360;
-const MAX_TILT_Y = 5; // ° rotation around vertical axis (cursor x → rotateY)
-const MAX_TILT_X = 4; // ° rotation around horizontal axis (cursor y → rotateX)
+// Tilt magnitudes are intentionally loud-ish because the cursor sits inside
+// the panel area; the panel's local centroid is much closer to the cursor's
+// normalised screen position than to the screen centre, so what reads as
+// "subtle" needs to be ±12° to actually feel like depth.
+const MAX_TILT_Y = 14; // ° rotation around vertical axis (cursor x → rotateY)
+const MAX_TILT_X = 10; // ° rotation around horizontal axis (cursor y → rotateX)
+const PERSPECTIVE_PX = 600;
 
 type Quadrant = "br" | "bl" | "tr" | "tl";
 
@@ -79,15 +84,22 @@ export function CursorPreview() {
         }
       }
 
-      // 3. Tilt — instant. Map cursor to a soft 3D rotation. Card faces
-      // toward the centre of the viewport: cursor at left → card tilts to
-      // face right; cursor at top → card tilts down.
+      // 3. Tilt — instant. Map cursor to a 3D rotation around the panel's
+      // local centre. Card faces toward the centre of the viewport: cursor at
+      // left → card tilts to face right; cursor at top → card tilts down.
+      // Signed curve so the magnitude grows faster near the edges (visible
+      // even when the cursor is only halfway from centre).
       if (tiltRef.current) {
-        const normX = Math.max(-1, Math.min(1, (e.clientX / vw) * 2 - 1));
-        const normY = Math.max(-1, Math.min(1, (e.clientY / vh) * 2 - 1));
-        const rotY = -normX * MAX_TILT_Y;
-        const rotX = normY * MAX_TILT_X;
-        tiltRef.current.style.transform = `perspective(900px) rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+        const rawX = (e.clientX / vw) * 2 - 1;
+        const rawY = (e.clientY / vh) * 2 - 1;
+        const normX = Math.max(-1, Math.min(1, rawX));
+        const normY = Math.max(-1, Math.min(1, rawY));
+        // signed sqrt curve: keeps sign, accelerates magnitude
+        const curveX = Math.sign(normX) * Math.sqrt(Math.abs(normX));
+        const curveY = Math.sign(normY) * Math.sqrt(Math.abs(normY));
+        const rotY = -curveX * MAX_TILT_Y;
+        const rotX = curveY * MAX_TILT_X;
+        tiltRef.current.style.transform = `perspective(${PERSPECTIVE_PX}px) rotateX(${rotX}deg) rotateY(${rotY}deg)`;
       }
     }
     window.addEventListener("mousemove", onMove, { passive: true });
