@@ -37,9 +37,9 @@ const BOARD_SQUARE_PX = 38;
 // Tilt magnitudes tuned to read as depth without becoming a parlour trick.
 // Horizontal axis is more pronounced than the vertical because eye-level
 // cursor motion is mostly side-to-side; up/down tilt earns less emphasis.
-const MAX_TILT_Y = 10; // ° rotation around vertical axis (cursor x → rotateY)
-const MAX_TILT_X = 4; // ° rotation around horizontal axis (cursor y → rotateX)
-const PERSPECTIVE_PX = 600;
+const MAX_TILT_Y = 7; // ° rotation around vertical axis (cursor x → rotateY)
+const MAX_TILT_X = 2.5; // ° rotation around horizontal axis (cursor y → rotateX)
+const PERSPECTIVE_PX = 700;
 
 type Quadrant = "br" | "bl" | "tr" | "tl";
 
