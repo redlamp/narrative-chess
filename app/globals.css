@@ -474,7 +474,7 @@
 .book-cover {
   background:
     radial-gradient(
-      circle 260px at var(--book-light-x) var(--book-light-y),
+      circle 480px at var(--book-light-x) var(--book-light-y),
       rgba(255, 238, 210, 0.55) 0%,
       rgba(255, 238, 210, 0.22) 26%,
       transparent 65%
