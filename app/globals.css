@@ -447,45 +447,25 @@
     ) !important;
 }
 
-/* Hinge — darker vertical band on the left edge suggests where the cover
-   meets the spine. Subtle: ~16px wide, ~30% darker than the cover. */
+/* Hinge — darker vertical band on the left edge of the OXBLOOD frame.
+   Sits in the 14px gap between the cover edge and the inset page, so a
+   sliver of darker leather is visible suggesting where the spine joins
+   the cover. */
 .book-cover::before {
   content: "";
   position: absolute;
   top: 0;
   bottom: 0;
   left: 0;
-  width: 18px;
+  width: 14px;
   background: linear-gradient(
     90deg,
     var(--book-spine) 0%,
-    color-mix(in srgb, var(--book-spine) 60%, transparent) 60%,
+    color-mix(in srgb, var(--book-spine) 50%, transparent) 80%,
     transparent 100%
   );
-  border-radius: 3px 0 0 3px;
   pointer-events: none;
-  opacity: 0.85;
-}
-
-/* Right edge — faux gilt page-edge gleam */
-.book-cover::after {
-  content: "";
-  position: absolute;
-  top: 8px;
-  bottom: 8px;
-  right: -1px;
-  width: 2px;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    var(--book-gilt-soft) 12%,
-    var(--book-gilt) 50%,
-    var(--book-gilt-soft) 88%,
-    transparent 100%
-  );
-  border-radius: 1px;
-  pointer-events: none;
-  opacity: 0.55;
+  opacity: 0.9;
 }
 
 /* --- Cursor-pinned floating preview ------------ */

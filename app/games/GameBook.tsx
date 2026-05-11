@@ -216,6 +216,33 @@ export function GameBook({ row, viewer, variant, index }: Props) {
   const isFeature = variant === "feature";
   const inviterC = isOpenInvite ? inviterColor(row) : null;
 
+  // Archive cards (completed games) decorate BOTH names with a piece icon:
+  // pawn next to the loser's name, king next to the winner. Draws and aborted
+  // games — no winner — show pawns on both. Computes the colour each line
+  // represents based on viewer perspective so the icons line up with the
+  // names actually rendered.
+  const isArchive = ["white_won", "black_won", "draw", "aborted"].includes(
+    row.status,
+  );
+  const winnerSide: "w" | "b" | null =
+    row.status === "white_won"
+      ? "w"
+      : row.status === "black_won"
+        ? "b"
+        : null;
+  // Per-line colours. For viewer-on-a-side, lineA = viewer's side. For
+  // observer/non-participant, lineA = white player.
+  const lineAColor: "w" | "b" = youColor
+    ? youColor === "white"
+      ? "w"
+      : "b"
+    : "w";
+  const lineBColor: "w" | "b" = lineAColor === "w" ? "b" : "w";
+  const lineAPieceType: "p" | "k" =
+    isArchive && lineAColor === winnerSide ? "k" : "p";
+  const lineBPieceType: "p" | "k" =
+    isArchive && lineBColor === winnerSide ? "k" : "p";
+
   // Pre-compute caption + plyLabel for the hover preview.
   const previewCaption = (() => {
     if (row.status === "in_progress") {
@@ -277,51 +304,66 @@ export function GameBook({ row, viewer, variant, index }: Props) {
       className={`book-card relative block ${isFeature ? "book-card--feature" : "book-card--compact"}`}
       data-variant={variant}
     >
+      {/* Card composition is two layers stacked: a full-bleed oxblood
+          leather cover (.book-cover) and a slightly inset parchment page
+          (.book-page) that holds the actual content. The cover shows as a
+          uniform red frame around the page on all four sides — the book
+          aesthetic without losing the editorial cream face. */}
       <article
-        className="book-cover relative h-full rounded-[3px] overflow-visible"
+        className="book-cover relative h-full rounded-[4px] overflow-hidden"
         style={{
           boxShadow:
             "0 1px 0 rgba(0,0,0,0.18) inset, 0 -1px 0 rgba(0,0,0,0.30) inset, 0 10px 22px -12px rgba(0,0,0,0.45), 0 2px 4px -2px rgba(0,0,0,0.20)",
         }}
       >
-        {/* Gilt corner rules — brass on oxblood reads as embossed foil */}
+        {/* Gilt corner rules sit on the OXBLOOD frame, just inside the cover
+            edge, so they read as brass corner stamps on the leather. */}
         <span
           aria-hidden
-          className="absolute top-0 left-0 w-7 h-7 pointer-events-none"
+          className="absolute top-[6px] left-[6px] w-5 h-5 pointer-events-none"
           style={{
             borderTop: "1.5px solid var(--book-gilt)",
             borderLeft: "1.5px solid var(--book-gilt)",
-            opacity: 0.75,
+            opacity: 0.85,
           }}
         />
         <span
           aria-hidden
-          className="absolute bottom-0 right-0 w-7 h-7 pointer-events-none"
+          className="absolute bottom-[6px] right-[6px] w-5 h-5 pointer-events-none"
           style={{
             borderBottom: "1.5px solid var(--book-gilt)",
             borderRight: "1.5px solid var(--book-gilt)",
-            opacity: 0.55,
+            opacity: 0.6,
           }}
         />
 
-        <div className={`relative ${isFeature ? "p-7 pl-9" : "p-5 pl-7"} flex flex-col h-full`}>
-          {/* Top decorative gilt rule */}
+        <div
+          className={`book-page relative ${isFeature ? "p-7" : "p-5"} flex flex-col h-full rounded-[2px]`}
+          style={{
+            background:
+              "linear-gradient(160deg, var(--background) 0%, var(--bg-soft) 100%)",
+            margin: "14px",
+            boxShadow:
+              "0 1px 0 rgba(255,255,255,0.5) inset, 0 -1px 0 rgba(0,0,0,0.06) inset, 0 2px 4px -2px rgba(0,0,0,0.18)",
+          }}
+        >
+          {/* Top decorative rule */}
           <div className="flex items-center gap-3 mb-4">
             <span
               aria-hidden
               className="h-px flex-1"
               style={{
                 background:
-                  "linear-gradient(90deg, transparent 0%, var(--book-gilt-soft) 30%, var(--book-gilt-soft) 70%, transparent 100%)",
+                  "linear-gradient(90deg, transparent 0%, var(--ink-faint-border) 30%, var(--ink-faint-border) 70%, transparent 100%)",
               }}
             />
           </div>
 
-          {/* Eyebrow — gilt for highlight states, soft cream otherwise */}
+          {/* Eyebrow */}
           <p
             className={`font-mono uppercase tracking-[0.22em] ${isFeature ? "text-[11px]" : "text-[10px]"} mb-1`}
             style={{
-              color: oxbloodEyebrow ? "var(--book-gilt)" : "var(--book-ink-soft)",
+              color: oxbloodEyebrow ? "var(--oxblood)" : "var(--ink-soft)",
             }}
           >
             <span className="opacity-70">Vol.&nbsp;</span>
@@ -330,31 +372,40 @@ export function GameBook({ row, viewer, variant, index }: Props) {
             <span>{eyebrow}</span>
           </p>
 
-          {/* Title — opponent block, cream on oxblood */}
+          {/* Title — opponent block. Piece icons appear on open invitations
+              (pawn marking inviter's side) and on archive cards (pawn for
+              loser / king for winner). */}
           <div className={`${isFeature ? "mt-3 mb-6" : "mt-2 mb-4"}`}>
             <p
-              className={`font-display ${isFeature ? "text-3xl" : "text-xl"} leading-[1.05] tracking-tight flex items-center gap-2`}
-              style={{ color: "var(--book-ink)" }}
+              className={`font-display ${isFeature ? "text-3xl" : "text-xl"} leading-[1.05] text-foreground tracking-tight flex items-center gap-2`}
             >
-              {/* Open-invite cards: pawn icon stands in for the board
-                  preview. Sits beside the inviter's name so the side they're
-                  playing reads at a glance. */}
               {isOpenInvite && inviterC && (
                 <ColorPawn color={inviterC} size={isFeature ? 28 : 22} />
+              )}
+              {isArchive && (
+                <ColorPawn
+                  color={lineAColor}
+                  type={lineAPieceType}
+                  size={isFeature ? 28 : 22}
+                />
               )}
               <span className="truncate">{titleLineA}</span>
             </p>
             <p
-              className={`font-display italic ${isFeature ? "text-xl mt-0.5" : "text-base mt-0.5"}`}
-              style={{ color: "var(--book-ink-soft)" }}
+              className={`font-display italic ${isFeature ? "text-xl mt-0.5" : "text-base mt-0.5"} text-ink-soft flex items-baseline gap-2`}
             >
               {isOpenInvite && (viewerIsWhite || viewerIsBlack)
                 ? ""
                 : "vs."}{" "}
-              <span
-                className="not-italic font-display"
-                style={{ color: "var(--book-ink)" }}
-              >
+              {isArchive && (
+                <ColorPawn
+                  color={lineBColor}
+                  type={lineBPieceType}
+                  size={isFeature ? 24 : 20}
+                  className="self-center"
+                />
+              )}
+              <span className="not-italic font-display text-foreground">
                 {titleLineB}
               </span>
             </p>
@@ -367,14 +418,11 @@ export function GameBook({ row, viewer, variant, index }: Props) {
               className="block h-px mb-3"
               style={{
                 background:
-                  "linear-gradient(90deg, transparent 0%, var(--book-gilt-soft) 30%, var(--book-gilt-soft) 70%, transparent 100%)",
+                  "linear-gradient(90deg, transparent 0%, var(--ink-faint-border) 30%, var(--ink-faint-border) 70%, transparent 100%)",
               }}
             />
             <div className="flex items-baseline justify-between gap-3">
-              <p
-                className="font-mono uppercase tracking-[0.16em] text-[10px]"
-                style={{ color: "var(--book-ink-faint)" }}
-              >
+              <p className="font-mono uppercase tracking-[0.16em] text-[10px] text-ink-faint">
                 {tcLabel}
                 {row.status === "in_progress" && (
                   <>
@@ -389,10 +437,7 @@ export function GameBook({ row, viewer, variant, index }: Props) {
                   </>
                 )}
               </p>
-              <p
-                className="font-mono text-[10px] tracking-[0.14em]"
-                style={{ color: "var(--book-ink-faint)" }}
-              >
+              <p className="font-mono text-[10px] text-ink-faint tracking-[0.14em]">
                 {editorialDate}
               </p>
             </div>
