@@ -342,8 +342,12 @@ export function GameBook({ row, viewer, variant, index }: Props) {
         onMouseMove={onCoverMouseMove}
         onMouseLeave={onCoverMouseLeave}
         style={{
+          // Padding (not page-margin) creates the leather frame so the
+          // 2px top + 4px bottom + 6px sides are guaranteed regardless of
+          // page content sizing or drop-shadow encroachment.
+          padding: "2px 6px 4px 6px",
           boxShadow:
-            "0 1px 0 rgba(0,0,0,0.18) inset, 0 -1px 0 rgba(0,0,0,0.30) inset, 0 10px 22px -12px rgba(0,0,0,0.45), 0 2px 4px -2px rgba(0,0,0,0.20)",
+            "0 1px 0 rgba(0,0,0,0.18) inset, 0 10px 22px -12px rgba(0,0,0,0.45), 0 2px 4px -2px rgba(0,0,0,0.20)",
         }}
       >
         <div
@@ -351,10 +355,6 @@ export function GameBook({ row, viewer, variant, index }: Props) {
           style={{
             background:
               "linear-gradient(160deg, var(--background) 0%, var(--bg-soft) 100%)",
-            // Asymmetric inset — page rides high. 2px hairline of leather
-            // at the top, deeper 4px pool below. Left + right at 6px keep
-            // the side trim tight.
-            margin: "2px 6px 4px 6px",
             boxShadow:
               "0 1px 0 rgba(255,255,255,0.5) inset, 0 -1px 0 rgba(0,0,0,0.06) inset, 0 2px 4px -2px rgba(0,0,0,0.18)",
           }}
