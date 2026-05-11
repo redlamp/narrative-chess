@@ -335,13 +335,11 @@ export function GameBook({ row, viewer, variant, index }: Props) {
           style={{
             background:
               "linear-gradient(160deg, var(--background) 0%, var(--bg-soft) 100%)",
-            // Asymmetric inset — page rides high on the cover. Top margin
-            // is negative so the page's top edge sits flush with the
-            // cover's top edge (cover's overflow:hidden trims the 2px
-            // overhang) leaving zero leather visible above the page. All
-            // of the oxblood pools at the foot of the card. Left + right
-            // at 6px keep the side trim tight.
-            margin: "-2px 6px 26px 6px",
+            // Asymmetric inset — page rides high but a 2px hairline of
+            // leather shows at the top and a deeper 28px pool below where
+            // the gilt corner stamp lives. Left + right at 6px keep the
+            // side trim tight.
+            margin: "2px 6px 28px 6px",
             boxShadow:
               "0 1px 0 rgba(255,255,255,0.5) inset, 0 -1px 0 rgba(0,0,0,0.06) inset, 0 2px 4px -2px rgba(0,0,0,0.18)",
           }}
