@@ -61,7 +61,7 @@ Cost is not the gate — Supabase free tier supports OAuth at no charge. Setup c
   - `http://localhost:3000/**`
   - `https://narrative-chess.vercel.app/**`
   - `https://narrative-chess-git-dev-taylor-8571s-projects.vercel.app/**` (kept; redundant with wildcard but harmless)
-  - `https://narrative-chess-git-*-taylor-8571s-projects.vercel.app/**` (added 2026-05-04 for feat-branch previews; pairs with Vercel env scope widened to "Preview (all)" for `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Service role key still scoped to Preview-dev only.)
+  - `https://narrative-chess-git-*-taylor-8571s-projects.vercel.app/**` (added 2026-05-04 for feat-branch previews; pairs with Vercel env scope widened to "Preview (all)" for `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`. **As of 2026-05-12, `SUPABASE_SERVICE_ROLE_KEY` was also widened from Preview-dev to Preview-all** so the `/admin` console (PR #47) can call `auth.admin.listUsers()` + `auth.admin.deleteUser()` on feat-branch previews during closed-beta testing. Reconsider before public release — preview URLs are unguessable but service-role bypasses RLS.)
 
 ## TODO — Re-enable email confirmation before broader release
 
