@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { hasRole } from "@/lib/auth/role";
+import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { StatsPanel } from "./components/StatsPanel";
 import { UsersTable } from "./components/UsersTable";
@@ -22,6 +23,12 @@ export default async function AdminPage({
   if (!(await hasRole("admin"))) {
     redirect("/");
   }
+
+  const supabase = await createClient();
+  const {
+    data: { user: currentUser },
+  } = await supabase.auth.getUser();
+  if (!currentUser) redirect("/");
 
   const { show_bots } = await searchParams;
   const hideBots = show_bots !== "1";
@@ -109,7 +116,11 @@ export default async function AdminPage({
         nowMs={nowMs}
       />
 
-      <UsersTable users={usersWithCounts} hideBots={hideBots} />
+      <UsersTable
+        users={usersWithCounts}
+        hideBots={hideBots}
+        currentUserId={currentUser.id}
+      />
 
       <InviteCodesPanel
         codes={inviteCodes}
