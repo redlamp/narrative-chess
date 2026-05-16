@@ -125,6 +125,25 @@ export function SignUpForm({ action = signUp, onSuccess }: SignUpFormProps) {
         </p>
       ) : null}
       <SubmitButton />
+      <p className="text-xs text-center text-muted-foreground">
+        By signing up you agree to the{" "}
+        <Link
+          href="/terms"
+          target="_blank"
+          className="text-primary underline-offset-4 hover:underline"
+        >
+          Terms
+        </Link>{" "}
+        and{" "}
+        <Link
+          href="/privacy"
+          target="_blank"
+          className="text-primary underline-offset-4 hover:underline"
+        >
+          Privacy
+        </Link>{" "}
+        notice.
+      </p>
       <p className="text-sm text-center text-muted-foreground">
         Already have an account?{" "}
         <Link href="/login" className="text-primary underline-offset-4 hover:underline">

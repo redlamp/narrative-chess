@@ -77,7 +77,15 @@ export function LoginForm({ action = login, onSuccess }: LoginFormProps) {
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <div className="flex items-baseline justify-between">
+          <Label htmlFor="password">Password</Label>
+          <Link
+            href="/reset-password"
+            className="font-mono text-[10px] uppercase tracking-widest text-ink-soft hover:text-foreground"
+          >
+            Forgot?
+          </Link>
+        </div>
         <Input id="password" name="password" type="password" required />
       </div>
       {state.error ? (
