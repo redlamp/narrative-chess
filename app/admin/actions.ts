@@ -48,6 +48,43 @@ export async function setRole(targetUserId: string, newRole: Role) {
   revalidatePath("/admin");
 }
 
+export async function setRoleBulk(
+  targetUserIds: string[],
+  newRole: Role,
+): Promise<{ count: number }> {
+  await assertAdmin();
+  const actorId = await currentUserId();
+
+  const ids = Array.from(new Set(targetUserIds)).filter((id) => id !== actorId);
+  if (ids.length === 0) {
+    return { count: 0 };
+  }
+
+  const admin = createAdminClient();
+
+  // Audit row first, mirrors the nuke RPC pattern: if the audit insert fails
+  // we bail before mutating profile rows.
+  const { error: auditError } = await admin.from("admin_audit").insert({
+    actor_id: actorId,
+    action: "set_role_bulk",
+    target_count: ids.length,
+    details: {
+      new_role: newRole,
+      target_ids: ids,
+    },
+  });
+  if (auditError) throw auditError;
+
+  const { error } = await admin
+    .from("profiles")
+    .update({ role: newRole })
+    .in("user_id", ids);
+  if (error) throw error;
+
+  revalidatePath("/admin");
+  return { count: ids.length };
+}
+
 // ---------------------------------------------------------------------------
 // Invite codes
 // ---------------------------------------------------------------------------
