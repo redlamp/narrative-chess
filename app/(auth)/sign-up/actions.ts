@@ -4,6 +4,10 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  checkDisplayName,
+  displayNameErrorMessage,
+} from "@/lib/auth/display-name-filter";
 
 const SignUpInput = z.object({
   // Crockford base32 alphabet: A-Z minus I/L/O/U, plus 2-9 (no 0, no 1).
@@ -57,6 +61,16 @@ async function attemptSignUp(formData: FormData): Promise<SignUpResult> {
   }
 
   const { inviteCode, email, password, displayName } = parsed.data;
+
+  // Display-name filter: block slurs + reserved staff names before any
+  // auth user is created. Cheap, sync, no external calls.
+  const nameCheck = checkDisplayName(displayName);
+  if (!nameCheck.ok) {
+    return {
+      ok: false,
+      error: displayNameErrorMessage(nameCheck) ?? "Invalid display name",
+    };
+  }
 
   // 1. Create the auth user (also fires the handle_new_user trigger -> profile row).
   const supabase = await createClient();
