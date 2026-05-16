@@ -173,7 +173,12 @@ export function GameClient({
   });
 
   const [moves, setMoves] = useState<MoveLike[]>(
-    initialMoves.map((m) => ({ ply: m.ply, san: m.san, fen_after: m.fen_after })),
+    initialMoves.map((m) => ({
+      ply: m.ply,
+      san: m.san,
+      fen_after: m.fen_after,
+      played_at: m.played_at,
+    })),
   );
   const [viewedPly, setViewedPly] = useState<number | null>(null);
 
@@ -511,7 +516,12 @@ export function GameClient({
         if (prev.some((x) => x.ply === m.ply)) return prev;
         return [
           ...prev,
-          { ply: m.ply, san: m.san, fen_after: m.fen_after },
+          {
+            ply: m.ply,
+            san: m.san,
+            fen_after: m.fen_after,
+            played_at: m.played_at,
+          },
         ].sort((a, b) => a.ply - b.ply);
       });
     }).then((s) => {
@@ -775,6 +785,7 @@ export function GameClient({
                 ply: result.data.ply,
                 san: result.data.san,
                 fen_after: result.data.fen_after,
+                played_at: new Date().toISOString(),
               },
             ].sort((a, b) => a.ply - b.ply);
           });
@@ -865,7 +876,12 @@ export function GameClient({
         if (prev.some((x) => x.ply === optimisticPly)) return prev;
         return [
           ...prev,
-          { ply: optimisticPly, san, fen_after: optFen },
+          {
+            ply: optimisticPly,
+            san,
+            fen_after: optFen,
+            played_at: new Date().toISOString(),
+          },
         ].sort((a, b) => a.ply - b.ply);
       });
       void submitMove(uci, state.ply);

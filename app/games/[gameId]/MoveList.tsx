@@ -9,7 +9,13 @@ import {
   Play,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { pairsFromMoves, stepPly, type MoveLike } from "@/lib/chess/move-list";
+import {
+  formatMoveDuration,
+  moveDurationMs,
+  pairsFromMoves,
+  stepPly,
+  type MoveLike,
+} from "@/lib/chess/move-list";
 import { MoveCell } from "./MoveCell";
 
 // Shared classes for the step buttons. Editorial mono micro-button
@@ -47,6 +53,18 @@ type Props = {
 };
 
 export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying = false }: Props) {
+  const sortedMoves = useMemo(
+    () => [...moves].sort((a, b) => a.ply - b.ply),
+    [moves],
+  );
+  const durationByPly = useMemo(() => {
+    const out = new Map<number, string>();
+    for (let i = 0; i < sortedMoves.length; i++) {
+      const ms = moveDurationMs(sortedMoves, i, null);
+      if (ms !== null) out.set(sortedMoves[i].ply, formatMoveDuration(ms));
+    }
+    return out;
+  }, [sortedMoves]);
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const t = e.target as HTMLElement;
@@ -247,6 +265,11 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
         </div>
       </div>
 
+      {/* Desktop: per-move duration renders below SAN inside the cell.
+          Computed from played_at deltas — ply 1 has no anchor so it
+          renders without a duration. Mobile ribbon stays bare SAN
+          since the cell width is already tight at narrow viewports. */}
+
       {/* Desktop: header (title + play + step buttons) is non-scrolling,
           fixed at the top of the panel. Only the moves grid below scrolls
           — keeps controls always reachable as the list grows. Each move
@@ -368,6 +391,7 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
                   side="white"
                   delayMs={whiteDelay}
                   isFresh={whiteFresh}
+                  duration={durationByPly.get(pair.white.ply) ?? null}
                   onSelect={onScrub}
                 />
                 {pair.black && blackDelay !== null ? (
@@ -378,6 +402,7 @@ export function MoveList({ moves, livePly, viewedPly, onScrub, onPlay, isPlaying
                     side="black"
                     delayMs={blackDelay}
                     isFresh={blackFresh}
+                    duration={durationByPly.get(pair.black.ply) ?? null}
                     onSelect={onScrub}
                   />
                 ) : null}

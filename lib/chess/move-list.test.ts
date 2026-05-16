@@ -1,10 +1,16 @@
 import { describe, expect, it } from "bun:test";
-import { pairsFromMoves, viewedFen, stepPly } from "./move-list";
+import {
+  formatMoveDuration,
+  moveDurationMs,
+  pairsFromMoves,
+  stepPly,
+  viewedFen,
+} from "./move-list";
 
 const MOVES = [
-  { ply: 1, san: "e4", fen_after: "FEN1" },
-  { ply: 2, san: "c5", fen_after: "FEN2" },
-  { ply: 3, san: "Nf3", fen_after: "FEN3" },
+  { ply: 1, san: "e4", fen_after: "FEN1", played_at: "2026-05-15T12:00:00Z" },
+  { ply: 2, san: "c5", fen_after: "FEN2", played_at: "2026-05-15T12:00:05Z" },
+  { ply: 3, san: "Nf3", fen_after: "FEN3", played_at: "2026-05-15T12:02:05Z" },
 ];
 
 describe("pairsFromMoves", () => {
@@ -73,5 +79,45 @@ describe("stepPly", () => {
   it("treats null current as livePly anchor", () => {
     expect(stepPly(null, -1, 5)).toBe(4);
     expect(stepPly(null, +1, 5)).toBe(5);
+  });
+});
+
+describe("moveDurationMs", () => {
+  it("returns null for ply 1 when gameStartedAt is null", () => {
+    expect(moveDurationMs(MOVES, 0, null)).toBeNull();
+  });
+
+  it("computes ply 1 delta from gameStartedAt", () => {
+    expect(moveDurationMs(MOVES, 0, "2026-05-15T11:59:55Z")).toBe(5_000);
+  });
+
+  it("computes subsequent plies from played_at deltas", () => {
+    expect(moveDurationMs(MOVES, 1, null)).toBe(5_000);
+    expect(moveDurationMs(MOVES, 2, null)).toBe(120_000);
+  });
+
+  it("returns null for out-of-range indices", () => {
+    expect(moveDurationMs(MOVES, -1, null)).toBeNull();
+    expect(moveDurationMs(MOVES, 99, null)).toBeNull();
+  });
+});
+
+describe("formatMoveDuration", () => {
+  it("renders seconds under a minute", () => {
+    expect(formatMoveDuration(5_000)).toBe("5s");
+    expect(formatMoveDuration(59_000)).toBe("59s");
+  });
+
+  it("renders minutes under an hour", () => {
+    expect(formatMoveDuration(120_000)).toBe("2m");
+    expect(formatMoveDuration(59 * 60_000)).toBe("59m");
+  });
+
+  it("renders hours under a day", () => {
+    expect(formatMoveDuration(2 * 3_600_000)).toBe("2h");
+  });
+
+  it("renders days at and above a day", () => {
+    expect(formatMoveDuration(2 * 86_400_000)).toBe("2d");
   });
 });
