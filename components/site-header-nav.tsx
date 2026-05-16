@@ -16,9 +16,11 @@ type Props = {
    * game, not only when the current URL is a game page.
    */
   currentGameId: string | null;
+  /** True if the current user has role='admin'. Shows the Admin link. */
+  isAdmin?: boolean;
 };
 
-export function SiteHeaderNav({ displayName, currentGameId }: Props) {
+export function SiteHeaderNav({ displayName, currentGameId, isAdmin }: Props) {
   const pathname = usePathname() ?? "/";
 
   const links: Array<{ href: string; label: string }> = [
@@ -26,6 +28,9 @@ export function SiteHeaderNav({ displayName, currentGameId }: Props) {
   ];
   if (currentGameId) {
     links.push({ href: `/games/${currentGameId}`, label: "Current" });
+  }
+  if (isAdmin) {
+    links.push({ href: "/admin", label: "Admin" });
   }
 
   return (
