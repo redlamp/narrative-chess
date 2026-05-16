@@ -74,7 +74,7 @@ export function SignUpForm({ action = signUp, onSuccess }: SignUpFormProps) {
           type="text"
           placeholder="ABCD2345"
           required
-          pattern="[A-Za-z2-7]{8}"
+          pattern="[A-HJ-NP-Za-hj-np-z2-9]{8}"
           minLength={8}
           maxLength={8}
           autoCapitalize="characters"

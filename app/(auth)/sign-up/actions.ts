@@ -6,11 +6,16 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const SignUpInput = z.object({
+  // Crockford base32 alphabet: A-Z minus I/L/O/U, plus 2-9 (no 0, no 1).
+  // Must match CODE_ALPHABET in app/admin/actions.ts::generateCode.
   inviteCode: z
     .string()
     .trim()
     .toUpperCase()
-    .regex(/^[A-Z2-7]{8}$/, "Invite code must be 8 characters (A–Z, 2–7)"),
+    .regex(
+      /^[A-HJ-NP-Z2-9]{8}$/,
+      "Invite code must be 8 characters (Crockford base32: A-Z minus I/L/O/U, plus 2-9)",
+    ),
   email: z.string().email(),
   password: z.string().min(8).max(72),
   displayName: z.string().min(1).max(60),
