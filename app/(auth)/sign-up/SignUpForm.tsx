@@ -67,6 +67,26 @@ export function SignUpForm({ action = signUp, onSuccess }: SignUpFormProps) {
         </em>
       </h1>
       <div className="space-y-2">
+        <Label htmlFor="inviteCode">Invite code</Label>
+        <Input
+          id="inviteCode"
+          name="inviteCode"
+          type="text"
+          placeholder="ABCD2345"
+          required
+          pattern="[A-Za-z2-7]{8}"
+          minLength={8}
+          maxLength={8}
+          autoCapitalize="characters"
+          autoComplete="off"
+          spellCheck={false}
+          className="font-mono tracking-widest uppercase"
+        />
+        <p className="text-xs text-muted-foreground">
+          Eight characters. Ask Taylor for one if you don&apos;t have it yet.
+        </p>
+      </div>
+      <div className="space-y-2">
         <Label htmlFor="displayName">Display name</Label>
         <Input
           id="displayName"

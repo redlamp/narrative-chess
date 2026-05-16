@@ -126,7 +126,8 @@ What success looks like for M1: two browsers, end-to-end smoke test green, no v1
 
 ## Open threads — post-M1.5++
 
-- **CI workflow bug**: `compgen -G "e2e/**/*.spec.ts"` misses top-level specs without `shopt -s globstar`. All 15 e2e specs currently no-op in CI. One-line chore PR.
+- **Admin: bulk user role edit** (queued 2026-05-12): /admin Users panel currently flips one role at a time via per-row `<select>`. Need a multi-select pattern for bulk role changes — concrete near-term need is demoting a batch of legacy `player` accounts to `bot` ahead of the doors opening so they can be wiped via "Delete all bots" without losing the audit trail of "yes, these were never real testers". Shape: row checkboxes + selection state in `UsersTable` (client component) + bulk action bar above the table ("Change N users to role: [player|admin|bot] [Apply]") + new `setRoleBulk(userIds[], role)` server action that loops the existing `setRole` logic under one audit row. ~80 LoC.
+- **CI workflow bug**: `compgen -G "e2e/**/*.spec.ts"` misses top-level specs without `shopt -s globstar`. All 15 e2e specs currently no-op in CI. One-line chore PR. **Note 2026-05-12**: PR #47's CI run did pick up the new `e2e/admin/*.spec.ts` files (Playwright config glob fine?), so the gap may already be smaller than feared. Confirm before relying.
 - **Polish A — draw-by-agreement** (offer / accept / decline flow): still queued.
 - ~~**Polish B — move-list stepper**~~ — **closed by PR #38 + scrub-playback in PR #40** (shipped 2026-05-10).
 - **Polish C — mobile / touch optimization**: still queued (after polish A settles).
