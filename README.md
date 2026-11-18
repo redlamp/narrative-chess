@@ -29,6 +29,6 @@ Next.js 16.2 · React 19 · TypeScript · Tailwind v4 · shadcn/ui (Radix, New Y
 
 ## More
 
-- Conventions: see `CLAUDE.md`
+- Conventions: see `AGENTS.md`
 - Design spec: `docs/superpowers/specs/2026-05-02-v2-foundation-design.md`
 - Decisions: `wiki/mocs/decisions.md`

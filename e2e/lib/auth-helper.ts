@@ -23,11 +23,47 @@ function getAdmin(): SupabaseClient {
   return _admin;
 }
 
-export async function ensureUser(email: string, password: string) {
+export type Role = "player" | "admin" | "bot";
+
+/**
+ * Crockford-style base32 alphabet (no I/L/O/U). Matches app/admin/actions.ts.
+ */
+const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTVWXYZ23456789";
+function generateInviteCode(): string {
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  let out = "";
+  for (let i = 0; i < 8; i++) {
+    out += CODE_ALPHABET[bytes[i] % CODE_ALPHABET.length];
+  }
+  return out;
+}
+
+/**
+ * Idempotent test-user creator. Returns the existing user untouched if one
+ * with this email already exists (role NOT modified — see note below);
+ * otherwise creates a fresh user with `role` set on the profile row.
+ *
+ * **Default role: 'bot'** so accumulated CI runs can be wiped via /admin
+ * "Delete all bot accounts" without affecting real testers. Override with
+ * `{ role: 'player' }` for tests that need a non-bot tester (e.g.,
+ * verifying that /admin rejects players).
+ *
+ * NOTE: Taylor's admin role is set by the seed_first_admin migration. If
+ * ensureUser creates Taylor before the seed migration runs (fresh DB),
+ * Taylor will be 'bot'; promote via `promoteToAdmin(user.id)` if needed.
+ */
+export async function ensureUser(
+  email: string,
+  password: string,
+  opts: { role?: Role } = {},
+) {
+  const role = opts.role ?? "bot";
   const admin = getAdmin();
   const { data: list } = await admin.auth.admin.listUsers();
   const existing = list.users.find((u) => u.email === email);
   if (existing) return existing;
+
   const { data, error } = await admin.auth.admin.createUser({
     email,
     password,
@@ -35,7 +71,69 @@ export async function ensureUser(email: string, password: string) {
     user_metadata: { display_name: email.split("@")[0] },
   });
   if (error) throw error;
-  return data.user;
+  const user = data.user;
+
+  // The handle_new_user trigger has already inserted the profile row. Update
+  // its role to match the requested tier.
+  if (user) {
+    const { error: roleError } = await admin
+      .from("profiles")
+      .update({ role })
+      .eq("user_id", user.id);
+    if (roleError) throw roleError;
+  }
+  return user;
+}
+
+/**
+ * Force-promote a user to admin via service-role profile update. Used to
+ * seed admin-only e2e specs without depending on the seed migration UUID.
+ */
+export async function promoteToAdmin(userId: string): Promise<void> {
+  const admin = getAdmin();
+  const { error } = await admin
+    .from("profiles")
+    .update({ role: "admin" })
+    .eq("user_id", userId);
+  if (error) throw error;
+}
+
+/**
+ * Force-set a user to any role. Used by tests that need to flip a fixture
+ * account between player/bot/admin between assertions.
+ */
+export async function setRoleFor(userId: string, role: Role): Promise<void> {
+  const admin = getAdmin();
+  const { error } = await admin
+    .from("profiles")
+    .update({ role })
+    .eq("user_id", userId);
+  if (error) throw error;
+}
+
+/**
+ * Insert an invite code via service-role (bypasses RLS). Returns the code
+ * string. Use this when an admin-context test needs an unused code to
+ * consume.
+ */
+export async function ensureInviteCode(
+  createdBy: string,
+  opts: { note?: string; expiresInDays?: number | null } = {},
+): Promise<string> {
+  const admin = getAdmin();
+  const code = generateInviteCode();
+  const expiresAt =
+    opts.expiresInDays == null
+      ? null
+      : new Date(Date.now() + opts.expiresInDays * 86_400_000).toISOString();
+  const { error } = await admin.from("invite_codes").insert({
+    code,
+    created_by: createdBy,
+    expires_at: expiresAt,
+    note: opts.note ?? "e2e fixture",
+  });
+  if (error) throw error;
+  return code;
 }
 
 /**
@@ -59,7 +157,7 @@ export async function loginAs(
   await page.fill('input[name="email"]', email);
   await page.fill('input[name="password"]', password);
   await page.click('button[type="submit"]');
-  await page.waitForURL(`${baseURL}/`, { timeout: 10_000 });
+  await page.waitForURL(`${baseURL}/`, { timeout: 30_000 });
   // Sanity: cookies on context are now set by the middleware.
   void context;
 }

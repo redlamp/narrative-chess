@@ -29,10 +29,18 @@ type Props = {
    * than sliding up after it.
    */
   isFresh?: boolean;
+  /**
+   * Optional compact duration string (e.g. "5s", "2m", "3h", "1d"),
+   * computed by MoveList from played_at deltas. Renders as faint mono
+   * text below the SAN in block layout; suppressed in inline layout
+   * (mobile ribbon). Null when the prior anchor isn't available
+   * (typically ply 1).
+   */
+  duration?: string | null;
   onSelect: (ply: number) => void;
 };
 
-export function MoveCell({ ply, san, isActive, inline, side, delayMs, isFresh, onSelect }: Props) {
+export function MoveCell({ ply, san, isActive, inline, side, delayMs, isFresh, duration, onSelect }: Props) {
   return (
     <button
       type="button"
@@ -62,7 +70,17 @@ export function MoveCell({ ply, san, isActive, inline, side, delayMs, isFresh, o
             ),
       )}
     >
-      {san}
+      <span>{san}</span>
+      {!inline && duration ? (
+        <span
+          className={cn(
+            "ml-1.5 font-mono text-[10px] tabular-nums align-baseline",
+            isActive ? "text-accent-foreground/70" : "text-ink-faint",
+          )}
+        >
+          {duration}
+        </span>
+      ) : null}
     </button>
   );
 }

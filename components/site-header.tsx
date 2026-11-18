@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { hasRole } from "@/lib/auth/role";
 import { SiteHeaderNav } from "./site-header-nav";
 
 export async function SiteHeader() {
@@ -9,9 +10,10 @@ export async function SiteHeader() {
 
   let displayName: string | null = null;
   let currentGameId: string | null = null;
+  let isAdmin = false;
 
   if (user) {
-    const [profileResult, lastMoveResult] = await Promise.all([
+    const [profileResult, lastMoveResult, adminCheck] = await Promise.all([
       supabase
         .from("profiles")
         .select("display_name")
@@ -28,9 +30,11 @@ export async function SiteHeader() {
         .order("played_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
+      hasRole("admin"),
     ]);
     displayName = profileResult.data?.display_name ?? null;
     currentGameId = lastMoveResult.data?.game_id ?? null;
+    isAdmin = adminCheck;
 
     // Fallback for participants in an in-progress game who haven't
     // played a move yet (joined as black before white opened, etc).
@@ -47,5 +51,11 @@ export async function SiteHeader() {
     }
   }
 
-  return <SiteHeaderNav displayName={displayName} currentGameId={currentGameId} />;
+  return (
+    <SiteHeaderNav
+      displayName={displayName}
+      currentGameId={currentGameId}
+      isAdmin={isAdmin}
+    />
+  );
 }

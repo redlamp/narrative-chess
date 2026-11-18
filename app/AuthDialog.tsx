@@ -28,11 +28,19 @@ export function AuthDialog({ open, onOpenChange, initialMode = "signin" }: Props
   // correctly whenever the caller (StageCtas) switches between Sign in / Sign up.
   const [mode, setMode] = useState<Mode>(initialMode);
 
-  // The forms invoke the no-redirect action variants, so this fires on success
+  // The forms invoke the no-redirect action variants, so these fire on success
   // (the redirecting variants throw NEXT_REDIRECT and never return).
-  const onSuccess = () => {
+  const onSignInSuccess = () => {
     onOpenChange(false);
     router.push("/games");
+    router.refresh();
+  };
+  // Signup is gated by email confirmation now — no session is active when the
+  // action returns, so we route to the "check your email" page instead of
+  // /games (which would bounce the unauthenticated user back to the landing).
+  const onSignUpSuccess = () => {
+    onOpenChange(false);
+    router.push("/check-email");
     router.refresh();
   };
 
@@ -48,9 +56,9 @@ export function AuthDialog({ open, onOpenChange, initialMode = "signin" }: Props
           </DialogDescription>
         </DialogHeader>
         {mode === "signin" ? (
-          <LoginForm action={loginNoRedirect} onSuccess={onSuccess} />
+          <LoginForm action={loginNoRedirect} onSuccess={onSignInSuccess} />
         ) : (
-          <SignUpForm action={signUpNoRedirect} onSuccess={onSuccess} />
+          <SignUpForm action={signUpNoRedirect} onSuccess={onSignUpSuccess} />
         )}
         <p className="text-xs text-center text-muted-foreground">
           {mode === "signin" ? "Don't have an account? " : "Already have an account? "}

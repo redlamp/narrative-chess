@@ -19,6 +19,7 @@ Significant project decisions and their rationale. Each entry should link to a `
 - [[decision-supabase-local-dev]] — hosted-first; Docker deferred until trigger condition fires
 - [[decision-vercel-default-previews]] — auto-deploy every branch (Vercel default) (2026-05-03, supersedes [[decision-vercel-branch-filter]])
 - [[decision-auth-email-password]] — email + password for M1; OAuth deferred to M2+
+- [[decision-role-storage-design]] — `profiles.role` text + `has_role()` helper; `player|admin|bot`; junction table deferred to M2 narrative (2026-05-12)
 
 ### Branding / naming
 

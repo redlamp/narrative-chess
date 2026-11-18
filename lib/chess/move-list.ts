@@ -3,7 +3,53 @@ import type { MoveEvent } from "@/lib/schemas/game";
 const STARTING_FEN =
   "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-export type MoveLike = Pick<MoveEvent, "ply" | "san" | "fen_after">;
+export type MoveLike = Pick<MoveEvent, "ply" | "san" | "fen_after" | "played_at">;
+
+/**
+ * Time elapsed for the move at index `i` of `moves` (already sorted by ply).
+ * Anchor for ply 1 is `gameStartedAt` (the timestamp when both players joined
+ * and `turn_started_at` was first set); if unknown, returns null for ply 1
+ * so the cell renders without a duration.
+ *
+ * Returns milliseconds, or null when the prior anchor isn't available.
+ */
+export function moveDurationMs(
+  moves: MoveLike[],
+  i: number,
+  gameStartedAt: string | null,
+): number | null {
+  if (i < 0 || i >= moves.length) return null;
+  const cur = new Date(moves[i].played_at).getTime();
+  if (Number.isNaN(cur)) return null;
+  let prev: number;
+  if (i === 0) {
+    if (!gameStartedAt) return null;
+    prev = new Date(gameStartedAt).getTime();
+    if (Number.isNaN(prev)) return null;
+  } else {
+    prev = new Date(moves[i - 1].played_at).getTime();
+    if (Number.isNaN(prev)) return null;
+  }
+  return Math.max(0, cur - prev);
+}
+
+/**
+ * Compact human-readable duration for the move-list cell.
+ * <60s -> "5s" / "59s"
+ * <1h  -> "2m" / "59m"
+ * <1d  -> "3h" / "23h"
+ * else -> "2d" / "9d"
+ */
+export function formatMoveDuration(ms: number): string {
+  const seconds = Math.round(ms / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.round(hours / 24);
+  return `${days}d`;
+}
 
 export type Pair = {
   moveNum: number;
